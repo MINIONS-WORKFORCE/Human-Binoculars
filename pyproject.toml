@@ -1,0 +1,5 @@
+# Shared tool config only; this repo is not a Python package.
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["members/**/*.ipynb"]

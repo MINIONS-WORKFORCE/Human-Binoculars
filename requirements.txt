@@ -1,0 +1,30 @@
+# Python 3.12 (numpy, scipy and photutils no longer support 3.11)
+# Install:  pip install -r requirements.txt
+# Versions are pinned so all 6 machines get the same stack (verified 3/11 on Windows 11).
+# Adding or bumping a package? Open a PR that changes this file, and tell the team in standup.
+
+# --- Astronomy / data pipeline (Khôi, Hữu Hoàng, Nguyên) ---
+numpy==2.5.4
+astropy==8.0.2
+astroquery==0.4.11
+pyvo==1.9.1
+reproject==0.21.0
+photutils==3.1.1
+matplotlib==3.11.2
+
+# --- Notebooks (IRSA tutorials) ---
+jupyterlab==4.6.5
+ipykernel==7.4.0
+
+# --- Backend (Đông) ---
+fastapi==0.162.0
+uvicorn[standard]==0.54.0
+diskcache==5.6.3
+pillow==13.0.0
+httpx==0.28.1
+python-dotenv==1.2.4
+
+# --- Dev tools ---
+pytest==9.2.0
+ruff==0.17.3
+nbstripout==0.9.1

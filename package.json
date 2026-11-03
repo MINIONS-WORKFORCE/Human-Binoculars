@@ -1,0 +1,26 @@
+{
+  "name": "spaceapps-training",
+  "private": true,
+  "type": "module",
+  "description": "Training repo for NASA Space Apps 2026: SPHEREx Sky Viewer",
+  "engines": {
+    "node": "^22.12.0 || >=24.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "dev:starter": "vite templates/vite-react",
+    "build:starter": "vite build templates/vite-react",
+    "test": "vitest run --passWithNoTests",
+    "format": "prettier --write \"members/**/*.{js,jsx,ts,tsx,css,json,md}\" \"templates/**/*.{js,jsx,css,html}\""
+  },
+  "dependencies": {
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.2.1",
+    "prettier": "^3.9.10",
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0"
+  }
+}
