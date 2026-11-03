@@ -1,0 +1,81 @@
+# ---------------------------------------------------------------
+# Astronomy data: NEVER commit. Fixture packs live on the team drive.
+# ---------------------------------------------------------------
+*.fits
+*.fit
+*.fts
+*.fits.gz
+*.fit.gz
+*.fz
+*.fits.fz
+*.hdf5
+*.h5
+*.npy
+*.npz
+
+# Everything under data/ is local-only (keep the README)
+data/*
+!data/README.md
+
+# Generated outputs (PNG frames, cutouts, notebook exports)
+out/
+outputs/
+frames/
+cutouts/
+
+# Local databases (SQLite metadata is shared via drive, not git)
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Caches
+.cache/
+cache/
+diskcache/
+.astropy/
+.pytest_cache/
+.ruff_cache/
+.vite/
+
+# ---------------------------------------------------------------
+# Secrets / local config
+# ---------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# ---------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# ---------------------------------------------------------------
+# Node / frontend
+# ---------------------------------------------------------------
+node_modules/
+dist/
+build/
+coverage/
+*.log
+npm-debug.log*
+playwright-report/
+test-results/
+
+# ---------------------------------------------------------------
+# OS / editor
+# ---------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+*.swp
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
