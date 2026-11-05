@@ -4,101 +4,114 @@
 
 Frontend (Duy Hoàng, Thạch) and image processing (Hữu Hoàng) build against this file. Any change goes through a PR that tags all three.
 
-## Hợp đồng v0
+## Contract v0
 
-[openapi.yaml](openapi.yaml) mô tả ba endpoint GET. Đây là hợp đồng để review và
-làm mock; backend hiện chỉ triển khai `/health`. Trang `/docs` của backend chưa
-tự động chứa các endpoint trong file YAML này.
+[openapi.yaml](openapi.yaml) describes three GET endpoints for review and mock
+development. The backend now implements `/health` and all three endpoints in
+mock mode. Its `/docs` page exposes the implemented Pydantic request and response
+models; this YAML remains the shared contract. See
+[the backend README](../../members/dong/README.md#day-4-mock-endpoints) for setup,
+example requests and the WISE 0855 fixture limitations.
 
-| Endpoint | Tham số bắt buộc | Kết quả chính |
+| Endpoint | Required parameters | Main output |
 | --- | --- | --- |
-| `/api/frames` | `s_ra`, `s_dec`, `obs_collection`, `energy_bandpassname`, `cutout_size_deg` | `frames`, URL PNG, thời gian và `sources` |
-| `/api/spectrum` | `s_ra`, `s_dec`, `obs_collection` | `points` theo bước sóng, flux, sai số và `sources` |
-| `/api/lightcurve` | `s_ra`, `s_dec`, `obs_collection`, `energy_bandpassname` | `points` theo thời gian trong cùng miền bước sóng và `sources` |
+| `/api/frames` | `s_ra`, `s_dec`, `obs_collection`, `energy_bandpassname`, `cutout_size_deg` | `frames`, PNG URLs, observation times and `sources` |
+| `/api/spectrum` | `s_ra`, `s_dec`, `obs_collection` | Wavelength `points`, fluxes, uncertainties and `sources` |
+| `/api/lightcurve` | `s_ra`, `s_dec`, `obs_collection`, `energy_bandpassname` | Time-ordered `points` in a common wavelength range and `sources` |
 
-Cả ba endpoint nhận thêm `t_min` và `t_max` tùy chọn, đơn vị MJD ngày. Khi có cả
-hai, `t_min` phải nhỏ hơn hoặc bằng `t_max`. Chỉ có một giới hạn nghĩa là khoảng
-mở ở đầu còn lại. Phản hồi `query` lặp lại tham số yêu cầu đã chuẩn hóa; bỏ những
-giới hạn thời gian không được truyền.
+All three endpoints accept optional `t_min` and `t_max` bounds in MJD days.
+When both are supplied, `t_min` must be less than or equal to `t_max`. A single
+bound leaves the other end open. The response `query` echoes the normalized
+request parameters and omits time bounds that were not supplied.
 
-Ví dụ đường dẫn của API ứng dụng, nối vào địa chỉ backend đang cấu hình:
+Append this example application API path to the configured backend address:
 
 ```text
 /api/frames?s_ra=133.79513&s_dec=-7.24515&obs_collection=spherex_qr2&energy_bandpassname=SPHEREx-D6&cutout_size_deg=0.05
 ```
 
-## Tên trường và ánh xạ sang IRSA
+## Field names and IRSA mapping
 
-Các tên metadata đã được đối chiếu với tiêu đề 51 cột trong phản hồi SIA2 thật
-của truy vấn WISE 0855 QR2. Schema `SourceObservation` giữ nguyên tên như
+Metadata names were checked against the 51 column headers in the actual SIA2
+response for the WISE 0855 QR2 query. The `SourceObservation` schema preserves
+names such as
 `obs_id`, `obs_publisher_did`, `obs_collection`, `energy_bandpassname`, `s_ra`,
 `s_dec`, `t_min`, `t_max`, `access_url`, `access_format`, `s_region`, `s_fov`,
-`em_min` và `em_max`. Chú thích `x-sia2-column` trong YAML ghi nguồn từng trường.
+`em_min` and `em_max`. The YAML `x-sia2-column` annotation records the source
+column for each field.
 
-| Tham số API ứng dụng | Cách dùng khi truy vấn IRSA |
+| Application API parameter | Mapping to IRSA |
 | --- | --- |
-| `s_ra`, `s_dec` | Tọa độ tâm vùng cần xem, độ ICRS; dùng xây `POS`. Tâm các ảnh trả về nằm riêng trong `sources[].s_ra/s_dec`. |
-| `obs_collection` | Chuyển thành tham số SIA2 `COLLECTION`, dùng đúng tên `spherex_qr2`, `spherex_qr2_deep`, `spherex_qr3`, `spherex_qr3_deep`. Không tự đổi release khi kết quả rỗng. |
-| `energy_bandpassname` | Lọc cột metadata cùng tên theo `SPHEREx-D1` đến `SPHEREx-D6`. Đây không phải tên tham số của endpoint SIA2. |
-| `t_min`, `t_max` | Chuyển thành khoảng `TIME` theo MJD; không gửi chuỗi ISO làm giá trị SIA2 TIME. |
-| `cutout_size_deg` | Trường riêng của ứng dụng: cạnh vùng cắt vuông theo độ, lớn hơn 0 và tối đa 0.2 độ trong v0. Khi dựng POS phải bao phủ cả vùng cắt. |
+| `s_ra`, `s_dec` | Requested centre in ICRS degrees, used to construct `POS`. Source-image centres are stored separately in `sources[].s_ra/s_dec`. |
+| `obs_collection` | Maps to SIA2 `COLLECTION`, using the exact values `spherex_qr2`, `spherex_qr2_deep`, `spherex_qr3` or `spherex_qr3_deep`. Do not silently switch releases for empty results. |
+| `energy_bandpassname` | Filters the metadata column of the same name using `SPHEREx-D1` through `SPHEREx-D6`. This is not a parameter name of the SIA2 endpoint. |
+| `t_min`, `t_max` | Map to a `TIME` interval in MJD. Do not send ISO strings as SIA2 TIME values. |
+| `cutout_size_deg` | Application field: square cutout side length in degrees, greater than 0 and at most 0.2 degrees in v0. The constructed POS region must cover the entire cutout. |
 
-`s_fov` trong metadata mô tả vùng phủ ảnh nguồn; không đổi tên nó để biểu diễn
-bán kính tìm kiếm hoặc kích thước cutout. `access_url` luôn là URL dữ liệu nguồn;
-URL PNG đã xử lý nằm ở trường ứng dụng `image_url`.
+The metadata field `s_fov` describes the source-image footprint size. Do not
+repurpose it as a search radius or cutout size. `access_url` always refers to
+the source data; processed PNG URLs belong in the application field `image_url`.
 
-## Quy tắc dữ liệu đầu ra
+## Output data rules
 
-- Các trường `frames`, `points`, `image_url`, `frame_id`, `data_kind`, `flux`,
-  `flux_error`, `wavelength_um`, `time_mjd` và `measurement_method` là dữ liệu
-  ứng dụng tạo ra, không phải cột SIA2.
-- `sources` chứa các sản phẩm đầu vào. Mỗi frame hoặc điểm đo tham chiếu chúng
-  bằng `source_obs_publisher_dids`. Không dùng riêng `obs_id` làm khóa tệp vì một
-  quan sát có thể có nhiều detector. Các định danh trong `sources` phải duy nhất.
-- Mỗi frame chứa một detector và một collection. `n_images` bằng số định danh
-  nguồn duy nhất được dùng. `t_min/t_max` là thời gian sớm nhất/muộn nhất của
-  nguồn đóng góp, và phải nằm trong phạm vi truy vấn có giao quan sát phù hợp.
-- `frames` và điểm light curve sắp theo thời gian tăng dần; các điểm phổ sắp
-  theo bước sóng tăng dần. Frame có thể được cộng từ nhiều ảnh.
-- `observation_time` của frame là trung điểm khoảng thời gian khung, dạng ISO
-  UTC. `time_mjd` của điểm light curve cũng là trung điểm khoảng đóng góp.
-- `em_min/em_max` nguồn dùng mét; `wavelength_um` và miền bước sóng light curve
-  dùng micromet. `flux` và `flux_error` dùng đơn vị được khai báo ở `flux_unit`.
-- Flux hoặc sai số không đo được là `null`, không thay bằng 0. Sai số có giá trị
-  phải không âm. Khi có điểm đo, đơn vị và phương pháp đo phải được khai báo.
-- HTTP 200 với danh sách rỗng và cảnh báo `NO_DATA` là truy vấn thành công nhưng
-  không có dữ liệu phù hợp. Khi chưa đánh giá được phép đo, `flux_unit`,
-  `measurement_method` và miền bước sóng light curve được để `null`.
-- Ví dụ có dữ liệu trong YAML là dữ liệu tổng hợp, có `data_kind: mock` và cảnh
-  báo `MOCK_DATA`. URL `example.org` và `/mock/` là minh họa, không phải ảnh thật.
+- `frames`, `points`, `image_url`, `frame_id`, `data_kind`, `flux`, `flux_error`,
+  `wavelength_um`, `time_mjd` and `measurement_method` are application-generated
+  fields, not SIA2 columns.
+- `sources` contains the input products. Each frame or measurement references
+  them through `source_obs_publisher_dids`. Do not use `obs_id` alone as a file
+  key because one observation may have multiple detectors. Product identifiers
+  in `sources` must be unique.
+- Each frame uses one detector and one collection. `n_images` equals the number
+  of distinct source identifiers used. Its `t_min/t_max` span the earliest and
+  latest contributing times. Source observations must overlap the requested
+  time range when a time constraint is supplied.
+- Sort `frames` and light curve points by increasing time, and spectrum points
+  by increasing wavelength. A frame may combine multiple source images.
+- A frame's `observation_time` is the midpoint of its time interval in ISO UTC.
+  A light curve point's `time_mjd` is also the midpoint of its contributing
+  time interval.
+- Source `em_min/em_max` use metres; `wavelength_um` and the light curve
+  wavelength range use micrometres. `flux` and `flux_error` use `flux_unit`.
+- Unavailable fluxes or uncertainties are `null`, never substituted with 0.
+  Available uncertainties must be nonnegative. Nonempty measurements must
+  declare their unit and measurement method.
+- HTTP 200 with an empty list and a `NO_DATA` warning means the query succeeded
+  but found no suitable data. If no measurement has been evaluated, set
+  `flux_unit`, `measurement_method` and the light curve wavelength range to `null`.
+- Populated YAML examples are synthetic and carry `data_kind: mock` and a
+  `MOCK_DATA` warning. The `example.org` and `/mock/` URLs are illustrative and
+  do not point to real observations.
 
-Schema kiểm tra kiểu, phạm vi từng trường và các trường bắt buộc. Những quy tắc
-liên trường như thứ tự thời gian, tham chiếu nguồn, tính trung điểm và độ nhất
-quán đơn vị phải được backend kiểm tra khi triển khai.
+Schemas validate types, individual value ranges and required fields. The backend
+must enforce cross-field rules such as time ordering, source references,
+midpoint calculations and unit consistency when implementing the endpoints.
 
-## Lỗi chung
+## Common errors
 
-Tất cả lỗi dùng cùng cấu trúc `error.code`, `error.message`, `error.fields`.
+All errors use the same `error.code`, `error.message`, `error.fields` structure.
 
-| HTTP | Mã | Khi dùng |
+| HTTP | Code | When to use |
 | --- | --- | --- |
-| 422 | `VALIDATION_ERROR` | Tọa độ, detector, collection, kích thước hoặc khoảng thời gian không hợp lệ. |
-| 502 | `UPSTREAM_ERROR` | IRSA lỗi hoặc phản hồi không dùng được. |
-| 504 | `UPSTREAM_TIMEOUT` | IRSA quá thời gian chờ. |
-| 500 | `PROCESSING_ERROR` | Pipeline xử lý cục bộ thất bại. |
+| 422 | `VALIDATION_ERROR` | Invalid coordinates, detector, collection, size or time bounds. |
+| 502 | `UPSTREAM_ERROR` | IRSA failed or returned an unusable response. |
+| 504 | `UPSTREAM_TIMEOUT` | IRSA exceeded the request timeout. |
+| 500 | `PROCESSING_ERROR` | Local pipeline processing failed. |
 
-Khi triển khai FastAPI, lỗi validation mặc định cần được chuyển thành cấu trúc
-này. Không đưa secret, đường dẫn máy cục bộ hay traceback vào thông báo lỗi.
+When implementing FastAPI, convert its default validation errors into this
+structure. Never expose secrets, local file paths or tracebacks in error messages.
 
-## Những điểm cần nhóm xác nhận trước dữ liệu thật
+## Team decisions required before live data processing
 
-1. Nguyên và Hữu Hoàng chốt quy tắc nhóm theo đợt quét, chọn bước sóng so sánh
-   được và kiểm tra chất lượng. Cùng detector chưa bảo đảm cùng bước sóng do LVF.
-2. Nguyên chốt phương pháp đo, xử lý nền, khẩu độ, sai số và đơn vị flux.
-   `mJy` trong ví dụ mock không ấn định phương pháp đo khoa học thật.
-3. Nhóm xác nhận giới hạn vùng cắt 0.2 độ của v0 dựa trên benchmark của Khôi.
-4. V0 trả kết quả đồng bộ. Trước khi nối pipeline chậm, Đông và frontend cần
-   bổ sung giao thức job nền, polling và thời hạn lưu kết quả vào hợp đồng.
+1. Nguyên and Hữu Hoàng must confirm survey-pass grouping, comparable wavelength
+   selection and quality checks. The same detector does not guarantee the same
+   wavelength because of the LVF.
+2. Nguyên must confirm the measurement method, background treatment, aperture,
+   uncertainty calculation and flux unit. The mock examples' `mJy` unit does not
+   prescribe the scientific measurement method.
+3. The team must confirm the v0 cutout limit of 0.2 degrees using Khôi's benchmarks.
+4. V0 returns results synchronously. Before integrating a slow pipeline, Đông and
+   the frontend developers must extend the contract with a background job
+   protocol, polling and result retention.
 
-Nguồn: [IRSA SIA2](https://irsa.ipac.caltech.edu/ibe/sia.html) và
+Sources: [IRSA SIA2](https://irsa.ipac.caltech.edu/ibe/sia.html) and
 [SPHEREx Data Access](https://caltech-ipac.github.io/spherex-archive-documentation/spherex-data-access/).
