@@ -1,0 +1,32 @@
+{
+  "status": "DOCUMENT_RULE_DERIVED_LABELS_NOT_ARCHIVE_ISSUED_IDS",
+  "observation_count": 1545,
+  "unique_exposure_headers": 792,
+  "header_errors": 0,
+  "classification_counts": {
+    "DERIVED_FIRST_PHASE": 1309,
+    "PHASE_BOUNDARY_OR_DATE_OUTSIDE_GUARDED_RULE": 132,
+    "DERIVED_SECOND_PHASE": 104
+  },
+  "survey_counts": {
+    "2": 624,
+    "1": 685,
+    "UNCLASSIFIED": 132,
+    "4": 104
+  },
+  "pair_count": 42,
+  "sources": [
+    "https://irsa.ipac.caltech.edu/data/SPHEREx/docs/SPHEREx_Expsupp_QR.pdf",
+    "https://spherex.caltech.edu/page/data-tools"
+  ],
+  "source_document_version": "2.0, 2026-08-25; survey definition pp.8-9 and header description p.14",
+  "source_document_sha256": "487fe962d7b862730dcad391b2b30bf3cdb07e554fb62ca704c1853b11aab33c",
+  "policy": "Science start 2025-05-01; PA 0/180 degrees within 0.1 degree; all_sky only; May 2026 and dates beyond conservative phase bounds remain unclassified. No exact UTC 12.5-month boundary invented.",
+  "header_reuse": "Planned pointing is identical across all six bands for a single observation according to the supplement.",
+  "representative_policy": "Median-time available observation per target/detector/release/derived survey; pair order follows actual observation time, not survey number.",
+  "limitations": "Catalog angular proper-motion predictions only. No parallax/orbits/perspective acceleration, matching bandpass, detection or image-motion claims.",
+  "inputs": {
+    "D:\\Dev\\projects\\NASA-spaceapps-training\\data\\nguyen\\irsa-qr2-fixed-01\\metadata.csv": "e3347d04ed082299c09961966616b3a7a83313956c67e83e4dcfcc9355887036",
+    "D:\\Dev\\projects\\NASA-spaceapps-training\\data\\nguyen\\predictions-qr2-01\\positions_by_observation.csv": "c3997dbef31252a916f59d61788398c9f40d75dde2c7ad57f60e68f4c63b1f08"
+  }
+}

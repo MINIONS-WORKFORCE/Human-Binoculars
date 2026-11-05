@@ -1,0 +1,6 @@
+﻿target_id,name,frame,epoch_jyear,ra_deg,dec_deg,pm_ra_cosdec_mas_yr,pm_dec_mas_yr,J_mag,H_mag,K_mag,source_url
+barnard,Barnard's Star,ICRS,2000,269.45207695861876,4.693364966576667,-801.551,10362.394,5.244,4.83,4.524,https://simbad.u-strasbg.fr/simbad/sim-basic?Ident=Barnard%27s+star&submit=SIMBAD+search
+wise0855,WISE 0855,ICRS,2000,133.81890825,-7.247048,-8123.7,673.2,25.0,23.83,,https://simbad.u-strasbg.fr/simbad/sim-id?Ident=WISEA+J085510.74-071442.5
+epsilon-indi-b,Epsilon Indi B,ICRS,2000,331.04414658852124,-56.78284419511611,3981.977,-2466.832,11.908,11.306,11.208,https://simbad.u-strasbg.fr/simbad/sim-id?Ident=%2A+eps+Ind+B
+rw-aur,RW Aurigae,ICRS,2000,76.95652603458333,30.401438173888888,7.23,-20.33,8.378,7.621,7.02,https://simbad.cds.unistra.fr/simbad/sim-id?Ident=RW+Aur
+r-dra,R Draconis,ICRS,2000,248.16761083295,66.75497941722,-20.643,6.149,3.71,3.125,2.23,https://simbad.cds.unistra.fr/simbad/sim-id?Ident=%40376084&Name=V%2A+R+Dra&submit=submit
