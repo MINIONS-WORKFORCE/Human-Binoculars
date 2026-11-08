@@ -1,6 +1,8 @@
-# Hữu Hoàng — tasks A, B, C, D
+# Hữu Hoàng — tasks A, B, C, D, E, F
 
 Ngày thực hiện A–C: **07/11/2026**; bổ sung D: **08/11/2026**. Dấu **−** là task chính; dấu **+** là task phụ.
+
+E (lịch 09/11) và F (lịch 10/11) được chuẩn bị/chạy demo trước vào **08/11/2026**. Ngày trong tiêu đề là ngày kế hoạch, không phải bằng chứng nhóm đã diễn tập tích hợp hay đổi vai.
 
 SPHEREx có thể hiểu là một camera chụp bầu trời bằng ánh sáng hồng ngoại. Mạch công việc: **A đặt ảnh lên cùng lưới → B ghép ảnh theo đợt và so sánh → C làm cho năm mục tiêu, thêm ảnh màu giả**.
 
@@ -192,7 +194,7 @@ Trong bộ C, RA (Right Ascension — xích kinh) và Dec (Declination — xích
 
 ![R Draconis: ảnh gốc, cờ liên quan bão hòa và ảnh sau mask](../../data/five_targets/r-dra/saturation_evidence.png)
 
-**Cách đọc minh chứng R Draconis:** cùng thứ tự ba ô như trên. Tổng trên các cutout đầu vào có **342 lượt pixel** mang cờ OVERFLOW/NONLINEAR. Vùng bị loại bên phải có thể lớn hơn vùng giữa vì còn các cờ chất lượng khác. Đã kiểm tra pixel mang hai cờ này thực sự thành NaN trước nội suy.
+**Cách đọc minh chứng R Draconis:** cùng thứ tự ba ô như trên. Tổng trên các cutout đầu vào có **342 lượt pixel** mang cờ OVERFLOW/NONLINEAR. Ô giữa chỉ đánh dấu hai cờ này bằng vàng; nền đen chưa bảo đảm pixel tốt. Vùng tím bên phải là số đo không dùng, gồm dữ liệu thiếu sẵn và pixel bị loại bởi toàn bộ cờ chất lượng đã chọn, nên có thể rộng hơn vùng vàng giữa. Đã kiểm tra pixel mang hai cờ này thực sự thành NaN trước nội suy.
 
 **Bước C4 — xuất khung từng mục tiêu và kiểm tra lại.** Sau mask, chạy lại cùng quy trình căn TAN, median và ảnh hiệu. Đọc lại file kết quả để kiểm tra tâm, đơn vị, số ảnh đóng góp và dấu phép trừ; kết quả trong [verification.json](../../data/five_targets/verification.json).
 
@@ -220,6 +222,8 @@ Ghép các khung cùng nhóm thời gian trên cùng TAN; giữ cùng thang từ
 | RW Aurigae | 12 | 6 | 3 | 2 |
 | R Draconis | 18 | 9 | 6 | 3 |
 | Tổng | **78** | **39** | **24** | **13** |
+
+Các cột là đầu vào và sản phẩm ở nhiều bước, không phải các phần chia của tổng cutout. Ví dụ Barnard: 12 cutout → 6 median; cùng 6 median tạo 3 ảnh hiệu và 2 RGB. Vì vậy 6 + 3 + 2 = 11 sản phẩm không có nghĩa thiếu một cutout. `SOURCE`/`FULLSAMPLE` tự nó không khiến pixel bị loại, và không được tô màu riêng trên ảnh độ sáng: pixel vẫn hiện thang xám nếu không có cờ xấu đồng thời. SOURCE chỉ báo vị trí nguồn đã biết, chưa bảo đảm số đo tốt hay phát hiện mục tiêu.
 
 Muốn xem cả năm mục tiêu cạnh nhau, mở [ảnh tổng quan](../../data/five_targets/overview.png): mỗi hàng là một mục tiêu, hai cột đầu là khung D3 đợt đầu/cuối, cột cuối là màu giả đợt cuối.
 
@@ -304,6 +308,160 @@ Theo lộ trình, mỗi vòng 50 phút, mỗi chiều dạy 25 phút; Hữu Hoà
 | Nguyên | Kiểm 5 mục tiêu theo kỳ vọng dưới 60 phút; kỳ vọng v1 | Có tài liệu v0 và audit; chưa xác nhận mốc này |
 
 **Sau khi nhận bàn giao:** giữ nguyên dữ liệu demo để đối chiếu, kiểm schema và định danh dữ liệu của Khôi trước khi tạo manifest tương thích; chạy lại D trên đầu vào của Khôi vào thư mục mới. Nhận Nguyên kiểm quy tắc chọn ảnh/bandpass và ghép kết quả theo obs_id; không gán cluster 30 ngày thành survey của Nguyên chỉ bằng tên. Bàn giao cho Khôi/Đông đường dẫn PNG/FITS/report, ngày chụp, detector, thang hiển thị, vùng thiếu và giới hạn khoa học. Tiếp theo E sửa lỗi theo issue thực tế; chưa có issue thì kiểm tra chủ động và ghi rõ đó là lỗi tự phát hiện.
+
+## E. Sửa căn ảnh/kéo giãn và thử tìm cặp sáng–tối — lịch 09/11
+
+### 1. Thuật ngữ cần hiểu trước
+
+| Thuật ngữ | Hiểu đơn giản |
+| --- | --- |
+| Issue | Phiếu lỗi có cách tái hiện, kết quả mong muốn, kết quả thực tế và người phụ trách. |
+| Stretch / kéo giãn | Đổi cách ánh xạ số đo thành độ sáng/màu để nhìn; không đổi số đo trong FITS. |
+| Cặp sáng–tối | Hai vùng hiệu trái dấu ở gần nhau. Nếu ảnh sau trừ ảnh trước, vị trí mới của nguồn di chuyển có thể dương và vị trí cũ có thể âm; nhiều lỗi cũng tạo hình tương tự. |
+| photutils | Thư viện Python xử lý/đo nguồn thiên văn; ở đây dùng `find_peaks` để tìm cực đại của ảnh hiệu và của ảnh đổi dấu. |
+| MAD / sigma | Median Absolute Deviation — độ lệch tuyệt đối trung vị; `mad_std` quy đổi thành ước lượng độ phân tán kiểu sigma. Đây là ngưỡng phát hiện thực hành, không phải sai số đo flux hoặc xác suất phát hiện đúng. |
+
+### 2. Task chính yêu cầu gì?
+
+**− Sửa lỗi căn ảnh, kéo giãn theo issue.**
+
+Task này cần issue từ buổi tích hợp của Thạch/Nguyên và app của nhóm để nghiệm thu. Lần kiểm GitHub 08/11 trả rỗng; vì vậy **chưa có căn cứ ghi đã sửa xong các issue tích hợp ngày 09/11**. Phần độc lập làm được ngay là chạy kiểm tra tọa độ đã có và kiểm tra cách hiển thị dữ liệu thiếu.
+
+### 3. Từng thao tác đã làm và minh chứng
+
+**Bước E1 — giữ kiểm tra căn ảnh và thang màu.** Các kiểm tra A/B tiếp tục kiểm tâm/hướng tọa độ, ảnh xoay/lệch và phép median/trừ. Demo dữ liệu thật ở A đo lệch tương đối các nguồn nền; không ép mục tiêu chuyển động về giữa. `frames.py` đã dùng chung ngưỡng percentile 2/99,5 và asinh cho các đợt của một detector, dùng thang hiệu đối xứng ±percentile 99 của trị tuyệt đối. Đây là tham số hiển thị thực hành đã dùng, chưa phải tham số cuối được cả nhóm duyệt. Không tự dịch ảnh thật khi chưa có bằng chứng lỗi căn từ issue.
+
+**Bước E2 — sửa lỗi tự phát hiện: màu của vùng không có số đo trên ảnh hiệu.** Bản A–D dùng `RdBu_r` mặc định: NaN (Not a Number — không có số đo hữu hạn) có thể hiện trong suốt/trắng, dễ bị hiểu nhầm thành hiệu gần 0. Đã sửa trong [frames.py](frames.py) để NaN hiện tím `#703090`, thống nhất với ảnh median. Chỉ đổi hiển thị; không điền số 0 và không đổi phép trừ FITS.
+
+![Cùng một ảnh hiệu trước/sau sửa màu vùng thiếu](../../data/tasks_def/E/missing_before_after.png)
+
+**Cách đọc:** hai ô dùng cùng mảng số đo và cùng giới hạn thang. Bên trái là cách vẽ cũ, bên phải tô tím nơi không có dữ liệu. Trắng ở thang đỏ–lam có thể là hiệu gần 0; tím ở ô phải mới là số đo không dùng. Không được hiểu nhiều tím hơn là nguồn tối đi hoặc sửa xong căn ảnh.
+
+**Bước E3 — khi có issue thật.** Nhận obs_id, detector, ngày, PNG/FITS gốc, tâm/FOV, cách tái hiện và ảnh trước/sau mong đợi. Nếu sao nền nhảy: đối chiếu WCS, mask, bước sóng và centroid trên cùng cặp ảnh, kiểm lại bằng nguồn nền độc lập trước khi đổi phép căn. Nếu nhấp nháy do thang màu: kiểm cùng thang qua các đợt, outlier, vùng thiếu và ngày chụp. Lưu minh chứng trước/sau và ngưỡng kiểm; chạy lại cặp gây lỗi rồi nhờ người báo lỗi nghiệm thu trên app. Không đóng issue chỉ vì PNG nhìn đẹp hơn.
+
+### 4. Task phụ là gì, ảnh hưởng gì?
+
+**+ Thử tự phát hiện cặp sáng–tối trên ảnh hiệu bằng photutils.**
+
+[tasks_def.py](tasks_def.py), nhánh chạy `E`: đọc **FITS hiệu chưa stretch**, lấy median nền và MAD từ pixel hữu hạn; tìm đỉnh dương trên ảnh và đỉnh âm trên ảnh đổi dấu. Loại lân cận vùng NaN bằng phép nở mask 2 pixel, bỏ mép 2 pixel; cửa sổ tìm đỉnh 5×5, ngưỡng 5 sigma. Ghép hai đỉnh trái dấu cách nhau trên 0 đến 8 pixel, ưu tiên khoảng cách nhỏ, mỗi đỉnh chỉ dùng một lần. Đây là cấu hình để thử thuật toán; chưa được tối ưu cho PSF hoặc khoảng dịch chuyển từng mục tiêu. Khoảng cách là giữa pixel cực trị, chưa phải centroid nguồn chính xác.
+
+**Kết quả lần chạy:** 9 ảnh hiệu thật của bộ D (6 WISE + 3 Barnard) cho tổng **58 cặp ứng viên** trên toàn các khung. Đây là số cặp do thuật toán ghép, không phải 58 vật thể mới, không phải 58 lần phát hiện hai mục tiêu. Cùng nguồn có thể lặp qua detector/đợt. Bộ ảnh chưa khớp PSF/bandpass/nền nên các ứng viên chưa có nhãn đúng/sai và chưa có đánh giá precision/recall.
+
+![Ca giả lập đã biết chuyển động và ảnh hiệu thật](../../data/tasks_def/E/dipoles.png)
+
+**Cách đọc:** trái là dữ liệu tự tạo, có một nguồn âm ở (26,29) và dương ở (31,29), dịch 5 pixel; thuật toán tìm được một cặp đúng vị trí. Phải là ảnh hiệu thật, các đoạn xanh lá nối ứng viên âm/dương, chưa chỉ ra danh tính mục tiêu. Đỏ/lam biểu diễn hiệu dương/âm; tím là dữ liệu thiếu. Giả lập chỉ kiểm thuật toán có chạy đúng với tình huống đã biết, không chứng minh ảnh thật có chuyển động.
+
+Kiểm tra tự động bổ sung: ca không có dịch chuyển chỉ có nhiễu không tạo cặp ở seed thử; đỉnh cạnh NaN không trở thành ứng viên. Đây là vài ca kiểm soát, không phải đo tỷ lệ báo giả trên mọi dữ liệu. Tham số và từng cặp lưu trong [report.json](../../data/tasks_def/E/report.json).
+
+**Ảnh hưởng:** trợ giúp khoanh vùng để người xem kiểm tra; chưa thay thế kết luận của Nguyên và chưa nối thành tính năng trên app.
+
+### 5. Chốt task E: đạt gì, thiếu gì, tiếp theo làm gì?
+
+**Đã đạt:** sửa nhất quán màu dữ liệu thiếu, có hình trước/sau; chạy thử tìm cặp trái dấu trên FITS thật và ca giả lập, có kiểm tra chống dùng vùng mask. **Chưa đạt:** sửa/đóng issue tích hợp thực tế, xác nhận tham số cuối với Nguyên, xác nhận ứng viên thuộc mục tiêu và nghiệm thu viewer. Sau khi có issue/bảng kỳ vọng, đối chiếu vị trí/hướng/khoảng dịch dự báo, loại sai khác PSF/bước sóng/nền và chốt tham số vào runbook cùng người báo lỗi.
+
+```powershell
+# D phải chạy trước để có FITS hiệu. Nếu đã có, chỉ cần lệnh E.
+.venv/Scripts/python.exe members/huu-hoang/task_d.py
+.venv/Scripts/python.exe members/huu-hoang/tasks_def.py E
+```
+
+## F. Trích phổ và kiểm khoa học Luhman 16 — lịch 10/11
+
+### 1. Thuật ngữ cần hiểu trước
+
+| Thuật ngữ | Hiểu đơn giản |
+| --- | --- |
+| Phổ | Độ sáng theo bước sóng; cần nhiều số đo tương thích. Ba detector được tô RGB không tự trở thành phổ. |
+| WCS phổ | Thông tin đổi vị trí pixel thành bước sóng và độ rộng dải đo. Ở FITS này là WCS thay thế khóa `W`, dùng bảng `WCS-WAVE`. |
+| Aperture / khẩu độ đo | Vùng tròn gom tín hiệu quanh tọa độ mục tiêu; không phải lỗ mở vật lý của kính. |
+| Annulus / vành đo nền | Vành tròn bên ngoài khẩu độ để ước lượng nền cần trừ. Pixel nền phải phù hợp, không lấy nguồn lân cận làm nền. |
+| Flux; mJy | Mật độ thông lượng nhận từ nguồn; mJy là millijansky. IMAGE dùng MJy/sr là độ sáng bề mặt, cần nhân góc khối pixel trước khi ra mJy. |
+| Forced photometry | Đo tại vị trí dự đoán ngay cả khi chưa tìm thấy nguồn rõ; ra số đo chưa có nghĩa xác nhận phát hiện đúng nguồn. |
+
+### 2. Task chính yêu cầu gì?
+
+**− Trích phổ + kiểm theo checklist khoa học cho Luhman 16, làm mảnh của Nguyên.**
+
+Luồng ngày đổi vai: **Đông tải cutout theo mảnh của Khôi → Khôi dựng PNG/ảnh hiệu theo mảnh của Hữu Hoàng; Hữu Hoàng dùng FITS gốc và runbook của Nguyên để thử trích phổ → Nguyên kiểm kết quả**. Nhánh ảnh và nhánh phổ dùng chung FITS; không trích phổ từ PNG của Khôi hay từ median trộn nhiều bước sóng.
+
+Theo lộ trình, tự làm trong 90 phút, người sở hữu chỉ quan sát, sau đó sửa runbook. Demo AI chuẩn bị trước không xác nhận Hữu Hoàng đã vượt bài đổi vai hoặc đã quan sát Khôi.
+
+### 3. Từng thao tác đã làm và minh chứng
+
+**Bước F1 — xử lý bàn giao còn thiếu bằng demo riêng.** Chưa thấy cutout Luhman của Đông, sản phẩm xử lý ảnh của Khôi hoặc runbook trích phổ của Nguyên trên các nhánh đã kiểm. Đã dùng `resolve`/`acquire_target` của mã C để tự truy vấn SIMBAD và tải cutout IRSA QR2 cho `WISE J104915.57-531906.1` (Luhman 16). Đây là dữ liệu thiên văn thật, không phải phổ giả dùng thay kết quả thật. Bộ này chọn **18 cutout: 3 nhóm thời gian × 3 detector D1/D3/D6 × tối đa 2 ảnh**, chưa lấy đủ detector hoặc đủ kênh phổ.
+
+Tâm tìm kiếm J2026 khoảng RA **162,295356°**, Dec **−53,316884°**, FOV **0,1°**. Tâm tìm kiếm giữ cố định cho bộ ảnh; khi đo từng FITS, vị trí dự đoán được đẩy từ J2000 tới MJD của bản ghi. Chưa tính thị sai/quỹ đạo hệ đôi/vận tốc xuyên tâm; vị trí này chưa phải centroid đo từ ảnh. Luhman là hệ đôi: phép đo thực hành không tuyên bố phân giải hay tách phổ từng thành phần.
+
+Nguồn và dấu kiểm file: [target.json](../../data/five_targets/luhman-16/target.json), [inputs.json](../../data/five_targets/luhman-16/inputs.json), `catalog.xml`, `simbad.txt` trong cùng thư mục. File đầu vào tự tải không có nghĩa đã hoàn thành DB của Đông/Khôi.
+
+**Bước F2 — thử trích từng mẫu trên FITS gốc.** Kiểm SHA256, obs_id, detector, đơn vị IMAGE và VARIANCE (phương sai số đo). Đọc WCS không gian và WCS phổ tại vị trí dự đoán; giữ `SOURCE`/`FULLSAMPLE` khi đo nguồn, loại các cờ chất lượng đã chọn. Đo khẩu độ tròn bán kính 2 pixel bằng trọng số diện tích của photutils; đòi toàn bộ khẩu độ có số đo/phương sai hợp lệ và nằm trong ảnh. Không điền lõi mất số đo hay sửa bằng tỷ lệ diện tích còn lại.
+
+Nền thử bằng median trong vành 4–7 pixel, bỏ pixel xấu **và pixel có SOURCE**, cần ít nhất 20 pixel nền dùng được. Khác với đo nguồn, loại `SOURCE` khỏi mẫu nền giúp tránh gom nguồn khác vào nền. Các bán kính/ngưỡng là lựa chọn demo, chưa được Nguyên duyệt theo PSF/crowding (nguồn chen chúc).
+
+Nếu mẫu đạt, tính tổng có trọng số sau trừ nền, nhân diện tích pixel chiếu xấp xỉ theo WCS: `mJy = tổng(MJy/sr × trọng số) × diện tích_pixel(sr) × 10^9`. Sai số gồm VARIANCE gốc với bình phương trọng số và ước lượng sai số median nền; chưa có hiệu chỉnh PSF/aperture, sai số hiệu chuẩn, biến thiên nền hoặc mô hình hệ đôi. Không lấy error này làm toàn bộ sai số khoa học. Script giữ bước sóng/độ rộng dải/thời điểm từng ảnh, không nối đường qua các khoảng bước sóng không đo.
+
+**Bước F3 — kết quả thật và lý do không có phổ dùng được.**
+
+| Trạng thái mẫu đầu vào | Số cutout | Ý nghĩa |
+| --- | ---: | --- |
+| Thiếu nền hợp lệ (`insufficient_background`) | 11 | Sau loại SOURCE và pixel xấu, vành thử không đủ 20 pixel nền; các mẫu này có 0 pixel nền dùng được |
+| Khẩu độ bị mask/không đầy đủ (`masked_or_edge_aperture`) | 6 | Không đủ diện tích có số đo hợp lệ trong khẩu độ; không tự bù phần mất |
+| Không có khẩu độ chồng lên ảnh (`outside_image`) | 1 | Không có vùng khẩu độ đo được trong mảng ảnh trả về; cần kiểm footprint/cutout |
+| Đạt điều kiện demo (`ok`) | **0** | **Chưa có điểm phổ thật đủ điều kiện để vẽ/diễn giải** |
+| Tổng đầu vào | **18** | Mỗi ảnh được phân loại theo lý do dừng đầu tiên; không cộng nhiều lỗi của một ảnh |
+
+Điều này không chứng minh Luhman 16 không tồn tại hoặc không có phổ. Nó cho thấy **bộ chọn ảnh và cách đo nền demo hiện chưa đủ**. Không giảm tiêu chí hoặc dùng pixel SOURCE làm nền chỉ để có đường phổ. File [samples.ecsv](../../data/tasks_def/F/samples.ecsv) vẫn lưu các lần thử/bước sóng/trạng thái; [report.json](../../data/tasks_def/F/report.json) có số đo kiểm tra và giới hạn. Bước sóng được đọc thành công không đồng nghĩa flux tại đó hợp lệ.
+
+![Minh chứng khẩu độ và mặt nạ nguồn ở cutout đầu tiên](../../data/tasks_def/F/background_qa.png)
+
+**Cách đọc:** ô trái là ảnh gốc; vòng xanh lá là khẩu độ đo, hai vòng cam giới hạn vành nền. Ô phải tô **đen** nơi mang SOURCE, **trắng** nơi không mang SOURCE; đây là bản đồ cờ, không phải thang độ sáng hay bản đồ pixel lỗi. Vành nền trong ví dụ nằm trong vùng SOURCE nên không còn pixel phù hợp với quy tắc nền thử. Một cờ hữu ích cho nhận diện nguồn vẫn có thể cần loại khỏi phép **đo nền**.
+
+**Bước F4 — ca kiểm soát khi chưa đo được ảnh thật.** `synthetic_control.json` chứa nguồn Gaussian giả lập trên nền hằng 10, phương sai 1; không đặt tên là phổ Luhman. Phép đo trả trạng thái `ok`, trừ đúng nền; kiểm thử riêng tiêm thêm tín hiệu 100 vào một pixel thu lại tổng 100, và loại phép đo nếu lõi thành NaN hoặc khẩu độ chạm biên. Ca này giúp học công thức và kiểm mã, không thay thế 18 mẫu thật bị loại.
+
+**Bước F5 — thử phương án độc lập khi nền gần không dùng được.** Giữ nguyên kết quả cơ sở ở `F/`; chạy thí nghiệm riêng `F_wide/` với vành nền **12–25 pixel**, vẫn bỏ SOURCE/pixel xấu, đòi tối thiểu 20 pixel nền và toàn khẩu độ hợp lệ. Không điền pixel thiếu, không hạ ngưỡng. Vành xa hơn giúp thử lấy nền ở khoảng trống ngoài vùng SOURCE gần mục tiêu; đổi lại nền có thể không đại diện vùng nguồn và bị ảnh hưởng gradient/bước sóng LVF, nên cần Nguyên kiểm lại.
+
+Thí nghiệm này cho **5/18 mẫu đạt điều kiện số học**: 3 D1 và 2 D6; 6 mẫu thiếu nền, 6 khẩu độ không đầy đủ, 1 không có khẩu độ trên ảnh. Không có mẫu D3 đạt. Xem [report.json thí nghiệm](../../data/tasks_def/F_wide/report.json) và [samples.ecsv](../../data/tasks_def/F_wide/samples.ecsv). Hai kết quả 0/18 và 5/18 dùng **cùng 18 đầu vào nhưng khác vùng đo nền**, không cộng thành 36 ảnh hay 5 phát hiện khoa học.
+
+![Năm mẫu đo thử trên FITS thật, vành nền rộng](../../data/tasks_def/F_wide/spectrum.png)
+
+**Cách đọc:** trục ngang là bước sóng tại vị trí dự đoán, trục đứng là flux khẩu độ chưa hiệu chỉnh, đơn vị mJy. Chấm xanh lam từ D1, xanh lá từ D6; có thanh sai số tính từ mô hình demo nhưng nhỏ ở tỷ lệ hình này. Không nối đường vì các điểm khác thời gian và có khoảng phổ trống lớn. Chưa có PSF/aperture correction và kiểm nguồn/nền nên **đây là mẫu đo thử theo bước sóng, chưa phải phổ chuẩn của Luhman 16**. Việc đổi cách đo nền tạo ra điểm đo là lý do phải bàn giao cả hai cấu hình cho Nguyên, không chọn cấu hình chỉ vì đường nhìn hợp lý hơn.
+
+### 4. Task phụ là gì, ảnh hưởng gì?
+
+**+ Xem Khôi làm mảnh xử lý ảnh.** Chưa có buổi thực hành/sản phẩm của Khôi để quan sát, nên chưa đánh dấu hoàn tất. Trong lúc chờ, Hữu Hoàng đã có [task_d.py](task_d.py) làm demo cutout → mask → TAN → median/NVALID → PNG/ảnh hiệu. Khi Đông bàn giao cutout, Khôi chạy mảnh đó; Hữu Hoàng ghi chỗ thiếu trong runbook: hiểu cờ, tâm/hướng, nhóm thời gian, giữ cùng thang, dấu ảnh hiệu, metadata và vùng thiếu. Không sửa hộ trong lúc bấm 90 phút; sau bài diễn tập mới bổ sung runbook theo lộ trình.
+
+### 5. Checklist khoa học tạm, bàn giao và bước tiếp theo
+
+Đây là **checklist đề xuất dựa trên tài liệu đã có của Nguyên và hướng dẫn IRSA**, chưa gắn nhãn “checklist của Nguyên đã duyệt”.
+
+| Cần kiểm | Kết quả demo | Việc còn lại |
+| --- | --- | --- |
+| Danh tính, epoch và vị trí theo thời gian | Có SIMBAD, dự báo tới thời điểm ảnh | Nguyên xác nhận đúng hệ/thành phần, thị sai/quỹ đạo và tâm đo |
+| Dữ liệu truy nguồn được, không đo từ PNG | Có 18 FITS QR2, manifest, SHA256, obs_id/detector | Thay bằng manifest chính thức của Đông/Khôi khi có; kiểm release và bản ghi trùng |
+| Bước sóng/bandwidth từng ảnh | Đọc từ WCS phổ tại tọa độ đo | Chọn thêm detector/ảnh, kiểm biến thiên bandpass trong aperture |
+| Mask chất lượng và coverage | Có kiểm toàn khẩu độ; có mẫu bị loại | Kiểm footprint, chọn ảnh tránh phần mất dữ liệu; không khôi phục lõi bão hòa |
+| Nền không bị nguồn chi phối | Demo phát hiện không đủ nền ở 11 mẫu | Nguyên chọn nền xa hơn/FOV lớn hơn hoặc mô hình PSF+nền phù hợp trường chen chúc |
+| Đơn vị và bất định | Có công thức MJy/sr → mJy và variance gốc, kiểm số học | Xác nhận pixel solid angle, PSF/aperture correction, hiệu chuẩn và hệ đôi |
+| Có điểm phổ thật đủ điều kiện | Cơ sở 0/18; thí nghiệm nền rộng có 5/18 mẫu đạt điều kiện số học | Chưa qua kiểm khoa học; Nguyên kiểm nền/nguồn/phương pháp trước khi dùng các điểm này |
+| Kiểm phổ tham chiếu, đồng thời và đặc trưng | Chưa làm | Nguyên đối chiếu công cụ phổ IRSA, thời điểm, sai số; không suy nhiệt độ/phân tử từ demo |
+| Bài đổi vai 90 phút và quan sát Khôi | Chưa xác nhận | Hữu Hoàng tự làm theo runbook, ghi thời gian thật; Khôi/Nguyên ghi nhận và sửa runbook |
+
+**Sau khi nhận kết quả của họ:** Đông/Khôi đưa manifest/FITS và metadata collection, thời điểm, detector, footprint, flags, variance; Hữu Hoàng đối chiếu nguồn/đơn vị/SHA256 rồi dùng FITS gốc. Nguyên đưa runbook và quy tắc nền/khẩu độ/bước sóng, tiêu chí loại mẫu và chuẩn đối chiếu; Hữu Hoàng chạy lại trong thư mục mới, trả bảng mẫu có trạng thái, hình khẩu độ/nền và báo cáo kiểm cho Nguyên. Chỉ khi có điểm đo đạt kiểm và Nguyên duyệt mới chốt hoàn thành trích phổ khoa học. Nếu bị chặn quá 30 phút, ghi rõ chặn và làm demo/secondary theo lộ trình; không báo đã có kết quả của người khác.
+
+**Chốt F:** đã chạy đường trích mẫu từ FITS thật cho mục tiêu mới, phát hiện cấu hình nền gần không dùng được, thử nền rộng và xuất 5 mẫu đo sơ bộ kèm phân loại lý do loại, ca kiểm soát và danh sách việc bàn giao. **Chưa có phổ được kiểm khoa học, chưa hoàn thành phần duyệt của Nguyên hoặc bài đổi vai của nhóm.** Hành động tiếp theo cụ thể là kiểm footprint mẫu không có khẩu độ, chọn ảnh ít mask và nhờ Nguyên đánh giá mẫu nền gần/xa, PSF và định danh nguồn trước khi tải thêm hàng loạt.
+
+```powershell
+# Lần đầu tự tải dữ liệu Luhman 16 khi chưa có cutout bàn giao:
+.venv/Scripts/python.exe members/huu-hoang/tasks_def.py F --download
+# Khi đã có dữ liệu demo trên máy, chạy lại không dùng mạng:
+.venv/Scripts/python.exe members/huu-hoang/tasks_def.py F
+# Thí nghiệm nền xa, xuất riêng vào data/tasks_def/F_wide/:
+.venv/Scripts/python.exe members/huu-hoang/tasks_def.py F --wide-background
+# Kiểm số học, mask, ứng viên và các kiểm tra A/B:
+.venv/Scripts/python.exe -m pytest members/huu-hoang/test_pipeline.py members/huu-hoang/test_tasks_def.py -q
+```
+
+Tham khảo cách đọc ảnh/WCS phổ: [IRSA Introduction to SPHEREx Spectral Images](https://caltech-ipac.github.io/irsa-tutorials/spherex-intro/); cách dùng trọng số khẩu độ và sai số: [photutils aperture photometry](https://docs.astropy.org/projects/photutils/en/stable/user_guide/aperture.html). Phương pháp demo có các lựa chọn riêng nêu trên, không coi đó là quy trình chuẩn chính thức IRSA.
 
 ## Chạy lại theo đúng task
 

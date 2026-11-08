@@ -135,7 +135,8 @@ def make_frames(ra, dec, fov, det, *, manifest=None, output=None, gap_days=30):
             output / f"{name}.fits", overwrite=True
         )
         fig, ax = plt.subplots(figsize=(6, 5), constrained_layout=True)
-        im = ax.imshow(diff, origin="lower", cmap="RdBu_r", vmin=-limit, vmax=limit)
+        difference_cmap = plt.get_cmap("RdBu_r").with_extremes(bad="#703090")
+        im = ax.imshow(diff, origin="lower", cmap=difference_cmap, vmin=-limit, vmax=limit)
         ax.set_title(name + "\nVisual difference; wavelengths/PSF/background unmatched", fontsize=9)
         fig.colorbar(im, ax=ax, label=unit)
         fig.savefig(output / f"{name}.png", dpi=140)
