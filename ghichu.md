@@ -1,5 +1,7 @@
 # Ghi chú workspace và thực hành reproject
 
+> **Cập nhật 07/11/2026:** đã triển khai các task ưu tiên mới trong [members/huu-hoang/TASKS.md](members/huu-hoang/TASKS.md): TAN tâm mục tiêu/tâm tìm kiếm, centroid nguồn nền, benchmark 10/50 ảnh, median/ảnh hiệu, `make_frames`, bộ mẫu năm mục tiêu, flags bão hòa và RGB giả. Xem [ảnh tổng quan](data/five_targets/overview.png) và [kiểm chứng đầu ra](data/five_targets/verification.json). Phần bên dưới giữ nguyên ghi chép demo hai ảnh ngày 06/11; checklist cũ không mô tả toàn bộ trạng thái hiện tại.
+
 Cập nhật: 06/11/2026. Người học đã nắm SPHEREx, LVF, WCS không gian/phổ, flags, asinh và FITS; ghi chú này tập trung vào việc chạy và đọc kết quả.
 
 ## Mở gì trước? — Bài thực hành hôm nay
