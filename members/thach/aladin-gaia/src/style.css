@@ -1,0 +1,135 @@
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+}
+
+.page {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  max-width: 1216px;
+  margin: 0 auto;
+  padding: var(--space-6);
+  box-sizing: border-box;
+}
+
+.map-column {
+  flex: 0 1 640px;
+  min-width: 0;
+}
+
+.map {
+  width: 100%;
+  aspect-ratio: 1;
+  background: #000;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.panel {
+  flex: 1 1 320px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  align-self: flex-start;
+  box-sizing: border-box;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+}
+
+.heading {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.targets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-1);
+}
+
+.button {
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  background: var(--color-raised);
+  color: var(--color-text);
+  border: 1px solid var(--color-control);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--color-text);
+}
+
+.button[aria-pressed="true"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: var(--weight-bold);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.button:focus-visible,
+.check input:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  font-size: var(--text-sm);
+}
+
+.check input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+.message {
+  margin: 0;
+  min-height: 1.5em;
+  font-size: var(--text-sm);
+}
+
+.message-warning {
+  color: var(--color-warning);
+}
+
+.message-danger {
+  color: var(--color-danger);
+}
+
+.note {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
