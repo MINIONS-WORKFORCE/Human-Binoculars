@@ -1,0 +1,74 @@
+/*
+ * SPHEREx Sky Viewer design tokens, v0. Owner: Thạch.
+ *
+ * Dark theme only: the app shows dark star fields, and a bright page around them
+ * makes faint sources harder to see.
+ *
+ * Use from JS:   import "<relative path>/shared/design-tokens.css";
+ * Use in CSS:    color: var(--color-text); padding: var(--space-4);
+ *
+ * Contrast ratios below are WCAG, measured against bg / surface / raised.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* Grounds, darkest to lightest. Image canvases stay pure black, not a token. */
+  --color-bg: #0b0f14;
+  --color-surface: #141a22; /* panels, cards */
+  --color-raised: #1e2733; /* inputs, buttons, hover */
+
+  /* Lines */
+  --color-border: #2e3a48; /* decorative dividers only */
+  --color-control: #7c8a9c; /* input and button outlines: 4.97 on surface */
+
+  /* Text */
+  --color-text: #e8edf2; /* 16.32 / 14.85 / 12.80 */
+  --color-muted: #a9b4c0; /* 9.13 / 8.31 / 7.16 */
+
+  /* Accent: actions, selected state, focus ring */
+  --color-accent: #4a96f0; /* 6.33 / 5.76 / 4.96 */
+  --color-on-accent: #06121f; /* text on accent: 6.20 */
+
+  /* Marker: anything drawn over the image (clicked point, moving-object candidate) */
+  --color-marker: #ffc46b; /* 12.23 / 11.13 / 9.59; 13.36 on black */
+
+  /* Status. Always pair with an icon or words, never color alone. */
+  --color-warning: #ffc46b; /* same as marker */
+  --color-danger: #ff9a8f; /* 9.40 / 8.55 / 7.37 */
+  --color-success: #7bd88f; /* 11.04 / 10.05 / 8.66 */
+
+  /* Type */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:
+    "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace; /* coordinates, dates, numbers */
+
+  --text-xs: 0.75rem; /* 12px: axis ticks, captions */
+  --text-sm: 0.875rem; /* 14px: labels, secondary text */
+  --text-md: 1rem; /* 16px: body, inputs */
+  --text-lg: 1.25rem; /* 20px: panel titles */
+  --text-xl: 1.5rem; /* 24px: object name */
+  --text-2xl: 2rem; /* 32px: page title */
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 600;
+
+  --leading-tight: 1.25; /* titles */
+  --leading-normal: 1.5; /* body */
+
+  /* Spacing: 4px base */
+  --space-1: 0.25rem; /* 4px */
+  --space-2: 0.5rem; /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-6: 1.5rem; /* 24px */
+  --space-8: 2rem; /* 32px */
+  --space-12: 3rem; /* 48px */
+
+  /* Shape and size */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --control-height: 44px; /* minimum touch target */
+  --focus-ring: 2px solid var(--color-accent);
+}
