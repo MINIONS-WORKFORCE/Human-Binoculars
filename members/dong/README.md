@@ -1,5 +1,14 @@
 # Đông: Backend API + cache
 
+## Current GitHub Issue work
+
+Issue #14 uses app.main and DATA_MODE=fixture for API 0.1.
+See [the current frontend guide](../../shared/api-contract/frontend-guide.md)
+and [sample notes](../../api_samples/README.md). Run npm run dev:be.
+The Day 3 through Day 7 notes below describe historical exercises. Their old
+queries and mode variables apply to app.legacy_main.
+
+
 The Day 6 pipeline, job polling, disk cache, stage timings and Day 7 integration
 plan are documented in [day06-frames-jobs-cache.md](docs/day06-frames-jobs-cache.md).
 

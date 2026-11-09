@@ -5,7 +5,7 @@ from threading import Event
 
 import pytest
 from app import frame_jobs
-from app.main import app
+from app.legacy_main import app
 from fastapi.testclient import TestClient
 
 QUERY = {
