@@ -2,6 +2,10 @@
 
 Training repo for **NASA Space Apps 2026: SPHEREx Sky Viewer** (3–13/11).
 
+Daily assignments are tracked in [GitHub Issues](https://github.com/MINIONS-WORKFORCE/Human-Binoculars/issues).
+Read the [team collaboration guide](docs/team/README.md) for the Issue-to-PR
+workflow, module handoffs and the current API sources.
+
 > This is the **training** repo. The competition repo is created fresh at hour 0 on 14/11; do not copy code from here into it.
 
 ## Layout
@@ -12,6 +16,7 @@ shared/              things others depend on: API contract, targets, data layout
 templates/vite-react starter for React + Vite pages (copy into your member folder)
 scripts/check_env.py checks that your machine is ready
 data/                local only, gitignored: fixture packs from the drive go here
+docs/team/           collaboration workflow and handoff guides
 ```
 
 | Folder | Person | Role |
@@ -31,8 +36,8 @@ You need: **Python 3.12**, **Node 24 LTS** (22.12+ also works), **Git**.
 - Node 20 will NOT work: Vite 8 / Vitest 5 need 22.12+.
 
 ```bash
-git clone https://github.com/HoangKhoi1704/NASA-space-challenges-PlanetXvsSphereX.git
-cd NASA-space-challenges-PlanetXvsSphereX
+git clone https://github.com/MINIONS-WORKFORCE/Human-Binoculars.git
+cd Human-Binoculars
 
 # 1. Python virtual environment
 py -3.12 -m venv .venv            # macOS/Linux: python3.12 -m venv .venv
@@ -59,13 +64,15 @@ npm run dev:starter               # opens the starter page at http://localhost:5
 
 ## Daily workflow
 
-1. `git switch main && git pull`
-2. `git switch -c <your-folder>/<task>`, e.g. `khoi/sia2-query`
-3. Work inside `members/<you>/`. Code someone else imports goes to `shared/`.
-4. Small PR, using the template. Duy Hoàng merges; `main` must always run.
-5. Hand off before 22:30: link, screenshot, one line saying how the receiver uses it.
+1. Read the assigned GitHub Issue, its acceptance criteria and current API wiki.
+2. Check `git status`. From a clean worktree, run `git switch main` and `git pull --ff-only origin main`.
+3. Create `<your-folder>/<task>`, e.g. `dong/issue-14-api-contract-fixture`.
+4. Work inside `members/<you>/`. Code someone else imports goes to `shared/`.
+5. Open a small PR using the template and link the Issue. Duy Hoàng merges; `main` must always run.
+6. Hand off by the Issue's deadline, and before 22:30 for the daily handoff, with a link and reproducible instructions.
 
-Blocked for more than 30 minutes: open a **Blocked** issue (template provided) and switch to your secondary task.
+Blocked for more than 30 minutes: open a **Blocked** issue (template provided),
+link the original task and switch to another assigned Issue or available backlog item.
 
 ## Rules
 
