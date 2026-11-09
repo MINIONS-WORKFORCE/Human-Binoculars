@@ -3,8 +3,8 @@
 import json
 
 import pytest
+from app.main import app
 from fastapi.testclient import TestClient
-from main import app
 
 BASE = {"s_ra": 133.79513, "s_dec": -7.24515, "obs_collection": "spherex_qr2"}
 PARAMS = {

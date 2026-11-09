@@ -36,7 +36,7 @@ const result = spawnSync(
   [
     "-m",
     "uvicorn",
-    "main:app",
+    "app.main:app",
     "--app-dir",
     "members/dong",
     "--reload",

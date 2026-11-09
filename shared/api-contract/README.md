@@ -1,5 +1,10 @@
 # API contract
 
+Use the [frontend integration guide](frontend-guide.md) for the implemented
+v0.2 frames/job flow, Barnard and WISE 0855 presets, image rendering and
+browser polling example. The v0 notes below describe the original synchronous
+mock contract.
+
 Đông puts `openapi.yaml` here on 4/11, covering `/api/frames`, `/api/spectrum` and `/api/lightcurve`, with field names taken from the real SIA2 columns.
 
 Frontend (Duy Hoàng, Thạch) and image processing (Hữu Hoàng) build against this file. Any change goes through a PR that tags all three.

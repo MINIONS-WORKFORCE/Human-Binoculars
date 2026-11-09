@@ -1,11 +1,11 @@
 openapi: 3.1.0
 info:
   title: SPHEREx Sky Viewer API contract
-  version: 0.1.0
+  version: 0.2.0
   description: Draft day 4 contract. Source metadata keys are copied from actual SPHEREx SIA2 columns.
     Query coordinate keys mirror metadata names but represent the requested target centre. Derived PNG
-    and measurement fields are application fields. Science comparison rules and asynchronous job protocol
-    require team approval before live implementation.
+    and measurement fields are application fields. Pipeline mode adds asynchronous frame jobs.
+    Epoch grouping and scientific comparison rules require science review.
 servers:
 - url: /
   description: API origin; host and port are configured locally, not fixed in this contract.
@@ -15,8 +15,9 @@ paths:
     get:
       operationId: get_frames
       summary: Get registered PNG frames for temporal blinking
-      description: Contract v0. Results are returned synchronously. Empty valid results use HTTP 200 and
-        NO_DATA. This file does not declare the endpoint implemented.
+      description: In mock mode returns the local fixture synchronously. In pipeline mode a cache miss
+        starts a background job and returns 202. Poll status_url until succeeded or failed.
+        Cache hits return FramesResponse with X-Cache HIT. Successful empty results use NO_DATA.
       parameters:
       - $ref: '#/components/parameters/s_ra'
       - $ref: '#/components/parameters/s_dec'
@@ -26,6 +27,14 @@ paths:
       - $ref: '#/components/parameters/t_min'
       - $ref: '#/components/parameters/t_max'
       responses:
+        '202':
+          description: Job queued or already running. Poll status_url.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+        '503':
+          description: Both worker slots are occupied. Retry later.
         '200':
           description: Computed result or a successful empty result.
           content:
@@ -236,6 +245,48 @@ paths:
           $ref: '#/components/responses/Error504'
         '500':
           $ref: '#/components/responses/Error500'
+  /api/jobs/{job_id}:
+    get:
+      summary: Read frame job status and completed result
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Job state with result on success or error on failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobStatus'
+        '404':
+          description: Job expired or unavailable. Submit the frames request again.
+  /api/jobs/{job_id}/images/{filename}:
+    get:
+      summary: Download a PNG from a completed cached job
+      parameters:
+      - name: job_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: filename
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: PNG on the common output sky grid
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Image unavailable or expired with its job
 components:
   parameters:
     s_ra:
@@ -291,6 +342,26 @@ components:
       schema:
         $ref: '#/components/schemas/ObservationTime'
   schemas:
+    JobStatus:
+      type: object
+      required: [job_id, status, status_url]
+      properties:
+        job_id:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, succeeded, failed]
+        status_url:
+          type: string
+        result:
+          $ref: '#/components/schemas/FramesResponse'
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
     RightAscension:
       type: number
       description: ICRS right ascension in degrees.

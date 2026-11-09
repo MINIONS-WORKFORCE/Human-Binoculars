@@ -4,148 +4,65 @@ import hashlib
 import json
 import math
 import os
+import re
 from datetime import UTC, datetime, timedelta
 from io import BytesIO
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi.responses import FileResponse
 from PIL import Image, ImageDraw
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import Field
 
-Collection = Literal["spherex_qr2", "spherex_qr2_deep", "spherex_qr3", "spherex_qr3_deep"]
-Band = Literal["SPHEREx-D1", "SPHEREx-D2", "SPHEREx-D3", "SPHEREx-D4", "SPHEREx-D5", "SPHEREx-D6"]
-ROOT = Path(__file__).resolve().parents[2]
+from .schemas import (
+    ErrorResponse,
+    FramesQuery,
+    FramesResponse,
+    JobStatus,
+    LightcurveQuery,
+    LightcurveResponse,
+    Model,
+    SkyQuery,
+    Source,
+    SpectrumResponse,
+)
+
+ERROR_RESPONSES = {422: {"model": ErrorResponse}, 500: {"model": ErrorResponse}}
+ROOT = Path(__file__).resolve().parents[3]
 router = APIRouter()
 MOCK_WARNING = {
     "code": "MOCK_DATA",
     "message": "Real SIA2 source metadata; PNG pixels, wavelengths and fluxes are synthetic UI fixtures, not SPHEREx measurements.",
 }
+PACK_WARNING = {
+    "code": "LOCAL_FIXTURE_PREVIEW",
+    "message": (
+        "PNGs use observed QR2 FITS pixels from a fixed local pack. "
+        "The cutouts retain their original centres and orientations; "
+        "they have not been registered to a common sky grid or quality masked."
+    ),
+}
+NO_DATA_WARNING = {
+    "code": "NO_DATA",
+    "message": "No local mock fixture rows match the query; archive coverage has not been checked.",
+}
 
 
-class Model(BaseModel):
-    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+class PackFrame(Model):
+    frame_id: str = Field(pattern=r"^fixture-[a-f0-9]{24}$")
+    target_ra_deg: float
+    target_dec_deg: float
+    cutout_size_deg: float
+    source: Source
 
 
-class SkyQuery(Model):
-    s_ra: float = Field(ge=0, lt=360)
-    s_dec: float = Field(ge=-90, le=90)
-    obs_collection: Collection
-    t_min: float | None = None
-    t_max: float | None = None
-
-    @model_validator(mode="after")
-    def ordered_times(self):
-        if self.t_min is not None and self.t_max is not None and self.t_min > self.t_max:
-            raise ValueError("t_min must be less than or equal to t_max")
-        return self
+def data_dir() -> Path:
+    return ROOT / os.environ.get("DATA_DIR", "data")
 
 
-class FramesQuery(SkyQuery):
-    energy_bandpassname: Band
-    cutout_size_deg: float = Field(gt=0, le=0.2)
-
-
-class LightcurveQuery(SkyQuery):
-    energy_bandpassname: Band
-
-
-class WarningMessage(Model):
-    code: str
-    message: str
-
-
-class ErrorDetail(Model):
-    code: str
-    message: str
-    fields: list[str]
-
-
-class ErrorResponse(Model):
-    error: ErrorDetail
-
-
-ERROR_RESPONSES = {422: {"model": ErrorResponse}, 500: {"model": ErrorResponse}}
-
-
-class Source(Model):
-    obs_id: str
-    obs_publisher_did: str
-    obs_collection: Collection
-    energy_bandpassname: Band
-    s_ra: float
-    s_dec: float
-    t_min: float
-    t_max: float
-    access_url: str
-    access_format: str
-    s_region: str | None = None
-    s_fov: float | None = None
-    em_min: float | None = None
-    em_max: float | None = None
-
-
-class Frame(Model):
-    frame_id: str
-    image_url: str
-    t_min: float
-    t_max: float
-    observation_time: str
-    energy_bandpassname: Band
-    obs_collection: Collection
-    n_images: int
-    source_obs_publisher_dids: list[str]
-    warnings: list[WarningMessage]
-
-
-class SpectrumPoint(Model):
-    wavelength_um: float
-    flux: float | None
-    flux_error: float | None
-    energy_bandpassname: Band
-    t_min: float
-    t_max: float
-    source_obs_publisher_dids: list[str]
-    warnings: list[WarningMessage]
-
-
-class LightcurvePoint(Model):
-    time_mjd: float
-    t_min: float
-    t_max: float
-    flux: float | None
-    flux_error: float | None
-    source_obs_publisher_dids: list[str]
-    warnings: list[WarningMessage]
-
-
-class CommonResponse(Model):
-    data_kind: Literal["mock"] = "mock"
-    sources: list[Source]
-    warnings: list[WarningMessage]
-
-
-class FramesResponse(CommonResponse):
-    query: FramesQuery
-    frames: list[Frame]
-
-
-class SpectrumResponse(CommonResponse):
-    query: SkyQuery
-    wavelength_unit: Literal["um"] = "um"
-    flux_unit: str | None
-    measurement_method: str | None
-    points: list[SpectrumPoint]
-
-
-class LightcurveResponse(CommonResponse):
-    query: LightcurveQuery
-    time_unit: Literal["MJD day"] = "MJD day"
-    flux_unit: str | None
-    measurement_method: str | None
-    wavelength_min_um: float | None
-    wavelength_max_um: float | None
-    points: list[LightcurvePoint]
+def rendered_dir() -> Path:
+    return data_dir() / "fixture_pack_v1" / "rendered"
 
 
 def processing_error():
@@ -162,7 +79,7 @@ def processing_error():
 
 
 def load_sources() -> list[Source]:
-    path = ROOT / os.environ.get("DATA_DIR", "data") / "wise0855_qr2_sources.json"
+    path = data_dir() / "wise0855_qr2_sources.json"
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
         sources = [Source.model_validate(row) for row in payload["sources"]]
@@ -175,13 +92,17 @@ def load_sources() -> list[Source]:
         raise processing_error() from None
 
 
+def is_legacy_wise_query(query: SkyQuery) -> bool:
+    return (
+        abs(query.s_ra - 133.79513) <= 1e-6
+        and abs(query.s_dec + 7.24515) <= 1e-6
+        and query.obs_collection == "spherex_qr2"
+    )
+
+
 def select_sources(query: SkyQuery):
     warnings = [MOCK_WARNING]
-    if (
-        abs(query.s_ra - 133.79513) > 1e-6
-        or abs(query.s_dec + 7.24515) > 1e-6
-        or query.obs_collection != "spherex_qr2"
-    ):
+    if not is_legacy_wise_query(query):
         sources = []
         warnings.append(
             {
@@ -201,12 +122,7 @@ def select_sources(query: SkyQuery):
             )
         ]
     if not sources:
-        warnings.append(
-            {
-                "code": "NO_DATA",
-                "message": "No local mock fixture rows match the query; archive coverage has not been checked.",
-            }
-        )
+        warnings.append(NO_DATA_WARNING)
     return sources, warnings
 
 
@@ -218,38 +134,70 @@ def midpoint(source: Source) -> float:
     return (source.t_min + source.t_max) / 2
 
 
+def describe_frame(source: Source, image_id: str):
+    observation_time = datetime(1858, 11, 17, tzinfo=UTC) + timedelta(days=midpoint(source))
+    return {
+        "frame_id": image_id,
+        "image_url": f"/mock/frames/{image_id}.png",
+        "t_min": source.t_min,
+        "t_max": source.t_max,
+        "observation_time": observation_time.isoformat().replace("+00:00", "Z"),
+        "energy_bandpassname": source.energy_bandpassname,
+        "obs_collection": source.obs_collection,
+        "n_images": 1,
+        "source_obs_publisher_dids": [source.obs_publisher_did],
+        "warnings": [],
+    }
+
+
+def select_pack_frames(index: Path, query: FramesQuery) -> list[PackFrame]:
+    try:
+        payload = json.loads(index.read_text(encoding="utf-8"))
+        frames = [PackFrame.model_validate(row) for row in payload["frames"]]
+    except (OSError, ValueError, KeyError, TypeError):
+        raise processing_error() from None
+    matches = [
+        row
+        for row in frames
+        if abs(row.target_ra_deg - query.s_ra) <= 1e-6
+        and abs(row.target_dec_deg - query.s_dec) <= 1e-6
+        and abs(row.cutout_size_deg - query.cutout_size_deg) <= 1e-9
+        and row.source.obs_collection == query.obs_collection
+        and row.source.energy_bandpassname == query.energy_bandpassname
+        and (query.t_min is None or row.source.t_max >= query.t_min)
+        and (query.t_max is None or row.source.t_min <= query.t_max)
+    ]
+    return sorted(matches, key=lambda row: (row.source.t_min, row.frame_id))
+
+
 @router.get(
     "/api/frames",
     response_model=FramesResponse,
     response_model_exclude_unset=True,
-    responses=ERROR_RESPONSES,
+    responses={**ERROR_RESPONSES, 202: {"model": JobStatus}, 503: {"description": "Worker capacity reached"}},
 )
 def frames(query: Annotated[FramesQuery, Query()]):
-    sources, warnings = select_sources(query)
+    if os.getenv("FRAMES_MODE", "mock") == "pipeline":
+        from .frame_jobs import submit
+
+        return submit(query)
+    index = rendered_dir() / "frames.json"
+    if index.parent.parent.is_dir():
+        matches = select_pack_frames(index, query)
+        if any(not (index.parent / f"{row.frame_id}.png").is_file() for row in matches):
+            raise processing_error()
+        sources = list({row.source.obs_publisher_did: row.source for row in matches}.values())
+        frame_list = [describe_frame(row.source, row.frame_id) for row in matches]
+        warnings = [PACK_WARNING] if matches else [PACK_WARNING, NO_DATA_WARNING]
+    else:
+        sources, warnings = select_sources(query)
+        frame_list = [describe_frame(source, frame_id(source)) for source in sources]
     return {
         "data_kind": "mock",
         "query": query.model_dump(exclude_none=True),
         "sources": [s.model_dump(exclude_none=True) for s in sources],
         "warnings": warnings,
-        "frames": [
-            {
-                "frame_id": frame_id(s),
-                "image_url": f"/mock/frames/{frame_id(s)}.png",
-                "t_min": s.t_min,
-                "t_max": s.t_max,
-                "observation_time": (
-                    datetime(1858, 11, 17, tzinfo=UTC) + timedelta(days=midpoint(s))
-                )
-                .isoformat()
-                .replace("+00:00", "Z"),
-                "energy_bandpassname": s.energy_bandpassname,
-                "obs_collection": s.obs_collection,
-                "n_images": 1,
-                "source_obs_publisher_dids": [s.obs_publisher_did],
-                "warnings": [],
-            }
-            for s in sources
-        ],
+        "frames": frame_list,
     }
 
 
@@ -330,6 +278,12 @@ def lightcurve(query: Annotated[LightcurveQuery, Query()]):
 
 @router.get("/mock/frames/{image_id}.png", include_in_schema=False)
 def mock_image(image_id: str):
+    if image_id.startswith("fixture-"):
+        if re.fullmatch(r"fixture-[a-f0-9]{24}", image_id):
+            path = rendered_dir() / f"{image_id}.png"
+            if path.is_file():
+                return FileResponse(path, media_type="image/png")
+        raise HTTPException(404, detail="Mock frame not found")
     sources = load_sources()
     source = next((s for s in sources if frame_id(s) == image_id), None)
     if source is None:
