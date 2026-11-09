@@ -82,5 +82,5 @@ key based on the validated search request and discovery policy. Use a short
 expiry for successful empty archive searches because new observations may
 appear. Store processing failures separately from successful empty searches.
 
-References in this repository include the [OpenAPI contract](../../../shared/api-contract/openapi.yaml)
-and the [backend fixture instructions](../README.md#day-5-png-and-json-from-fixture-pack-v1).
+References in this repository include the [OpenAPI contract](../../../../shared/api-contract/openapi.yaml)
+and the [backend fixture instructions](../../README.md#day-5-png-and-json-from-fixture-pack-v1).

@@ -5,7 +5,7 @@ import socket
 
 import pytest
 from app.api_models import Astrometry, ErrorResponse, Frames, Health, Photometry, Resolve
-from app.fixture_api import image_lock, images
+from app.services.fixtures import image_lock, images
 from app.main import app
 from fastapi.testclient import TestClient
 from PIL import Image

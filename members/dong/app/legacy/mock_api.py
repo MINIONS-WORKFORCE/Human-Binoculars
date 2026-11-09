@@ -29,7 +29,7 @@ from .schemas import (
 )
 
 ERROR_RESPONSES = {422: {"model": ErrorResponse}, 500: {"model": ErrorResponse}}
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[4]
 router = APIRouter()
 MOCK_WARNING = {
     "code": "MOCK_DATA",

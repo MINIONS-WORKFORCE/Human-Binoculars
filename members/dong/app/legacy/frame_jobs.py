@@ -20,7 +20,7 @@ from shared.frames_pipeline import VERSION, make_frames
 
 from .schemas import FramesQuery, FramesResponse, JobStatus
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[4]
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
 executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="frames")
