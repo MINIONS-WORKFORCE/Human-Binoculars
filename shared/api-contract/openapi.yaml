@@ -1,866 +1,1178 @@
 openapi: 3.1.0
 info:
-  title: SPHEREx Sky Viewer API contract
-  version: 0.2.0
-  description: Draft day 4 contract. Source metadata keys are copied from actual SPHEREx SIA2 columns.
-    Query coordinate keys mirror metadata names but represent the requested target centre. Derived PNG
-    and measurement fields are application fields. Pipeline mode adds asynchronous frame jobs.
-    Epoch grouping and scientific comparison rules require science review.
-servers:
-- url: /
-  description: API origin; host and port are configured locally, not fixed in this contract.
-security: []
+  title: Human Binoculars API
+  version: '0.1'
 paths:
+  /api/health:
+    get:
+      summary: Health
+      operationId: health_api_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '504':
+          description: Gateway Timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/resolve:
+    get:
+      summary: Resolve
+      operationId: resolve_api_resolve_get
+      parameters:
+      - name: name
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 200
+          title: Name
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resolve'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Request
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal Server Error
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Gateway
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Service Unavailable
+        '504':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Gateway Timeout
   /api/frames:
     get:
-      operationId: get_frames
-      summary: Get registered PNG frames for temporal blinking
-      description: In mock mode returns the local fixture synchronously. In pipeline mode a cache miss
-        starts a background job and returns 202. Poll status_url until succeeded or failed.
-        Cache hits return FramesResponse with X-Cache HIT. Successful empty results use NO_DATA.
+      summary: Frames
+      operationId: frames_api_frames_get
       parameters:
-      - $ref: '#/components/parameters/s_ra'
-      - $ref: '#/components/parameters/s_dec'
-      - $ref: '#/components/parameters/obs_collection'
-      - $ref: '#/components/parameters/energy_bandpassname'
-      - $ref: '#/components/parameters/cutout_size_deg'
-      - $ref: '#/components/parameters/t_min'
-      - $ref: '#/components/parameters/t_max'
+      - name: ra
+        in: query
+        required: true
+        schema:
+          type: number
+          minimum: 0
+          exclusiveMaximum: 360
+          title: Ra
+      - name: dec
+        in: query
+        required: true
+        schema:
+          type: number
+          maximum: 90
+          minimum: -90
+          title: Dec
+      - name: target_key
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 80
+          - type: 'null'
+          title: Target Key
+      - name: detector
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 6
+          minimum: 1
+          default: 6
+          title: Detector
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: number
+          maximum: 0.3
+          minimum: 0.02
+          default: 0.1
+          title: Size
+      - name: max_frames
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 60
+          title: Max Frames
       responses:
-        '202':
-          description: Job queued or already running. Poll status_url.
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JobStatus'
+                $ref: '#/components/schemas/Frames'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Request
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal Server Error
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Gateway
         '503':
-          description: Both worker slots are occupied. Retry later.
-        '200':
-          description: Computed result or a successful empty result.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FramesResponse'
-              examples:
-                synthetic:
-                  summary: Synthetic fixture; not a real observation
-                  value:
-                    data_kind: mock
-                    query:
-                      s_ra: 133.79513
-                      s_dec: -7.24515
-                      obs_collection: spherex_qr2
-                      energy_bandpassname: SPHEREx-D6
-                      cutout_size_deg: 0.05
-                    frames:
-                    - frame_id: mock-frame-001
-                      image_url: /mock/frames/mock-frame-001.png
-                      t_min: 61000.0
-                      t_max: 61000.0
-                      observation_time: '2025-11-21T00:00:00Z'
-                      energy_bandpassname: SPHEREx-D6
-                      obs_collection: spherex_qr2
-                      n_images: 1
-                      source_obs_publisher_dids: &id001
-                      - ivo://example.org/spherex/mock-001/D6
-                      warnings: []
-                    sources:
-                    - &id002
-                      obs_id: mock-observation-001
-                      obs_publisher_did: ivo://example.org/spherex/mock-001/D6
-                      obs_collection: spherex_qr2
-                      energy_bandpassname: SPHEREx-D6
-                      s_ra: 133.79513
-                      s_dec: -7.24515
-                      t_min: 61000.0
-                      t_max: 61000.0
-                      access_url: https://example.org/mock-source.fits
-                      access_format: image/fits
-                    warnings:
-                    - &id003
-                      code: MOCK_DATA
-                      message: Synthetic example only; not a SPHEREx measurement.
-                noData:
-                  summary: Successful empty query
-                  value:
-                    data_kind: observational
-                    query:
-                      s_ra: 133.79513
-                      s_dec: -7.24515
-                      obs_collection: spherex_qr2
-                      energy_bandpassname: SPHEREx-D6
-                      cutout_size_deg: 0.05
-                    frames: []
-                    sources: []
-                    warnings:
-                    - code: NO_DATA
-                      message: No suitable observations match the query.
-        '422':
-          $ref: '#/components/responses/Error422'
-        '502':
-          $ref: '#/components/responses/Error502'
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Service Unavailable
         '504':
-          $ref: '#/components/responses/Error504'
-        '500':
-          $ref: '#/components/responses/Error500'
-  /api/spectrum:
-    get:
-      operationId: get_spectrum
-      summary: Get spectral measurements across detectors
-      description: Contract v0. Results are returned synchronously. Empty valid results use HTTP 200 and
-        NO_DATA. This file does not declare the endpoint implemented.
-      parameters:
-      - $ref: '#/components/parameters/s_ra'
-      - $ref: '#/components/parameters/s_dec'
-      - $ref: '#/components/parameters/obs_collection'
-      - $ref: '#/components/parameters/t_min'
-      - $ref: '#/components/parameters/t_max'
-      responses:
-        '200':
-          description: Computed result or a successful empty result.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SpectrumResponse'
-              examples:
-                synthetic:
-                  summary: Synthetic fixture; not a real observation
-                  value:
-                    data_kind: mock
-                    query:
-                      s_ra: 133.79513
-                      s_dec: -7.24515
-                      obs_collection: spherex_qr2
-                    wavelength_unit: um
-                    flux_unit: mJy
-                    measurement_method: mock_fixture
-                    points:
-                    - wavelength_um: 4.6
-                      flux: 1.0
-                      flux_error: 0.1
-                      energy_bandpassname: SPHEREx-D6
-                      t_min: 61000.0
-                      t_max: 61000.0
-                      source_obs_publisher_dids: *id001
-                      warnings: []
-                    sources:
-                    - *id002
-                    warnings:
-                    - *id003
-                noData:
-                  summary: Successful empty query
-                  value:
-                    data_kind: observational
-                    query:
-                      s_ra: 133.79513
-                      s_dec: -7.24515
-                      obs_collection: spherex_qr2
-                    wavelength_unit: um
-                    flux_unit: null
-                    measurement_method: null
-                    points: []
-                    sources: []
-                    warnings:
-                    - code: NO_DATA
-                      message: No suitable observations match the query.
-        '422':
-          $ref: '#/components/responses/Error422'
-        '502':
-          $ref: '#/components/responses/Error502'
-        '504':
-          $ref: '#/components/responses/Error504'
-        '500':
-          $ref: '#/components/responses/Error500'
-  /api/lightcurve:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Gateway Timeout
+  /api/frames/{id}.png:
     get:
-      operationId: get_lightcurve
-      summary: Get flux measurements over time in a comparable passband
-      description: Contract v0. Results are returned synchronously. Empty valid results use HTTP 200 and
-        NO_DATA. This file does not declare the endpoint implemented.
+      summary: Png
+      operationId: png_api_frames__id__png_get
       parameters:
-      - $ref: '#/components/parameters/s_ra'
-      - $ref: '#/components/parameters/s_dec'
-      - $ref: '#/components/parameters/obs_collection'
-      - $ref: '#/components/parameters/energy_bandpassname'
-      - $ref: '#/components/parameters/t_min'
-      - $ref: '#/components/parameters/t_max'
-      responses:
-        '200':
-          description: Computed result or a successful empty result.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LightcurveResponse'
-              examples:
-                synthetic:
-                  summary: Synthetic fixture; not a real observation
-                  value:
-                    data_kind: mock
-                    query:
-                      s_ra: 133.79513
-                      s_dec: -7.24515
-                      obs_collection: spherex_qr2
-                      energy_bandpassname: SPHEREx-D6
-                    time_unit: MJD day
-                    flux_unit: mJy
-                    measurement_method: mock_fixture
-                    wavelength_min_um: 4.5
-                    wavelength_max_um: 4.7
-                    points:
-                    - time_mjd: 61000.0
-                      t_min: 61000.0
-                      t_max: 61000.0
-                      flux: 1.0
-                      flux_error: 0.1
-                      source_obs_publisher_dids: *id001
-                      warnings: []
-                    sources:
-                    - *id002
-                    warnings:
-                    - *id003
-                noData:
-                  summary: Successful empty query
-                  value:
-                    data_kind: observational
-                    query:
-                      s_ra: 133.79513
-                      s_dec: -7.24515
-                      obs_collection: spherex_qr2
-                      energy_bandpassname: SPHEREx-D6
-                    time_unit: MJD day
-                    flux_unit: null
-                    measurement_method: null
-                    wavelength_min_um: null
-                    wavelength_max_um: null
-                    points: []
-                    sources: []
-                    warnings:
-                    - code: NO_DATA
-                      message: No suitable observations match the query.
-        '422':
-          $ref: '#/components/responses/Error422'
-        '502':
-          $ref: '#/components/responses/Error502'
-        '504':
-          $ref: '#/components/responses/Error504'
-        '500':
-          $ref: '#/components/responses/Error500'
-  /api/jobs/{job_id}:
-    get:
-      summary: Read frame job status and completed result
-      parameters:
-      - name: job_id
+      - name: id
         in: path
         required: true
         schema:
           type: string
+          title: Id
       responses:
         '200':
-          description: Job state with result on success or error on failure
+          description: Successful Response
+          content:
+            image/png: {}
+        '400':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/JobStatus'
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Request
         '404':
-          description: Job expired or unavailable. Submit the frames request again.
-  /api/jobs/{job_id}/images/{filename}:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal Server Error
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Gateway
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Service Unavailable
+        '504':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Gateway Timeout
+  /api/frames/{id}/diff.png:
     get:
-      summary: Download a PNG from a completed cached job
+      summary: Diff Png
+      operationId: diff_png_api_frames__id__diff_png_get
       parameters:
-      - name: job_id
+      - name: id
         in: path
         required: true
         schema:
           type: string
-      - name: filename
-        in: path
-        required: true
-        schema:
-          type: string
+          title: Id
       responses:
         '200':
-          description: PNG on the common output sky grid
+          description: Successful Response
           content:
-            image/png:
+            image/png: {}
+        '400':
+          content:
+            application/json:
               schema:
-                type: string
-                format: binary
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Request
         '404':
-          description: Image unavailable or expired with its job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal Server Error
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Gateway
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Service Unavailable
+        '504':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Gateway Timeout
+  /api/photometry:
+    get:
+      summary: Photometry
+      operationId: photometry_api_photometry_get
+      parameters:
+      - name: ra
+        in: query
+        required: true
+        schema:
+          type: number
+          minimum: 0
+          exclusiveMaximum: 360
+          title: Ra
+      - name: dec
+        in: query
+        required: true
+        schema:
+          type: number
+          maximum: 90
+          minimum: -90
+          title: Dec
+      - name: target_key
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 80
+          - type: 'null'
+          title: Target Key
+      - name: detector
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            maximum: 6
+            minimum: 1
+          - type: 'null'
+          title: Detector
+      - name: aperture_arcsec
+        in: query
+        required: false
+        schema:
+          type: number
+          exclusiveMinimum: 0
+          default: 12.3
+          title: Aperture Arcsec
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Photometry'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Request
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal Server Error
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Gateway
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Service Unavailable
+        '504':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Gateway Timeout
+  /api/astrometry:
+    get:
+      summary: Astrometry
+      operationId: astrometry_api_astrometry_get
+      parameters:
+      - name: ra
+        in: query
+        required: true
+        schema:
+          type: number
+          minimum: 0
+          exclusiveMaximum: 360
+          title: Ra
+      - name: dec
+        in: query
+        required: true
+        schema:
+          type: number
+          maximum: 90
+          minimum: -90
+          title: Dec
+      - name: target_key
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 80
+          - type: 'null'
+          title: Target Key
+      - name: detector
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            maximum: 6
+            minimum: 1
+          - type: 'null'
+          title: Detector
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Astrometry'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Request
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Not Found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Internal Server Error
+        '502':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Bad Gateway
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Service Unavailable
+        '504':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Gateway Timeout
 components:
-  parameters:
-    s_ra:
-      name: s_ra
-      in: query
-      required: true
-      description: Requested centre RA, not the centre of a returned source image. Combined with s_dec
-        to form SIA2 POS.
-      schema:
-        $ref: '#/components/schemas/RightAscension'
-    s_dec:
-      name: s_dec
-      in: query
-      required: true
-      description: Requested centre Dec; source-image s_dec remains in sources metadata.
-      schema:
-        $ref: '#/components/schemas/Declination'
-    obs_collection:
-      name: obs_collection
-      in: query
-      required: true
-      description: Collection selected explicitly; maps to the SIA2 COLLECTION parameter.
-      schema:
-        $ref: '#/components/schemas/Collection'
-    energy_bandpassname:
-      name: energy_bandpassname
-      in: query
-      required: true
-      description: Exact detector label from SIA2 metadata. Filter results by this column; it is not itself
-        an SIA2 endpoint parameter.
-      schema:
-        $ref: '#/components/schemas/EnergyBandpassName'
-    cutout_size_deg:
-      name: cutout_size_deg
-      in: query
-      required: true
-      description: 'Application field: side length of the square cutout in degrees; not source-image s_fov
-        or POS search radius. v0 limit is 0.2 degrees.'
-      schema:
-        $ref: '#/components/schemas/CutoutSize'
-    t_min:
-      name: t_min
-      in: query
-      required: false
-      description: Optional lower observation-time bound in MJD days; maps to SIA2 TIME.
-      schema:
-        $ref: '#/components/schemas/ObservationTime'
-    t_max:
-      name: t_max
-      in: query
-      required: false
-      description: Optional upper observation-time bound in MJD days; must be >= t_min if both are supplied.
-      schema:
-        $ref: '#/components/schemas/ObservationTime'
   schemas:
-    JobStatus:
-      type: object
-      required: [job_id, status, status_url]
+    Astrometry:
       properties:
-        job_id:
+        api_version:
           type: string
-        status:
-          type: string
-          enum: [queued, running, succeeded, failed]
-        status_url:
-          type: string
-        result:
-          $ref: '#/components/schemas/FramesResponse'
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-            message:
-              type: string
-    RightAscension:
-      type: number
-      description: ICRS right ascension in degrees.
-      minimum: 0
-      exclusiveMaximum: 360
-    Declination:
-      type: number
-      description: ICRS declination in degrees.
-      minimum: -90
-      maximum: 90
-    Collection:
-      type: string
-      description: Exact SIA2 obs_collection value; no silent release fallback.
-      enum:
-      - spherex_qr2
-      - spherex_qr2_deep
-      - spherex_qr3
-      - spherex_qr3_deep
-    EnergyBandpassName:
-      type: string
-      description: Exact SIA2 energy_bandpassname; identifies a detector, not a single wavelength.
-      enum:
-      - SPHEREx-D1
-      - SPHEREx-D2
-      - SPHEREx-D3
-      - SPHEREx-D4
-      - SPHEREx-D5
-      - SPHEREx-D6
-    ObservationTime: &id009
-      type: number
-      description: Observation time in Modified Julian Date (MJD), measured in days.
-    CutoutSize:
-      type: number
-      description: 'Application field: side length of the square cutout in degrees; not source-image s_fov
-        or POS search radius. v0 limit is 0.2 degrees.'
-      exclusiveMinimum: 0
-      maximum: 0.2
-    SkyQuery:
-      type: object
+          const: '0.1'
+          title: Api Version
+          default: '0.1'
+        target:
+          $ref: '#/components/schemas/Target'
+        catalog_pm:
+          $ref: '#/components/schemas/CatalogPM'
+        points:
+          items:
+            $ref: '#/components/schemas/AstrometryPoint'
+          type: array
+          title: Points
+        fit:
+          anyOf:
+          - $ref: '#/components/schemas/MotionFit'
+          - type: 'null'
       additionalProperties: false
-      required:
-      - s_ra
-      - s_dec
-      - obs_collection
-      properties:
-        s_ra: &id004
-          $ref: '#/components/schemas/RightAscension'
-        s_dec: &id005
-          $ref: '#/components/schemas/Declination'
-        obs_collection: &id006
-          $ref: '#/components/schemas/Collection'
-        t_min: &id007
-          $ref: '#/components/schemas/ObservationTime'
-        t_max: &id008
-          $ref: '#/components/schemas/ObservationTime'
-    FramesQuery:
       type: object
-      additionalProperties: false
       required:
-      - s_ra
-      - s_dec
-      - obs_collection
-      - energy_bandpassname
-      - cutout_size_deg
-      properties:
-        s_ra: *id004
-        s_dec: *id005
-        obs_collection: *id006
-        t_min: *id007
-        t_max: *id008
-        energy_bandpassname:
-          $ref: '#/components/schemas/EnergyBandpassName'
-        cutout_size_deg:
-          $ref: '#/components/schemas/CutoutSize'
-    LightcurveQuery:
-      type: object
-      additionalProperties: false
-      required:
-      - s_ra
-      - s_dec
-      - obs_collection
-      - energy_bandpassname
-      properties:
-        s_ra: *id004
-        s_dec: *id005
-        obs_collection: *id006
-        t_min: *id007
-        t_max: *id008
-        energy_bandpassname:
-          $ref: '#/components/schemas/EnergyBandpassName'
-    Warning:
-      type: object
-      additionalProperties: false
-      required:
-      - code
-      - message
-      properties:
-        code:
-          type: string
-          description: Stable application warning code.
-        message:
-          type: string
-          description: Human-readable warning; must not expose secrets or internal paths.
-    SourceObservation:
-      type: object
-      additionalProperties: false
-      required:
-      - obs_id
-      - obs_publisher_did
-      - obs_collection
-      - energy_bandpassname
-      - s_ra
-      - s_dec
-      - t_min
-      - t_max
-      - access_url
-      - access_format
-      properties:
-        obs_id:
-          type: string
-          description: Observation identifier. Can repeat across detectors; not a unique file key.
-          x-sia2-column: obs_id
-        obs_publisher_did:
-          type: string
-          description: Publisher identifier of this source product.
-          x-sia2-column: obs_publisher_did
-        obs_collection:
-          $ref: '#/components/schemas/Collection'
-          x-sia2-column: obs_collection
-        energy_bandpassname:
-          $ref: '#/components/schemas/EnergyBandpassName'
-          x-sia2-column: energy_bandpassname
-        s_ra:
-          $ref: '#/components/schemas/RightAscension'
-          x-sia2-column: s_ra
-        s_dec:
-          $ref: '#/components/schemas/Declination'
-          x-sia2-column: s_dec
-        t_min:
-          $ref: '#/components/schemas/ObservationTime'
-          x-sia2-column: t_min
-        t_max:
-          $ref: '#/components/schemas/ObservationTime'
-          x-sia2-column: t_max
-        access_url:
-          type: string
-          description: Original SIA2 data-access URL, not the processed PNG URL.
-          format: uri
-          x-sia2-column: access_url
-        access_format:
-          type: string
-          description: Original SIA2 MIME type, for example image/fits.
-          x-sia2-column: access_format
-        s_region:
-          type: string
-          description: SIA2 footprint in ICRS, e.g. a POLYGON expression.
-          x-sia2-column: s_region
-        s_fov:
-          type: number
-          description: Source-image field of view in degrees; not requested cutout size.
-          x-sia2-column: s_fov
-        em_min:
-          type: number
-          description: Source spectral lower bound in metres.
-          exclusiveMinimum: 0
-          x-sia2-column: em_min
-        em_max:
-          type: number
-          description: Source spectral upper bound in metres.
-          exclusiveMinimum: 0
-          x-sia2-column: em_max
-    SourceIds:
-      type: array
-      items:
-        type: string
-        description: Matches an obs_publisher_did in the top-level sources array.
-      minItems: 1
-      uniqueItems: true
-    Frame:
-      type: object
-      additionalProperties: false
-      required:
-      - frame_id
-      - image_url
-      - t_min
-      - t_max
-      - observation_time
-      - energy_bandpassname
-      - obs_collection
-      - n_images
-      - source_obs_publisher_dids
-      - warnings
+      - target
+      - catalog_pm
+      - points
+      - fit
+      title: Astrometry
+    AstrometryPoint:
       properties:
         frame_id:
           type: string
-          description: Application-generated frame identifier.
-        image_url:
-          type: string
-          description: Application PNG URL; relative URLs resolve against the API origin.
-          format: uri-reference
-        t_min: *id009
-        t_max: *id009
-        observation_time:
-          type: string
-          description: 'Application display time: UTC ISO 8601 midpoint of the [t_min,t_max] interval;
-            not an extra exposure.'
-          format: date-time
-        energy_bandpassname:
-          $ref: '#/components/schemas/EnergyBandpassName'
-        obs_collection:
-          $ref: '#/components/schemas/Collection'
-        n_images:
-          type: integer
-          minimum: 1
-          description: Number of distinct source products; must equal source_obs_publisher_dids length.
-        source_obs_publisher_dids:
-          $ref: '#/components/schemas/SourceIds'
-        warnings:
-          type: array
-          items:
-            $ref: '#/components/schemas/Warning'
-    SpectrumPoint:
-      type: object
-      additionalProperties: false
-      required:
-      - wavelength_um
-      - flux
-      - flux_error
-      - energy_bandpassname
-      - t_min
-      - t_max
-      - source_obs_publisher_dids
-      - warnings
-      properties:
-        wavelength_um:
+          title: Frame Id
+        mjd:
           type: number
-          description: Application central wavelength of this measurement in micrometres.
-          exclusiveMinimum: 0
-        flux: &id010
-          type:
-          - number
-          - 'null'
-          description: Application measurement in the response flux_unit. Missing or rejected measurements
-            are null, never substituted with zero.
-        flux_error: &id011
-          type:
-          - number
-          - 'null'
-          minimum: 0
-          description: Application flux uncertainty in the same flux_unit; null if unavailable.
-        energy_bandpassname:
-          $ref: '#/components/schemas/EnergyBandpassName'
-        t_min: *id009
-        t_max: *id009
-        source_obs_publisher_dids:
-          $ref: '#/components/schemas/SourceIds'
-        warnings:
-          type: array
-          items:
-            $ref: '#/components/schemas/Warning'
-    LightcurvePoint:
-      type: object
+          title: Mjd
+        measured:
+          anyOf:
+          - $ref: '#/components/schemas/Measurement'
+          - type: 'null'
+        predicted:
+          anyOf:
+          - $ref: '#/components/schemas/Position'
+          - type: 'null'
+        offset_arcsec:
+          anyOf:
+          - type: number
+            minimum: 0.0
+          - type: 'null'
+          title: Offset Arcsec
+        measured_px:
+          anyOf:
+          - prefixItems:
+            - type: number
+            - type: number
+            type: array
+            maxItems: 2
+            minItems: 2
+          - type: 'null'
+          title: Measured Px
       additionalProperties: false
-      required:
-      - time_mjd
-      - t_min
-      - t_max
-      - flux
-      - flux_error
-      - source_obs_publisher_dids
-      - warnings
-      properties:
-        time_mjd:
-          type: number
-          description: 'Application representative time: midpoint of [t_min,t_max], in MJD days.'
-        t_min: *id009
-        t_max: *id009
-        flux: *id010
-        flux_error: *id011
-        source_obs_publisher_dids:
-          $ref: '#/components/schemas/SourceIds'
-        warnings:
-          type: array
-          items:
-            $ref: '#/components/schemas/Warning'
-    FramesResponse:
       type: object
-      additionalProperties: false
       required:
-      - data_kind
-      - query
-      - frames
-      - sources
-      - warnings
+      - frame_id
+      - mjd
+      - measured
+      - predicted
+      - offset_arcsec
+      - measured_px
+      title: AstrometryPoint
+    CatalogPM:
       properties:
-        data_kind: &id012
+        pmra:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Pmra
+        pmdec:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Pmdec
+        source:
           type: string
-          description: 'Application provenance: mock responses must always be labelled mock.'
-          enum:
-          - observational
-          - mock
-        sources: &id013
-          type: array
-          items:
-            $ref: '#/components/schemas/SourceObservation'
-        warnings: &id014
-          type: array
-          items:
-            $ref: '#/components/schemas/Warning'
-        query:
-          $ref: '#/components/schemas/FramesQuery'
-        frames:
-          type: array
-          items:
-            $ref: '#/components/schemas/Frame'
-    SpectrumResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - data_kind
-      - query
-      - wavelength_unit
-      - flux_unit
-      - measurement_method
-      - points
-      - sources
-      - warnings
-      properties:
-        data_kind: *id012
-        sources: *id013
-        warnings: *id014
-        flux_unit: &id015
-          type:
-          - string
-          - 'null'
-          minLength: 1
-          description: Application flux and uncertainty unit; non-null when points exist. Science owner
-            must confirm. Null for an unevaluated empty result.
-        measurement_method: &id016
-          type:
-          - string
-          - 'null'
-          minLength: 1
-          description: Application method identifier; non-null when points exist. Null for an unevaluated
-            empty result.
-        query:
-          $ref: '#/components/schemas/SkyQuery'
-        wavelength_unit:
+          title: Source
+        epoch:
           type: string
-          const: um
-        points:
-          type: array
-          items:
-            $ref: '#/components/schemas/SpectrumPoint'
-      allOf:
-      - if:
-          properties:
-            points:
-              minItems: 1
-        then:
-          properties:
-            flux_unit:
-              type: string
-            measurement_method:
-              type: string
-    LightcurveResponse:
-      type: object
+          title: Epoch
       additionalProperties: false
+      type: object
       required:
-      - data_kind
-      - query
-      - time_unit
-      - flux_unit
-      - measurement_method
-      - wavelength_min_um
-      - wavelength_max_um
-      - points
-      - sources
-      - warnings
+      - pmra
+      - pmdec
+      - source
+      - epoch
+      title: CatalogPM
+    ErrorDetail:
       properties:
-        data_kind: *id012
-        sources: *id013
-        warnings: *id014
-        flux_unit: *id015
-        measurement_method: *id016
-        query:
-          $ref: '#/components/schemas/LightcurveQuery'
-        time_unit:
+        code:
           type: string
-          const: MJD day
-        wavelength_min_um:
-          type:
-          - number
-          - 'null'
-          description: Application lower bound of the common comparison passband in micrometres. Null
-            only when no passband has been evaluated and points is empty.
-          exclusiveMinimum: 0
-        wavelength_max_um:
-          type:
-          - number
-          - 'null'
-          description: Application upper bound of the common comparison passband in micrometres. Null
-            only when no passband has been evaluated and points is empty.
-          exclusiveMinimum: 0
-        points:
-          type: array
-          items:
-            $ref: '#/components/schemas/LightcurvePoint'
-      allOf:
-      - if:
-          properties:
-            points:
-              minItems: 1
-        then:
-          properties:
-            flux_unit:
-              type: string
-            measurement_method:
-              type: string
-            wavelength_min_um:
-              type: number
-            wavelength_max_um:
-              type: number
+          title: Code
+        message:
+          type: string
+          title: Message
+        details:
+          additionalProperties: true
+          type: object
+          title: Details
+      additionalProperties: false
+      type: object
+      required:
+      - code
+      - message
+      - details
+      title: ErrorDetail
     ErrorResponse:
-      type: object
+      properties:
+        api_version:
+          type: string
+          const: '0.1'
+          title: Api Version
+          default: '0.1'
+        error:
+          $ref: '#/components/schemas/ErrorDetail'
       additionalProperties: false
+      type: object
       required:
       - error
+      title: ErrorResponse
+    Frame:
       properties:
-        error:
+        id:
+          type: string
+          title: Id
+        mjd:
+          type: number
+          title: Mjd
+        iso:
+          type: string
+          title: Iso
+        wavelength_um:
+          type: number
+          exclusiveMinimum: 0.0
+          title: Wavelength Um
+        bandwidth_um:
+          type: number
+          exclusiveMinimum: 0.0
+          title: Bandwidth Um
+        release:
+          type: string
+          title: Release
+        survey:
+          type: integer
+          title: Survey
+        bad_pixel_frac:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Bad Pixel Frac
+        predicted_px:
+          anyOf:
+          - prefixItems:
+            - type: number
+            - type: number
+            type: array
+            maxItems: 2
+            minItems: 2
+          - type: 'null'
+          title: Predicted Px
+        png:
+          type: string
+          title: Png
+        diff_png:
+          type: string
+          title: Diff Png
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - mjd
+      - iso
+      - wavelength_um
+      - bandwidth_um
+      - release
+      - survey
+      - bad_pixel_frac
+      - predicted_px
+      - png
+      - diff_png
+      title: Frame
+    Frames:
+      properties:
+        api_version:
+          type: string
+          const: '0.1'
+          title: Api Version
+          default: '0.1'
+        target:
+          $ref: '#/components/schemas/Target'
+        detector:
+          type: integer
+          maximum: 6.0
+          minimum: 1.0
+          title: Detector
+        grid:
+          $ref: '#/components/schemas/Grid'
+        norm:
+          $ref: '#/components/schemas/Norm'
+        reference_frame_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reference Frame Id
+        frames:
+          items:
+            $ref: '#/components/schemas/Frame'
+          type: array
+          title: Frames
+        warnings:
+          items:
+            type: string
+            enum:
+            - SATURATION_POSSIBLE
+            - FEW_FRAMES
+            - TRUNCATED
+            - MIXED_WAVELENGTH
+          type: array
+          title: Warnings
+      additionalProperties: false
+      type: object
+      required:
+      - target
+      - detector
+      - grid
+      - norm
+      - reference_frame_id
+      - frames
+      - warnings
+      title: Frames
+    Grid:
+      properties:
+        width:
+          type: integer
+          exclusiveMinimum: 0.0
+          title: Width
+        height:
+          type: integer
+          exclusiveMinimum: 0.0
+          title: Height
+        pixscale_arcsec:
+          type: number
+          exclusiveMinimum: 0.0
+          title: Pixscale Arcsec
+        projection:
+          type: string
+          const: TAN
+          title: Projection
+        center_ra:
+          type: number
+          exclusiveMaximum: 360.0
+          minimum: 0.0
+          title: Center Ra
+        center_dec:
+          type: number
+          maximum: 90.0
+          minimum: -90.0
+          title: Center Dec
+      additionalProperties: false
+      type: object
+      required:
+      - width
+      - height
+      - pixscale_arcsec
+      - projection
+      - center_ra
+      - center_dec
+      title: Grid
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    Health:
+      properties:
+        api_version:
+          type: string
+          const: '0.1'
+          title: Api Version
+          default: '0.1'
+        status:
+          type: string
+          enum:
+          - ok
+          - degraded
+          title: Status
+        mode:
+          type: string
+          enum:
+          - fixture
+          - live
+          title: Mode
+        fixture_targets:
+          items:
+            type: string
+          type: array
+          title: Fixture Targets
+        irsa_reachable:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Irsa Reachable
+        git_sha:
+          type: string
+          title: Git Sha
+      additionalProperties: false
+      type: object
+      required:
+      - status
+      - mode
+      - fixture_targets
+      - irsa_reachable
+      - git_sha
+      title: Health
+    Measurement:
+      properties:
+        ra:
+          type: number
+          exclusiveMaximum: 360.0
+          minimum: 0.0
+          title: Ra
+        dec:
+          type: number
+          maximum: 90.0
+          minimum: -90.0
+          title: Dec
+        err_arcsec:
+          type: number
+          minimum: 0.0
+          title: Err Arcsec
+      additionalProperties: false
+      type: object
+      required:
+      - ra
+      - dec
+      - err_arcsec
+      title: Measurement
+    MotionFit:
+      properties:
+        pmra:
+          type: number
+          title: Pmra
+        pmdec:
+          type: number
+          title: Pmdec
+        pmra_err:
+          type: number
+          minimum: 0.0
+          title: Pmra Err
+        pmdec_err:
+          type: number
+          minimum: 0.0
+          title: Pmdec Err
+        n_points:
+          type: integer
+          minimum: 3.0
+          title: N Points
+        baseline_days:
+          type: number
+          minimum: 30.0
+          title: Baseline Days
+      additionalProperties: false
+      type: object
+      required:
+      - pmra
+      - pmdec
+      - pmra_err
+      - pmdec_err
+      - n_points
+      - baseline_days
+      title: MotionFit
+    Norm:
+      properties:
+        vmin:
+          type: number
+          title: Vmin
+        vmax:
+          type: number
+          title: Vmax
+        stretch:
+          type: string
+          const: asinh
+          title: Stretch
+      additionalProperties: false
+      type: object
+      required:
+      - vmin
+      - vmax
+      - stretch
+      title: Norm
+    Photometry:
+      properties:
+        api_version:
+          type: string
+          const: '0.1'
+          title: Api Version
+          default: '0.1'
+        target:
+          $ref: '#/components/schemas/Target'
+        reference_star:
+          anyOf:
+          - $ref: '#/components/schemas/ReferenceStar'
+          - type: 'null'
+        points:
+          items:
+            $ref: '#/components/schemas/PhotometryPoint'
+          type: array
+          title: Points
+        variability:
+          anyOf:
+          - $ref: '#/components/schemas/Variability'
+          - type: 'null'
+      additionalProperties: false
+      type: object
+      required:
+      - target
+      - reference_star
+      - points
+      - variability
+      title: Photometry
+    PhotometryPoint:
+      properties:
+        frame_id:
+          type: string
+          title: Frame Id
+        mjd:
+          type: number
+          title: Mjd
+        wavelength_um:
+          type: number
+          exclusiveMinimum: 0.0
+          title: Wavelength Um
+        detector:
+          type: integer
+          maximum: 6.0
+          minimum: 1.0
+          title: Detector
+        release:
+          type: string
+          title: Release
+        survey:
+          type: integer
+          title: Survey
+        flux_mjy:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Flux Mjy
+        err_mjy:
+          anyOf:
+          - type: number
+            minimum: 0.0
+          - type: 'null'
+          title: Err Mjy
+        snr:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Snr
+        detected:
+          type: boolean
+          title: Detected
+        flagged:
+          type: boolean
+          title: Flagged
+        is_reference_star:
+          type: boolean
+          title: Is Reference Star
+      additionalProperties: false
+      type: object
+      required:
+      - frame_id
+      - mjd
+      - wavelength_um
+      - detector
+      - release
+      - survey
+      - flux_mjy
+      - err_mjy
+      - snr
+      - detected
+      - flagged
+      - is_reference_star
+      title: PhotometryPoint
+    Position:
+      properties:
+        ra:
+          type: number
+          exclusiveMaximum: 360.0
+          minimum: 0.0
+          title: Ra
+        dec:
+          type: number
+          maximum: 90.0
+          minimum: -90.0
+          title: Dec
+      additionalProperties: false
+      type: object
+      required:
+      - ra
+      - dec
+      title: Position
+    ReferenceStar:
+      properties:
+        gaia_source_id:
+          type: string
+          title: Gaia Source Id
+        ra:
+          type: number
+          exclusiveMaximum: 360.0
+          minimum: 0.0
+          title: Ra
+        dec:
+          type: number
+          maximum: 90.0
+          minimum: -90.0
+          title: Dec
+      additionalProperties: false
+      type: object
+      required:
+      - gaia_source_id
+      - ra
+      - dec
+      title: ReferenceStar
+    Resolve:
+      properties:
+        api_version:
+          type: string
+          const: '0.1'
+          title: Api Version
+          default: '0.1'
+        query:
+          type: string
+          title: Query
+        target_key:
+          type: string
+          title: Target Key
+        name:
+          type: string
+          title: Name
+        ra:
+          type: number
+          exclusiveMaximum: 360.0
+          minimum: 0.0
+          title: Ra
+        dec:
+          type: number
+          maximum: 90.0
+          minimum: -90.0
+          title: Dec
+        epoch:
+          type: string
+          title: Epoch
+        pmra:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Pmra
+        pmdec:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Pmdec
+        parallax_mas:
+          anyOf:
+          - type: number
+            minimum: 0.0
+          - type: 'null'
+          title: Parallax Mas
+        kind:
+          type: string
+          enum:
+          - high_pm
+          - variable
+          - other
+          title: Kind
+        source:
+          type: string
+          enum:
+          - targets_table
+          - simbad
+          title: Source
+      additionalProperties: false
+      type: object
+      required:
+      - query
+      - target_key
+      - name
+      - ra
+      - dec
+      - epoch
+      - pmra
+      - pmdec
+      - parallax_mas
+      - kind
+      - source
+      title: Resolve
+    Target:
+      properties:
+        ra:
+          type: number
+          exclusiveMaximum: 360.0
+          minimum: 0.0
+          title: Ra
+        dec:
+          type: number
+          maximum: 90.0
+          minimum: -90.0
+          title: Dec
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        target_key:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Target Key
+      additionalProperties: false
+      type: object
+      required:
+      - ra
+      - dec
+      - name
+      - target_key
+      title: Target
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
           type: object
-          additionalProperties: false
-          required:
-          - code
-          - message
-          - fields
-          properties:
-            code:
-              type: string
-              description: Stable application code.
-              enum:
-              - VALIDATION_ERROR
-              - UPSTREAM_ERROR
-              - UPSTREAM_TIMEOUT
-              - PROCESSING_ERROR
-            message:
-              type: string
-              description: Safe human-readable explanation; no tracebacks, secrets or local file paths.
-            fields:
-              type: array
-              items:
-                type: string
-                description: Invalid public query parameter name.
-  responses:
-    Error422:
-      description: Invalid query or inconsistent time bounds.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: VALIDATION_ERROR
-              message: Invalid query or inconsistent time bounds.
-              fields:
-              - s_ra
-    Error502:
-      description: IRSA request failed or returned an unusable response.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: UPSTREAM_ERROR
-              message: IRSA request failed or returned an unusable response.
-              fields: []
-    Error504:
-      description: IRSA request exceeded the configured timeout.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: UPSTREAM_TIMEOUT
-              message: IRSA request exceeded the configured timeout.
-              fields: []
-    Error500:
-      description: Local data processing failed.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-          example:
-            error:
-              code: PROCESSING_ERROR
-              message: Local data processing failed.
-              fields: []
-externalDocs:
-  description: IRSA SIA2 query parameters and metadata
-  url: https://irsa.ipac.caltech.edu/ibe/sia.html
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    Variability:
+      properties:
+        chi2_reduced:
+          type: number
+          minimum: 0.0
+          title: Chi2 Reduced
+        dof:
+          type: integer
+          exclusiveMinimum: 0.0
+          title: Dof
+        is_variable:
+          type: boolean
+          title: Is Variable
+        method:
+          type: string
+          title: Method
+      additionalProperties: false
+      type: object
+      required:
+      - chi2_reduced
+      - dof
+      - is_variable
+      - method
+      title: Variability

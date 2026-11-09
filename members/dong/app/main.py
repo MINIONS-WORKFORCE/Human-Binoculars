@@ -1,45 +1,71 @@
+"""Issue #14 entry point. Historical training uses app.legacy_main."""
+
 import logging
 import os
 from time import perf_counter
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from .frame_jobs import router as jobs_router
-from .mock_api import router
+from .api_models import ErrorResponse
+from .fixture_api import router
 
-app = FastAPI(title="SPHEREx Training API")
-cors_origins = [
-    origin.strip()
-    for origin in os.getenv("CORS_ALLOW_ORIGINS", "*").split(",")
-    if origin.strip()
-]
+app = FastAPI(title="Human Binoculars API", version="0.1")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=[
+        v.strip()
+        for v in os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:5173").split(",")
+        if v.strip()
+    ],
     allow_methods=["GET"],
-    expose_headers=["Server-Timing", "X-Cache", "Retry-After"],
+    expose_headers=["Server-Timing", "Cache-Control"],
 )
 app.include_router(router)
-app.include_router(jobs_router)
 logger = logging.getLogger("uvicorn.error")
 
 
+def error_response(status, code, message, details):
+    body = ErrorResponse(error={"code": code, "message": message, "details": details})
+    return JSONResponse(body.model_dump(), status_code=status)
+
+
+@app.exception_handler(RequestValidationError)
+def validation_error(request: Request, exc: RequestValidationError):
+    fields = sorted({str(e["loc"][-1]) for e in exc.errors()})
+    code = "BAD_COORDS" if {"ra", "dec"}.intersection(fields) else "BAD_PARAM"
+    return error_response(400, code, "Invalid request parameters.", {"fields": fields})
+
+
+@app.exception_handler(StarletteHTTPException)
+def http_error(request: Request, exc: StarletteHTTPException):
+    if isinstance(exc.detail, dict) and "error" in exc.detail:
+        return JSONResponse(exc.detail, status_code=exc.status_code)
+    return error_response(exc.status_code, "INTERNAL", "Request failed.", {})
+
+
+@app.exception_handler(Exception)
+def unexpected_error(request: Request, exc: Exception):
+    logger.error("request_failed error_type=%s", type(exc).__name__)
+    return error_response(500, "INTERNAL", "Internal processing error.", {})
+
+
 @app.middleware("http")
-async def record_request_time(request: Request, call_next):
+async def timing(request: Request, call_next):
     started = perf_counter()
     status = 500
     try:
         response = await call_next(request)
         status = response.status_code
-        elapsed_ms = (perf_counter() - started) * 1000
-        response.headers["Server-Timing"] = f"app;dur={elapsed_ms:.2f}"
+        response.headers["Server-Timing"] = f"app;dur={(perf_counter() - started) * 1000:.2f}"
         return response
     finally:
         logger.info(
-            "%s %s status=%d duration_ms=%.2f",
+            "%s %s status=%s duration_ms=%.2f",
             request.method,
             request.url.path,
             status,
@@ -47,45 +73,14 @@ async def record_request_time(request: Request, call_next):
         )
 
 
-@app.exception_handler(RequestValidationError)
-def validation_error(request: Request, exc: RequestValidationError):
-    fields = sorted({str(e["loc"][-1]) for e in exc.errors() if len(e["loc"]) > 1})
-    if not fields:
-        fields = ["t_min", "t_max"]
-    return JSONResponse(
-        status_code=422,
-        content={
-            "error": {
-                "code": "VALIDATION_ERROR",
-                "message": "Invalid query or inconsistent time bounds.",
-                "fields": fields,
-            }
-        },
-    )
+def contract_openapi():
+    if app.openapi_schema is None:
+        schema = get_openapi(title=app.title, version=app.version, routes=app.routes)
+        for path in schema["paths"].values():
+            for operation in path.values():
+                operation.get("responses", {}).pop("422", None)
+        app.openapi_schema = schema
+    return app.openapi_schema
 
 
-@app.exception_handler(HTTPException)
-def http_error(request: Request, exc: HTTPException):
-    if isinstance(exc.detail, dict) and "error" in exc.detail:
-        return JSONResponse(status_code=exc.status_code, content=exc.detail)
-    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
-
-
-@app.exception_handler(Exception)
-def unexpected_error(request: Request, exc: Exception):
-    return JSONResponse(
-        status_code=500,
-        content={
-            "error": {
-                "code": "PROCESSING_ERROR",
-                "message": "Local mock processing failed.",
-                "fields": [],
-            }
-        },
-    )
-
-
-@app.get("/health")
-def health() -> dict[str, str]:
-    """Report application liveness without checking external services."""
-    return {"status": "ok"}
+app.openapi = contract_openapi

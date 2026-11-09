@@ -1,6 +1,6 @@
 ## What
 
-<!-- One or two lines. Link the task: Closes #123 -->
+<!-- Explain the outcome and link the Issue. Use Closes #123 only if all its acceptance criteria are met; otherwise use Related to #123. -->
 
 ## How to try it
 
@@ -15,3 +15,5 @@
 - [ ] No FITS, cutouts, `.env` or database files in the diff
 - [ ] Notebook outputs cleared
 - [ ] If `requirements.txt` or `package.json` changed, I told the team in chat
+- [ ] The receiver has run instructions, sample inputs and known limitations
+- [ ] If the API contract changed, models, samples and OpenAPI were updated through the wiki review process

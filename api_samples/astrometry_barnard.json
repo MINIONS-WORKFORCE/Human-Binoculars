@@ -1,0 +1,72 @@
+{
+  "api_version": "0.1",
+  "target": {
+    "ra": 269.4521,
+    "dec": 4.6934,
+    "name": "Barnard's Star",
+    "target_key": "barnard"
+  },
+  "catalog_pm": {
+    "pmra": -801.6,
+    "pmdec": 10362.4,
+    "source": "gaia_dr3",
+    "epoch": "J2016.0"
+  },
+  "points": [
+    {
+      "frame_id": "fixture-barnard-d6-0",
+      "mjd": 60800.0,
+      "measured": {
+        "ra": 269.4521,
+        "dec": 4.6934,
+        "err_arcsec": 0.8
+      },
+      "predicted": {
+        "ra": 269.4521,
+        "dec": 4.6934
+      },
+      "offset_arcsec": 0.0,
+      "measured_px": [
+        17.0,
+        19.0
+      ]
+    },
+    {
+      "frame_id": "fixture-barnard-d6-1",
+      "mjd": 60980.0,
+      "measured": {
+        "ra": 269.4521,
+        "dec": 4.6934,
+        "err_arcsec": 0.8
+      },
+      "predicted": {
+        "ra": 269.4521,
+        "dec": 4.6934
+      },
+      "offset_arcsec": 0.0,
+      "measured_px": [
+        19.0,
+        19.0
+      ]
+    },
+    {
+      "frame_id": "fixture-barnard-d6-2",
+      "mjd": 61160.0,
+      "measured": {
+        "ra": 269.4521,
+        "dec": 4.6934,
+        "err_arcsec": 0.8
+      },
+      "predicted": {
+        "ra": 269.4521,
+        "dec": 4.6934
+      },
+      "offset_arcsec": 0.0,
+      "measured_px": [
+        21.0,
+        19.0
+      ]
+    }
+  ],
+  "fit": null
+}
