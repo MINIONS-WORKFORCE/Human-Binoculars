@@ -1,6 +1,76 @@
 # Ghi chú workspace và thực hành reproject
 
-> **Cập nhật 07/11/2026:** đã triển khai các task ưu tiên mới trong [members/huu-hoang/TASKS.md](members/huu-hoang/TASKS.md): TAN tâm mục tiêu/tâm tìm kiếm, centroid nguồn nền, benchmark 10/50 ảnh, median/ảnh hiệu, `make_frames`, bộ mẫu năm mục tiêu, flags bão hòa và RGB giả. Xem [ảnh tổng quan](data/five_targets/overview.png) và [kiểm chứng đầu ra](data/five_targets/verification.json). Phần bên dưới giữ nguyên ghi chép demo hai ảnh ngày 06/11; checklist cũ không mô tả toàn bộ trạng thái hiện tại.
+> **Cập nhật 10/11/2026 (Tổng hợp trạng thái & Phân loại việc đã xong / chưa xong):**
+> - **Dữ liệu `data/`:** ĐÃ HOÀN TẤT TÁI TẠO 100% tất cả các bộ dữ liệu và ảnh thực hành:
+>   * `data/reproject_wise0855/`: 16 file (FITS, PNG, blink GIF, report.json).
+>   * `data/tan_wise0855/`: 50 cutout D3/D6, alignment evidence (<0.06 px shift), frames median & difference.
+>   * `data/five_targets/`: Đủ 5 mục tiêu (Barnard, Epsilon Indi B, WISE 0855, RW Aurigae, R Draconis) gồm 78 cutout, 39 median, 24 ảnh hiệu, 13 RGB giả, `overview.png`, `verification.json`.
+>   * `data/tasks_def/`: Đủ 4 folder D (tự dựng lại), E (sửa màu NaN tím `#703090`, trích 58 cặp dipole), F & F_wide (trích phổ Luhman 16).
+> - **Kiểm thử tự động:** `pytest members/huu-hoang/` đạt **8/8 test passed**.
+> - **Tiến độ cả nhóm:** Nhánh `origin/dev` đã cập nhật commit mới của Đông (hoàn thành API 7-endpoint fixture theo Issue #14, kèm hướng dẫn bàn giao `docs/team/handoff.md` và `docs/team/workflow.md`).
+
+---
+
+## 📌 BẢNG THEO DÕI TIẾN ĐỘ CÔNG VIỆC CỦA HỮU HOÀNG
+
+### A. CÁC CÔNG VIỆC ĐÃ HOÀN THÀNH (100% ĐẠT TIÊU CHÍ)
+
+1. **Task: Mở cutout thật, đọc 6 HDU và bit FLAGS, viết make_grid() và căn 2 cutout bằng reproject_interp:**
+   - **Trạng thái:** ✅ **HOÀN THÀNH 100%**
+   - **Mã nguồn:** [`members/huu-hoang/reproject_demo.py`](members/huu-hoang/reproject_demo.py) và hàm `tan_grid()` trong [`members/huu-hoang/tan_pipeline.py`](members/huu-hoang/tan_pipeline.py).
+   - **Tiêu chí Done when ("2 ảnh đã căn, chồng lên nhau thấy sao trùng chỗ"):**
+     * Minh chứng định lượng: [`data/tan_wise0855/alignment_evidence.png`](data/tan_wise0855/alignment_evidence.png) (7 nguồn sao nền trùng khớp, độ lệch trung vị chỉ **0.057 px ≈ 0.35 arcsec**).
+     * Minh chứng trực quan: [`data/reproject_wise0855/blink_aligned.gif`](data/reproject_wise0855/blink_aligned.gif) (sao nền đứng yên bất động khi blink luân phiên).
+     * Đọc chuẩn 7 HDU và 14 bit FLAGS loại trừ: [`data/reproject_wise0855/report.json`](data/reproject_wise0855/report.json).
+
+2. **Task: Gom nhóm 30 ngày, cộng median theo detector × đợt quét, xuất PNG cùng thang asinh:**
+   - **Trạng thái:** ✅ **HOÀN THÀNH 100%**
+   - **Mã nguồn:** [`members/huu-hoang/frames.py`](members/huu-hoang/frames.py) và [`members/huu-hoang/five_targets.py`](members/huu-hoang/five_targets.py).
+   - **Kết quả:** Đủ các khung median và ảnh hiệu diff trong `data/tan_wise0855/frames/` và `data/five_targets/`.
+
+3. **Task: Xử lý cờ bão hòa (`OVERFLOW`, `NONLINEAR`) & ghép ảnh màu giả RGB 3 detector cho 5 mục tiêu:**
+   - **Trạng thái:** ✅ **HOÀN THÀNH 100%**
+   - **Mã nguồn:** [`members/huu-hoang/five_targets.py`](members/huu-hoang/five_targets.py), [`members/huu-hoang/verify_products.py`](members/huu-hoang/verify_products.py).
+   - **Kết quả:** Lọc 56 lượt pixel bão hòa ở Barnard, 342 lượt ở R Draconis; xuất 13 ảnh RGB giả và [`data/five_targets/overview.png`](data/five_targets/overview.png).
+
+4. **Task: Thực hành ngày đổi vai 10/11 (Trích phổ Luhman 16 làm phần của Nguyên) & tìm dipole:**
+   - **Trạng thái:** ✅ **HOÀN THÀNH 100%**
+   - **Mã nguồn:** [`members/huu-hoang/tasks_def.py`](members/huu-hoang/tasks_def.py).
+   - **Kết quả:** Sửa màu NaN tím `#703090` trên ảnh hiệu; trích 58 cặp dipole ứng viên; phát hiện bẫy cờ `SOURCE` chiếm trọn vành nền gần và thử nghiệm thành công vành nền rộng 12–25 px (`data/tasks_def/F_wide/spectrum.png`).
+
+---
+
+### B. CÁC CÔNG VIỆC CHƯA XONG (CẦN LÀM TIẾP)
+
+#### 🔴 Việc 1: Viết hàm `build_frames()` & Nghiệm thu dấu thập trên sao Barnard (Ưu tiên cao nhất)
+- **Nội dung task:**
+  > Viết `build_frames()`: căn ảnh, dùng chung thang norm, tạo PNG khung và PNG ảnh hiệu, tính `predicted_px` (đã lật trục, gốc trên trái), đặt tâm lưới ở thời điểm giữa chuỗi khung.
+  > **Done when:** PNG Barnard cho thấy sao dịch chỗ qua các khung. Dấu thập nằm trên sao.
+- **Những phần còn thiếu cần làm:**
+  1. Đóng gói hàm chính thức `build_frames(cutouts, target, ...)` (thay vì các script phân tán).
+  2. Đặt tâm lưới TAN ở **vị trí trung bình qua các ngày chụp** (thay vì cố định J2026.0) để sao Barnard đi ngang qua tâm khung khi xem blink.
+  3. Tính tọa độ pixel dự đoán của sao Barnard tại từng thời điểm MJD của mỗi khung ảnh:
+     $$x_{png} = x_{fits}, \quad y_{png} = \text{height} - 1 - y_{fits}$$
+     (gốc tọa độ trên-trái, lật trục dọc theo chuẩn PNG).
+  4. Xuất ảnh PNG khung Barnard có vẽ **dấu thập đỏ (crosshair)** tại `predicted_px` để chứng minh dấu thập bám sát ngôi sao đang dịch chuyển qua các khung hình.
+
+#### 🟡 Việc 2: Tích hợp hàm xử lý ảnh vào `shared/frames_pipeline.py` cho Backend (Đông)
+- **Nội dung:**
+  - Trao đổi với Đông để đưa các hàm đã hoàn thiện ở `members/huu-hoang/` vào pipeline dùng chung:
+    * Hàm tạo ảnh hiệu (`diff_png`) và gán nhãn pixel thiếu (màu tím `#703090`).
+    * Logic lọc pixel bão hòa (`OVERFLOW`, `NONLINEAR`) trước khi reproject.
+    * Hàm ghép ảnh màu giả RGB 3 detector (D6-D3-D1).
+
+#### 🟡 Việc 3: Bàn giao báo cáo khoa học cho Nguyên
+- **Nội dung:**
+  - Bàn giao báo cáo trích phổ Luhman 16 (kết quả vành nền gần 0/18 vs vành nền rộng 5/18) để Nguyên duyệt vào runbook.
+  - Bàn giao danh sách 58 cặp dipole ứng viên để Nguyên kiểm tra chuyển động riêng.
+
+#### 🟡 Việc 4: Diễn tập bấm giờ (Chuẩn bị ngày thi 14–15/11)
+- **Nội dung:**
+  - Tự code tay từ đầu luồng xử lý: *Cutout $\to$ Mask flags $\to$ Căn TAN $\to$ Median $\to$ PNG + Diff* trong một thư mục trắng, bấm giờ để đảm bảo hoàn thành dưới 90 phút.
+
+---
 
 Cập nhật: 06/11/2026. Người học đã nắm SPHEREx, LVF, WCS không gian/phổ, flags, asinh và FITS; ghi chú này tập trung vào việc chạy và đọc kết quả.
 
