@@ -1,0 +1,11 @@
+{
+  "api_version": "0.1",
+  "error": {
+    "code": "NO_FRAMES",
+    "message": "No SPHEREx frames found for this example request.",
+    "details": {
+      "ra": 133.7951,
+      "dec": -7.2451
+    }
+  }
+}

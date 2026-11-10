@@ -1,0 +1,97 @@
+{
+  "api_version": "0.1",
+  "target": {
+    "ra": 248.1675,
+    "dec": 66.755,
+    "name": "R Draconis",
+    "target_key": "rdra"
+  },
+  "reference_star": null,
+  "points": [
+    {
+      "frame_id": "fixture-science-d1",
+      "mjd": 60801.0,
+      "wavelength_um": 1.4,
+      "detector": 1,
+      "release": "qr2",
+      "survey": 1,
+      "flux_mjy": 11.0,
+      "err_mjy": 1.0,
+      "snr": 11.0,
+      "detected": true,
+      "flagged": false,
+      "is_reference_star": false
+    },
+    {
+      "frame_id": "fixture-science-d2",
+      "mjd": 60802.0,
+      "wavelength_um": 2.0,
+      "detector": 2,
+      "release": "qr2",
+      "survey": 1,
+      "flux_mjy": 12.0,
+      "err_mjy": 1.0,
+      "snr": 12.0,
+      "detected": true,
+      "flagged": false,
+      "is_reference_star": false
+    },
+    {
+      "frame_id": "fixture-science-d3",
+      "mjd": 60803.0,
+      "wavelength_um": 2.5999999999999996,
+      "detector": 3,
+      "release": "qr2",
+      "survey": 1,
+      "flux_mjy": 13.0,
+      "err_mjy": 1.0,
+      "snr": 13.0,
+      "detected": true,
+      "flagged": false,
+      "is_reference_star": false
+    },
+    {
+      "frame_id": "fixture-science-d4",
+      "mjd": 60804.0,
+      "wavelength_um": 3.2,
+      "detector": 4,
+      "release": "qr2",
+      "survey": 1,
+      "flux_mjy": 14.0,
+      "err_mjy": 1.0,
+      "snr": 14.0,
+      "detected": true,
+      "flagged": false,
+      "is_reference_star": false
+    },
+    {
+      "frame_id": "fixture-science-d5",
+      "mjd": 60805.0,
+      "wavelength_um": 3.8,
+      "detector": 5,
+      "release": "qr2",
+      "survey": 1,
+      "flux_mjy": 15.0,
+      "err_mjy": 1.0,
+      "snr": 15.0,
+      "detected": true,
+      "flagged": false,
+      "is_reference_star": false
+    },
+    {
+      "frame_id": "fixture-science-d6",
+      "mjd": 60806.0,
+      "wavelength_um": 4.3999999999999995,
+      "detector": 6,
+      "release": "qr2",
+      "survey": 1,
+      "flux_mjy": 16.0,
+      "err_mjy": 1.0,
+      "snr": 16.0,
+      "detected": true,
+      "flagged": false,
+      "is_reference_star": false
+    }
+  ],
+  "variability": null
+}

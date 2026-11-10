@@ -1,0 +1,75 @@
+{
+  "api_version": "0.1",
+  "target": {
+    "ra": 269.4521,
+    "dec": 4.6934,
+    "name": "Barnard's Star",
+    "target_key": "barnard"
+  },
+  "detector": 6,
+  "grid": {
+    "width": 39,
+    "height": 39,
+    "pixscale_arcsec": 6.15,
+    "projection": "TAN",
+    "center_ra": 269.4521,
+    "center_dec": 4.6934
+  },
+  "norm": {
+    "vmin": 0.0,
+    "vmax": 1.0,
+    "stretch": "asinh"
+  },
+  "reference_frame_id": "fixture-barnard-d6-0",
+  "frames": [
+    {
+      "id": "fixture-barnard-d6-0",
+      "mjd": 60800.0,
+      "iso": "2025-05-05T00:00:00Z",
+      "wavelength_um": 4.7,
+      "bandwidth_um": 0.037,
+      "release": "qr2",
+      "survey": 1,
+      "bad_pixel_frac": 0.0,
+      "predicted_px": [
+        17.0,
+        19.0
+      ],
+      "png": "/api/frames/fixture-barnard-d6-0.png",
+      "diff_png": "/api/frames/fixture-barnard-d6-0/diff.png"
+    },
+    {
+      "id": "fixture-barnard-d6-1",
+      "mjd": 60980.0,
+      "iso": "2025-11-01T00:00:00Z",
+      "wavelength_um": 4.7,
+      "bandwidth_um": 0.037,
+      "release": "qr2",
+      "survey": 2,
+      "bad_pixel_frac": 0.0,
+      "predicted_px": [
+        19.0,
+        19.0
+      ],
+      "png": "/api/frames/fixture-barnard-d6-1.png",
+      "diff_png": "/api/frames/fixture-barnard-d6-1/diff.png"
+    },
+    {
+      "id": "fixture-barnard-d6-2",
+      "mjd": 61160.0,
+      "iso": "2026-04-30T00:00:00Z",
+      "wavelength_um": 4.7,
+      "bandwidth_um": 0.037,
+      "release": "qr2",
+      "survey": 3,
+      "bad_pixel_frac": 0.0,
+      "predicted_px": [
+        21.0,
+        19.0
+      ],
+      "png": "/api/frames/fixture-barnard-d6-2.png",
+      "diff_png": "/api/frames/fixture-barnard-d6-2/diff.png"
+    }
+  ],
+  "warnings": []
+}
