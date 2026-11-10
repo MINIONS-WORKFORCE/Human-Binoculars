@@ -14,7 +14,9 @@
     "lint": "eslint .",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "gen:types": "openapi-typescript ../shared/api-contract/openapi.yaml -o src/api/schema.d.ts"
+    "gen:types": "openapi-typescript ../shared/api-contract/openapi.yaml -o src/api/schema.d.ts",
+    "build:mock": "tsc -b && vite build --mode mock",
+    "e2e": "playwright test"
   },
   "msw": {
     "workerDirectory": [
@@ -27,6 +29,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.0",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

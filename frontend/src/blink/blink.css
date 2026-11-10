@@ -1,0 +1,142 @@
+.blink {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+}
+
+.blink-hint {
+  margin: 0;
+  color: var(--color-marker);
+  font-weight: var(--weight-medium);
+}
+
+.blink-stage {
+  position: relative;
+  width: 100%;
+}
+
+/* Pure black around the stars, and nearest-neighbour scaling if CSS shrinks it. */
+.blink-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #000;
+  image-rendering: pixelated;
+  border-radius: var(--radius-sm);
+}
+
+.blink-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+  text-align: center;
+  background: rgb(0 0 0 / 0.6);
+}
+
+.blink-overlay-error {
+  color: var(--color-danger);
+}
+
+.blink-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-muted);
+}
+
+.blink-info strong {
+  color: var(--color-text);
+}
+
+.blink-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.blink-play {
+  min-width: 8.5rem;
+}
+
+.blink-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.blink-toggle {
+  display: inline-flex;
+}
+
+.blink-toggle button {
+  background: var(--color-raised);
+  border-color: var(--color-control);
+  color: var(--color-text);
+  border-radius: 0;
+}
+
+.blink-toggle button:first-child {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.blink-toggle button:last-child {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  border-left: 0;
+}
+
+.blink-toggle button[aria-pressed="true"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.blink-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.blink-check input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--color-accent);
+}
+
+.blink-sliders {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3) var(--space-6);
+}
+
+.blink-sliders label {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.blink-sliders strong {
+  color: var(--color-text);
+}
+
+.blink-sliders input[type="range"] {
+  width: 100%;
+  accent-color: var(--color-accent);
+}
+
+.blink-keys {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}

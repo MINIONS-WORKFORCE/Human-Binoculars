@@ -1,8 +1,9 @@
-// Temporary page for Issue 18: proves the skeleton can call /api/frames and show
-// the frames. The blink viewer (canvas, playback, crosshair) replaces the image grid next.
+// Demo page: pick a target, load /api/frames, blink the frames.
+// Thạch's real page will import BlinkViewer the same way.
 import { useEffect, useState } from "react";
 import { api, friendlyMessage, ApiError, type Frames } from "./api";
 import { apiBase, useMock } from "./config";
+import { BlinkViewer } from "./blink/BlinkViewer";
 import { DETECTORS, TARGET_PRESETS } from "./targets";
 
 type State =
@@ -14,8 +15,6 @@ interface Request {
   targetKey: string;
   detector: number;
 }
-
-const SCALE = 6;
 
 async function fetchFrames({ targetKey, detector }: Request): Promise<State> {
   // An unknown key is sent as-is, so the page can show the 404 path too.
@@ -119,20 +118,24 @@ export default function App() {
         </button>
       </form>
 
-      <section aria-live="polite">
-        {state.status === "loading" && <p className="muted">Loading frames…</p>}
+      <section>
+        {state.status === "loading" && (
+          <p className="muted" role="status">
+            Loading frames…
+          </p>
+        )}
         {state.status === "error" && (
           <p className="error" role="alert">
             {state.message} <code>{state.code}</code>
           </p>
         )}
-        {state.status === "ready" && <FrameList data={state.data} />}
+        {state.status === "ready" && <FrameSummary data={state.data} />}
       </section>
     </main>
   );
 }
 
-function FrameList({ data }: { data: Frames }) {
+function FrameSummary({ data }: { data: Frames }) {
   const { grid } = data;
   return (
     <>
@@ -144,48 +147,12 @@ function FrameList({ data }: { data: Frames }) {
           <> · warnings: {data.warnings.join(", ")}</>
         )}
       </p>
-      <ol className="frames">
-        {data.frames.map((frame, index) => (
-          <li key={frame.id} className="frame">
-            <div className="images">
-              <figure>
-                <img
-                  src={api.imageUrl(frame.png)}
-                  width={grid.width * SCALE}
-                  height={grid.height * SCALE}
-                  alt={`Frame ${index + 1}, ${frame.iso}`}
-                />
-                <figcaption>Original</figcaption>
-              </figure>
-              <figure>
-                <img
-                  src={api.imageUrl(frame.diff_png)}
-                  width={grid.width * SCALE}
-                  height={grid.height * SCALE}
-                  alt={`Difference image for frame ${index + 1}`}
-                />
-                <figcaption>Difference</figcaption>
-              </figure>
-            </div>
-            <dl>
-              <dt>UTC</dt>
-              <dd>{frame.iso.replace("T", " ").replace("Z", "")}</dd>
-              <dt>Wavelength</dt>
-              <dd>{frame.wavelength_um} µm</dd>
-              <dt>Predicted px</dt>
-              <dd>
-                {frame.predicted_px
-                  ? `(${frame.predicted_px.join(", ")})`
-                  : "none"}
-              </dd>
-              <dt>Release</dt>
-              <dd>
-                {frame.release.toUpperCase()} · survey {frame.survey}
-              </dd>
-            </dl>
-          </li>
-        ))}
-      </ol>
+      <BlinkViewer
+        frames={data.frames}
+        grid={grid}
+        detector={data.detector}
+        imageUrl={api.imageUrl}
+      />
     </>
   );
 }
