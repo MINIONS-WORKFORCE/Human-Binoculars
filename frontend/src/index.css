@@ -109,6 +109,119 @@ input:focus-visible {
   color: var(--color-muted);
 }
 
+/* Target input ---------------------------------------------------------- */
+
+.target-field {
+  display: grid;
+  gap: var(--space-1);
+  flex: 1 1 22rem;
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.target-field input {
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-control);
+  border-radius: var(--radius-sm);
+  background: var(--color-raised);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-md);
+}
+
+.target-field input[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.target-hint {
+  margin: 0;
+  font-size: var(--text-xs);
+}
+
+.target-hint code,
+.coord-rows dd {
+  font-family: var(--font-mono);
+}
+
+.coord-preview {
+  flex: 1 1 100%;
+  min-height: 4.5rem;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  font-size: var(--text-sm);
+}
+
+.coord-preview p {
+  margin: 0;
+}
+
+.coord-rows {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.coord-rows div {
+  display: grid;
+  grid-template-columns: minmax(9rem, auto) 1fr;
+  gap: var(--space-4);
+}
+
+.coord-rows dt {
+  color: var(--color-muted);
+}
+
+.coord-rows dd {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.coord-rows dd strong {
+  font-family: var(--font-sans);
+}
+
+.coord-note {
+  font-family: var(--font-sans);
+  color: var(--color-muted);
+}
+
+.coord-typed {
+  margin-left: var(--space-1);
+  padding: 0 var(--space-1);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+}
+
+.coord-error {
+  color: var(--color-danger);
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  flex: 1 1 100%;
+}
+
+.chip {
+  height: auto;
+  min-height: 2.25rem;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 480px) {
+  .coord-rows div {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
 .summary strong {
   color: var(--color-text);
 }

@@ -55,9 +55,29 @@ src/blink/player.ts             pure playback reducer + accumulated rAF clock
 src/blink/preload.ts            parallel fetch + img.decode() with progress
 src/blink/usePreloadedFrames.ts React hook around preload for originals and diffs
 src/blink/canvas.ts             square-pixel drawing and crosshair at (x+0.5)*size
-src/App.tsx                     demo page: pick a target, load /api/frames, blink
+src/coords/parse.ts             decimal degrees / hours-degrees -> degrees (CoordError codes)
+src/coords/format.ts            degrees -> "269.4521°", "17h57m48.50s", "+04°41′36.2″"
+src/coords/locate.ts            input -> position: coordinates, the 5 targets, then /api/resolve
+src/coords/CoordinatePreview.tsx shows the position in every notation while typing
+src/App.tsx                     demo page: type a target, load /api/frames, blink
 e2e/blink.spec.ts               Playwright: play, step, difference, crosshair pixels
+e2e/target-input.spec.ts        Playwright: the three ways to type a target, errors
 ```
+
+## Target input
+
+One text field accepts a name or coordinates (RA and Dec together):
+
+| Typed           | Example                             | Shown while typing                            |
+| --------------- | ----------------------------------- | --------------------------------------------- |
+| Decimal degrees | `133.795129 -7.245147`              | the same position in hours / degrees          |
+| Hours / degrees | `17h57m48.5s +04d41m36s`            | the same position in decimal degrees          |
+| A name          | `Barnard's Star`, `R Dra`, `GJ 699` | the name, decimal degrees and hours / degrees |
+
+The five challenge targets (and their aliases) are found offline. Other names are
+sent to `/api/resolve` when the form is submitted; the fixture backend only knows
+Barnard's Star for now. Typed coordinates send no `target_key`, so the API returns
+no `predicted_px` and the viewer shows no crosshair.
 
 ## Using BlinkViewer
 
