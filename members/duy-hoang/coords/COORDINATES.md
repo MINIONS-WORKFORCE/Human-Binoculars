@@ -84,21 +84,35 @@ All three parts (h, m, s / d, m, s) are required. Limits: hours < 24, degrees <=
 
 Reference values were computed with astropy (`Angle("08h55m10.831s").to(u.deg)`); the tests check them to 1e-6°.
 
+## Form 3: colons or spaces
+
+The numbers of Form 2 without the letters, separated by colons or single spaces, as SIMBAD prints them: `<H>:<M>:<S> <sign><D>:<M>:<S>` or `<H> <M> <S> <sign><D> <M> <S>`. Same units, rules and limits as Form 2. RA and Dec are separated by spaces or a comma, and the sign stays attached to the degrees.
+
+| Input                       | raDeg      | decDeg    | Note                         |
+| --------------------------- | ---------- | --------- | ---------------------------- |
+| `08:55:10.831 -07:14:42.53` | 133.795129 | -7.245147 | WISE 0855                    |
+| `08 55 10.831 -07 14 42.53` | 133.795129 | -7.245147 | WISE 0855, as SIMBAD prints  |
+| `17:57:48.5 +04:41:36.2`    | 269.452083 | 4.693389  |                              |
+| `12:30:49.42 12:23:28.0`    | 187.705917 | 12.391111 | no sign = positive           |
+| `00:00:00 -00:30:00`        | 0          | -0.5      | sign kept when degrees are 0 |
+
+All three numbers are required on each side: `08:55 -07:14` is `UNSUPPORTED_FORMAT`.
+
 ## Errors
 
-| Input                             | `error.code`                             |
-| --------------------------------- | ---------------------------------------- |
-| (empty)                           | `EMPTY`                                  |
-| `24h00m00s +00d00m00s`            | `RA_OUT_OF_RANGE`                        |
-| `360 0`, `-1 0`                   | `RA_OUT_OF_RANGE`                        |
-| `0 91`, `00h00m00s +90d00m01s`    | `DEC_OUT_OF_RANGE`                       |
-| `00h61m00s +00d00m00s`            | `MINUTES_OUT_OF_RANGE`                   |
-| `00h00m60s +00d00m00s`            | `SECONDS_OUT_OF_RANGE`                   |
-| `08h55m10.831s -7.245`            | `UNSUPPORTED_FORMAT` (forms mixed)       |
-| `08:55:10.831 -07:14:42.53`       | `UNSUPPORTED_FORMAT` (not supported yet) |
-| `133.795`                         | `UNSUPPORTED_FORMAT` (Dec missing)       |
-| `nonexistent zzz`                 | `NAME_NOT_FOUND`                         |
-| name lookup offline or HTTP error | `RESOLVER_UNAVAILABLE`                   |
+| Input                             | `error.code`                           |
+| --------------------------------- | -------------------------------------- |
+| (empty)                           | `EMPTY`                                |
+| `24h00m00s +00d00m00s`            | `RA_OUT_OF_RANGE`                      |
+| `360 0`, `-1 0`                   | `RA_OUT_OF_RANGE`                      |
+| `0 91`, `00h00m00s +90d00m01s`    | `DEC_OUT_OF_RANGE`                     |
+| `00h61m00s +00d00m00s`            | `MINUTES_OUT_OF_RANGE`                 |
+| `00h00m60s +00d00m00s`            | `SECONDS_OUT_OF_RANGE`                 |
+| `08h55m10.831s -7.245`            | `UNSUPPORTED_FORMAT` (forms mixed)     |
+| `08:55 -07:14`                    | `UNSUPPORTED_FORMAT` (seconds missing) |
+| `133.795`                         | `UNSUPPORTED_FORMAT` (Dec missing)     |
+| `nonexistent zzz`                 | `NAME_NOT_FOUND`                       |
+| name lookup offline or HTTP error | `RESOLVER_UNAVAILABLE`                 |
 
 ## Names
 
@@ -127,7 +141,6 @@ Name lookups return the **J2000 position** (`epoch: 2000`). Nearby stars have mo
 
 ## Not supported yet
 
-- Colon or space-only sexagesimal: `08:55:10.8 -07:14:42`, `08 55 10.8 -07 14 42`
 - Symbols: `8h55m10.8s −7°14′42.5″`
 - Partial forms: `08h55m`, `-7d14m`
 - Galactic coordinates (l, b)
