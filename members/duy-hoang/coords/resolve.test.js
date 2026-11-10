@@ -126,6 +126,43 @@ describe("resolveName: MAST", () => {
   });
 });
 
+describe("locate: WISE 0855 in every supported form", () => {
+  // The challenge position (astropy) for the three coordinate formats.
+  it.each([
+    ["133.79512916666664 -7.245147222222222"],
+    ["08h55m10.831s -07d14m42.53s"],
+    ["08:55:10.831 -07:14:42.53"],
+    ["08 55 10.831 -07 14 42.53"],
+  ])("%j is read as coordinates, not looked up", async (input) => {
+    const fetch = mastReturning([M31]);
+
+    const result = await locate(input, { fetch });
+
+    expect(result.raDeg).toBeCloseTo(133.79512917, 6);
+    expect(result.decDeg).toBeCloseTo(-7.24514722, 6);
+    expect(result).toMatchObject({ source: "input", name: null });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  // The name gives the catalog J2000 position from targets.js, about 85" from the
+  // challenge position, which is for a later epoch.
+  it("the name gives the local target without calling MAST", async () => {
+    const fetch = mastReturning([M31]);
+    const target = TARGETS.find((t) => t.id === "wise-0855");
+
+    const result = await locate("WISE 0855", { fetch });
+
+    expect(result).toMatchObject({
+      raDeg: target.raDeg,
+      decDeg: target.decDeg,
+      name: "WISE 0855-0714",
+      source: "local",
+      epoch: 2000,
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
 describe("locate", () => {
   it("parses coordinates without calling MAST", async () => {
     const fetch = mastReturning([M31]);
