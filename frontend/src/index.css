@@ -1,0 +1,114 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+}
+
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: var(--text-2xl);
+}
+
+.badge {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-control);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.badge-mock {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+  margin: var(--space-6) 0;
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+}
+
+.controls label {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+select,
+button {
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-control);
+  border-radius: var(--radius-sm);
+  background: var(--color-raised);
+  color: var(--color-text);
+  font: inherit;
+}
+
+button {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+button.secondary {
+  background: var(--color-raised);
+  border-color: var(--color-control);
+  color: var(--color-text);
+}
+
+select:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.muted {
+  color: var(--color-muted);
+}
+
+.error {
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--color-danger);
+  background: var(--color-surface);
+}
+
+.summary {
+  color: var(--color-muted);
+}
+
+.summary strong {
+  color: var(--color-text);
+}
