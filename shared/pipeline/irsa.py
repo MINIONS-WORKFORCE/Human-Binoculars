@@ -359,3 +359,165 @@ def fetch_cutouts(
     manifest_path = out_path / "manifest.json"
     manifest_path.write_text(json.dumps(manifest_data, indent=2), encoding="utf-8")
     return manifest_path
+
+
+def _normalize_target_key(key: str | None) -> str | None:
+    if not key:
+        return None
+    k = str(key).strip().lower()
+    k = re.sub(r"[^a-z0-9]", "", k)
+    # Map common variations
+    mapping = {
+        "barnard": "barnard",
+        "barnardsstar": "barnard",
+        "gj699": "barnard",
+        "wise0855": "wise0855",
+        "wise08550714": "wise0855",
+        "wisej085510830714425": "wise0855",
+        "epsindib": "epsindib",
+        "epsilonindib": "epsindib",
+        "gj845b": "epsindib",
+        "rwaur": "rwaur",
+        "rwaurigae": "rwaur",
+        "rdra": "rdra",
+        "rdraconis": "rdra",
+    }
+    return mapping.get(k, k)
+
+
+def find_frames(
+    query: dict[str, Any] | None = None,
+    *,
+    target_key: str | None = None,
+    ra_deg: float | None = None,
+    dec_deg: float | None = None,
+    detector: str | int | None = None,
+    collection: str = "spherex_qr2",
+    cutout_size_deg: float = 0.0833,
+    data_dir: Path | str | None = None,
+    mode: str = "fixture",
+    max_frames: int | None = None,
+) -> list[dict[str, Any]]:
+    """Finds SPHEREx observation frames in either offline fixture mode or live mode.
+
+    Fulfills contract in SRS-MVP Section 6 and Issue #21.
+    In 'fixture' mode: operates 100% offline without network calls.
+    In 'live' mode: queries IRSA and fetches cutouts dynamically.
+
+    Returns:
+        List of frame dictionaries containing:
+        obs_id, obs_publisher_did, target_key, detector, energy_bandpassname,
+        mjd, t_min, t_max, ra, dec, fits_path, sha256, file_size.
+    """
+    # Extract params from query dict if provided
+    q = query or {}
+    t_key = target_key or q.get("target_key") or q.get("id") or q.get("target")
+    norm_t_key = _normalize_target_key(t_key)
+    ra = ra_deg if ra_deg is not None else q.get("ra") or q.get("ra_deg") or q.get("s_ra")
+    dec = dec_deg if dec_deg is not None else q.get("dec") or q.get("dec_deg") or q.get("s_dec")
+    det = detector if detector is not None else q.get("detector") or q.get("energy_bandpassname")
+    norm_det = _normalize_detector(det)
+    coll = q.get("collection") or q.get("obs_collection") or collection
+    size_deg = q.get("cutout_size_deg") or cutout_size_deg
+    active_mode = q.get("data_mode") or q.get("mode") or mode
+    max_f = max_frames or q.get("max_frames")
+
+    root = Path(__file__).resolve().parents[2]
+    d_dir = Path(data_dir) if data_dir else root / "data"
+
+    if active_mode == "fixture":
+        # Search candidate manifest paths
+        manifest_candidates = [
+            d_dir / "fixtures" / "manifest.json",
+            root / "data" / "fixtures" / "manifest.json",
+            root / "members" / "khoi" / "fixtures_manifest.json",
+            d_dir / "cutouts" / "barnard_d6" / "manifest.json",
+        ]
+        manifest_path = next((p for p in manifest_candidates if p.exists()), None)
+        if not manifest_path:
+            logger.warning("No fixture manifest found in candidate locations: %s", manifest_candidates)
+            return []
+
+        try:
+            manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            logger.error("Failed to read manifest %s: %s", manifest_path, exc)
+            return []
+
+        entries = manifest_data.get("entries", [])
+        matched_frames: list[dict[str, Any]] = []
+
+        for e in entries:
+            # 1. Check target_key match
+            entry_target = _normalize_target_key(e.get("target_key") or e.get("target_name"))
+            if norm_t_key and entry_target and entry_target != norm_t_key:
+                continue
+
+            # 2. Check detector match if requested
+            entry_det = _normalize_detector(e.get("detector") or e.get("energy_bandpassname"))
+            if norm_det and entry_det and entry_det != norm_det:
+                continue
+
+            # 3. Check spatial coordinates distance if ra & dec specified and no target_key
+            if not norm_t_key and ra is not None and dec is not None:
+                e_ra = float(e.get("ra") or e.get("s_ra") or 0.0)
+                e_dec = float(e.get("dec") or e.get("s_dec") or 0.0)
+                dist = math.hypot(e_ra - float(ra), e_dec - float(dec))
+                if dist > 0.15:  # Tolerance radius
+                    continue
+
+            # Resolve local absolute fits_path
+            raw_path = str(e.get("fits_path") or e.get("path") or "")
+            fits_path = root / raw_path if not Path(raw_path).is_absolute() else Path(raw_path)
+
+            frame_dict = {
+                "obs_id": str(e.get("obs_id", "")),
+                "obs_publisher_did": str(e.get("obs_publisher_did", "")),
+                "target_key": e.get("target_key", t_key),
+                "detector": entry_det or e.get("detector", ""),
+                "energy_bandpassname": entry_det or e.get("energy_bandpassname", ""),
+                "mjd": float(e.get("mjd") or e.get("t_min") or 0.0),
+                "t_min": float(e.get("t_min") or e.get("mjd") or 0.0),
+                "t_max": float(e.get("t_max") or e.get("mjd") or 0.0),
+                "ra": float(e.get("ra") or ra or 0.0),
+                "dec": float(e.get("dec") or dec or 0.0),
+                "fits_path": str(fits_path),
+                "sha256": e.get("sha256", ""),
+                "file_size": e.get("file_size", 0),
+            }
+            matched_frames.append(frame_dict)
+
+        # Sort by MJD
+        matched_frames.sort(key=lambda x: x["mjd"])
+        if max_f is not None and max_f > 0:
+            matched_frames = matched_frames[:max_f]
+        return matched_frames
+
+    # Live mode: network fetch
+    if ra is None or dec is None:
+        raise ValueError("Live mode requires coordinates ra_deg and dec_deg")
+
+    imgs = find_images(float(ra), float(dec), collection=coll, detector=norm_det, search_radius_deg=size_deg)
+    out_cache = d_dir / "cache" / f"live_{float(ra):.4f}_{float(dec):.4f}"
+    m_path = fetch_cutouts(imgs, float(ra), float(dec), float(size_deg), out_cache)
+    m_data = json.loads(m_path.read_text(encoding="utf-8"))
+    live_results = []
+    for en in m_data.get("entries", []):
+        live_results.append({
+            "obs_id": en["obs_id"],
+            "obs_publisher_did": en["obs_publisher_did"],
+            "target_key": t_key,
+            "detector": en["detector"],
+            "energy_bandpassname": f"SPHEREx-{en['detector']}" if not en['detector'].startswith("SPHEREx-") else en['detector'],
+            "mjd": en["mjd"],
+            "t_min": en["mjd"],
+            "t_max": en["t_max"],
+            "ra": float(ra),
+            "dec": float(dec),
+            "fits_path": str(out_cache / en["path"]),
+            "sha256": en["sha256"],
+            "file_size": en.get("file_size", 0),
+        })
+    if max_f is not None and max_f > 0:
+        live_results = live_results[:max_f]
+    return live_results

@@ -1,5 +1,11 @@
 """Unit tests for Khôi's IRSA data pipeline module (shared/pipeline/irsa.py).
-Run with: pytest members/khoi/test_irsa.py
+Fulfills Issue #21 test requirements:
+- Offline fixture mode execution without network.
+- 5 targets verification (>= 3 frames each).
+- Detector filtering (D6 vs D1).
+- Manifest structure and FITS integrity.
+
+Run with: pytest members/khoi/test_irsa.py -v
 """
 
 from __future__ import annotations
@@ -7,6 +13,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
@@ -18,6 +25,7 @@ from shared.pipeline.irsa import (
     _normalize_detector,
     find_images,
     fetch_cutouts,
+    find_frames,
     make_cutout_url,
     group_images_into_visits,
 )
@@ -52,20 +60,65 @@ def test_group_images_into_visits():
     assert len(visits[1]) == 2
 
 
-def test_manifest_structure(tmp_path):
-    mock_images = [
-        {
-            "obs_id": "2025W33_test_1",
-            "obs_publisher_did": "ivo://spx/test1",
-            "obs_collection": "spherex_qr2",
-            "energy_bandpassname": "SPHEREx-D6",
-            "s_ra": 269.45,
-            "s_dec": 4.76,
-            "t_min": 60902.8,
-            "t_max": 60902.9,
-            "access_url": "https://irsa.ipac.caltech.edu/test.fits",
-        }
-    ]
-    # Verify group logic works
-    visits = group_images_into_visits(mock_images)
-    assert len(visits) == 1
+@pytest.mark.parametrize("target_key", ["barnard", "wise0855", "epsindib", "rwaur", "rdra"])
+def test_find_frames_five_targets_offline(target_key: str):
+    """Verify that find_frames in fixture mode works 100% offline and returns >= 3 frames for each target."""
+    with patch("requests.get", side_effect=RuntimeError("Network access forbidden in fixture mode")):
+        frames = find_frames(target_key=target_key, mode="fixture")
+        assert len(frames) >= 3, f"Expected >= 3 frames for {target_key}, got {len(frames)}"
+
+        # Check required fields in each frame
+        for f in frames:
+            assert f["target_key"] == target_key
+            assert f["detector"] in ("SPHEREx-D6", "SPHEREx-D1")
+            assert "obs_id" in f
+            assert "mjd" in f
+            assert "fits_path" in f
+            assert "sha256" in f
+
+            fits_path = Path(f["fits_path"])
+            assert fits_path.exists(), f"FITS file does not exist: {fits_path}"
+            assert fits_path.stat().st_size > 10000, f"FITS file too small: {fits_path}"
+            # Verify valid FITS magic bytes
+            with open(fits_path, "rb") as fp:
+                assert fp.read(8) == b"SIMPLE  "
+
+
+def test_find_frames_detector_filtering():
+    """Verify detector filtering for SPHEREx-D6 and SPHEREx-D1."""
+    with patch("requests.get", side_effect=RuntimeError("Network access forbidden in fixture mode")):
+        d6_frames = find_frames(target_key="barnard", detector="D6", mode="fixture")
+        assert len(d6_frames) >= 3
+        assert all(f["detector"] == "SPHEREx-D6" for f in d6_frames)
+
+        d1_frames = find_frames(target_key="barnard", detector="SPHEREx-D1", mode="fixture")
+        assert len(d1_frames) >= 3
+        assert all(f["detector"] == "SPHEREx-D1" for f in d1_frames)
+
+
+def test_find_frames_query_dict_and_coords():
+    """Verify query dict and coordinate matching."""
+    with patch("requests.get", side_effect=RuntimeError("Network access forbidden in fixture mode")):
+        # Query dict format matching Section 5 contract
+        q = {"target_key": "wise0855", "energy_bandpassname": "SPHEREx-D6"}
+        frames = find_frames(q, mode="fixture")
+        assert len(frames) >= 3
+        assert all(f["target_key"] == "wise0855" for f in frames)
+
+        # Spatial lookup near Barnard (RA=269.446, Dec=4.767)
+        spatial_frames = find_frames(ra_deg=269.446, dec_deg=4.767, mode="fixture")
+        assert len(spatial_frames) >= 3
+        assert any(f["target_key"] == "barnard" for f in spatial_frames)
+
+
+def test_fixtures_manifest_integrity():
+    """Verify manifest.json contains all 5 targets and valid schema."""
+    manifest_path = ROOT_DIR / "members" / "khoi" / "fixtures_manifest.json"
+    assert manifest_path.exists()
+    data = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert data["total_targets"] == 5
+    assert data["total_frames"] >= 15
+    for key in ["barnard", "wise0855", "epsindib", "rwaur", "rdra"]:
+        assert key in data["targets_summary"]
+        assert data["targets_summary"][key]["total"] >= 3
