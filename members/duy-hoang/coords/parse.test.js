@@ -51,6 +51,41 @@ describe("parseCoordinates: h/m/s d/m/s", () => {
   });
 });
 
+describe("parseCoordinates: colons or spaces", () => {
+  it.each([
+    ["08:55:10.831 -07:14:42.53"],
+    ["08 55 10.831 -07 14 42.53"], // as SIMBAD prints it
+    ["08:55:10.831, -07:14:42.53"],
+    ["8:55:10.831 -7:14:42.53"],
+    ["  08:55:10.831   -07:14:42.53 "],
+    ["08:55:10.831 −07:14:42.53"], // Unicode minus sign
+  ])("reads WISE 0855 from %j", (input) => {
+    expectCoords(input, WISE_0855.raDeg, WISE_0855.decDeg);
+  });
+
+  it.each([
+    ["17:57:48.5 +04:41:36.2", 269.4520833333333, 4.693388888888889],
+    ["17 57 48.5 +04 41 36.2", 269.4520833333333, 4.693388888888889],
+    ["12:30:49.42 12:23:28.0", 187.70591666666664, 12.39111111111111], // no sign = positive
+    ["00:00:00 -00:30:00", 0, -0.5], // the sign survives zero degrees
+    ["00:00:00 -90:00:00", 0, -90],
+  ])("%s", (input, raDeg, decDeg) => {
+    expectCoords(input, raDeg, decDeg);
+  });
+});
+
+describe("parseCoordinates: all three formats agree", () => {
+  it("gives the same WISE 0855 position for decimal, h/m/s and colons", () => {
+    const decimal = parseCoordinates("133.79512916666664 -7.245147222222222");
+    const letters = parseCoordinates("08h55m10.831s -07d14m42.53s");
+    const colons = parseCoordinates("08:55:10.831 -07:14:42.53");
+    for (const result of [letters, colons]) {
+      expect(result.raDeg).toBeCloseTo(decimal.raDeg, 9);
+      expect(result.decDeg).toBeCloseTo(decimal.decDeg, 9);
+    }
+  });
+});
+
 describe("parseCoordinates: decimal degrees", () => {
   it.each([
     ["133.795 -7.245", 133.795, -7.245],
@@ -85,8 +120,13 @@ describe("parseCoordinates: errors", () => {
     ["00h00m00s +00d60m00s", "MINUTES_OUT_OF_RANGE"],
     ["00h00m60s +00d00m00s", "SECONDS_OUT_OF_RANGE"],
     ["00h00m00s +00d00m60.0s", "SECONDS_OUT_OF_RANGE"],
+    ["24:00:00 +00:00:00", "RA_OUT_OF_RANGE"],
+    ["00:00:00 +91:00:00", "DEC_OUT_OF_RANGE"],
+    ["00:61:00 +00:00:00", "MINUTES_OUT_OF_RANGE"],
+    ["00:00:00 +00:00:60", "SECONDS_OUT_OF_RANGE"],
     ["08h55m10.831s -7.245", "UNSUPPORTED_FORMAT"], // mixed forms
-    ["08:55:10.831 -07:14:42.53", "UNSUPPORTED_FORMAT"], // colons: not yet
+    ["08:55:10.831 -7.245", "UNSUPPORTED_FORMAT"], // mixed forms
+    ["08:55 -07:14", "UNSUPPORTED_FORMAT"], // seconds missing
     ["133.795", "UNSUPPORTED_FORMAT"], // Dec missing
     ["133.795 -7.245 1", "UNSUPPORTED_FORMAT"],
     ["Barnard's Star", "UNSUPPORTED_FORMAT"],
@@ -99,6 +139,8 @@ describe("looksLikeCoordinates", () => {
   it.each([
     ["133.795 -7.245", true],
     ["08h55m10.831s-7d14m42.53s", true],
+    ["08:55:10.831 -07:14:42.53", true],
+    ["08 55 10.831 -07 14 42.53", true],
     ["25h00m00s +10d00m00s", true], // invalid, but still coordinates
     ["-7 5", true],
     ["Barnard's Star", false],
