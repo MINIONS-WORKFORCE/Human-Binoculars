@@ -1,4 +1,4 @@
-"""Offline API 0.1 fixtures. All example measurements and pixels are synthetic."""
+"""Offline API 0.1 fixtures, with observed FITS preferred for frame requests."""
 
 import hashlib
 import json
@@ -13,7 +13,9 @@ from ..api_models import (
     PhotometryQuery,
     ResolveQuery,
     ScienceQuery,
+    Target,
 )
+from .catalog import resolve_name, targets
 
 ROOT = Path(__file__).resolve().parents[4]
 SAMPLES = ROOT / "api_samples"
@@ -41,9 +43,13 @@ def fail(status, code, message, details=None):
     raise FixtureError(status, code, message, details or {})
 
 
-def sample(filename):
+def require_fixture_mode():
     if os.getenv("DATA_MODE", "fixture") != "fixture":
         fail(500, "INTERNAL", "Live API 0.1 adapters await team integration.")
+
+
+def sample(filename):
+    require_fixture_mode()
     return json.loads((SAMPLES / filename).read_text(encoding="utf-8"))
 
 
@@ -65,16 +71,46 @@ def health():
 
 
 def resolve(query: ResolveQuery):
-    if query.name.strip().lower() not in {"barnard", "barnards star", "barnard's star"}:
+    require_fixture_mode()
+    result = resolve_name(query.name)
+    if result is None:
         fail(404, "UNKNOWN_TARGET", "Name absent from fixture resolver.", {"name": query.name})
-    result = sample("resolve_barnard.json")
-    result["query"] = query.name
     return result
 
 
 def frames(query: FramesQuery):
+    from .frame_rendering import NoCoverage
+    from .observed_frames import matching_cutouts, render_cached
+
+    require_fixture_mode()
+    requested_target = Target.model_validate(target(query))
+    cutouts = matching_cutouts(query)
+    if cutouts is None:
+        result, published = sample_frames(query, requested_target)
+    else:
+        try:
+            result, published = render_cached(
+                query.model_dump_json(), requested_target.model_dump_json(), cutouts
+            )
+        except NoCoverage:
+            fail(
+                404,
+                "NO_FRAMES",
+                "No fixture FITS cover this sky grid.",
+                {"ra": query.ra, "dec": query.dec},
+            )
+    with image_lock:
+        for frame_id, content in published.items():
+            images[frame_id] = content
+            images.move_to_end(frame_id)
+        while len(images) > 1200:
+            images.popitem(last=False)
+    return result
+
+
+def sample_frames(query, requested_target):
     result = sample("frames_barnard_d6.json")
-    result["target"] = target(query)
+    result["target"] = requested_target
     result["detector"] = query.detector
     result["grid"].update(center_ra=query.ra, center_dec=query.dec)
     identity = hashlib.sha256(query.model_dump_json().encode()).hexdigest()[:24]
@@ -96,18 +132,15 @@ def frames(query: FramesQuery):
             (SAMPLES / f"png/frame-{index}_diff.png").read_bytes(),
         )
     result["reference_frame_id"] = result["frames"][0]["id"]
-    result = Frames.model_validate(result)
-    with image_lock:
-        images.update(published)
-        while len(images) > 1200:
-            images.popitem(last=False)
-    return result
+    return Frames.model_validate(result), published
 
 
 def image(frame_id, difference):
-    sample("health.json")
+    require_fixture_mode()
     with image_lock:
         content = images.get(frame_id)
+        if content is not None:
+            images.move_to_end(frame_id)
     if content is None:
         fail(404, "FRAME_NOT_FOUND", "Call /api/frames first or reload the list.", {"id": frame_id})
     return content[difference]
@@ -115,6 +148,8 @@ def image(frame_id, difference):
 
 def photometry(query: PhotometryQuery):
     result = sample("photometry_rdra.json")
+    if query.target_key != result["target"]["target_key"]:
+        result.update(reference_star=None, points=[], variability=None)
     result["target"] = target(query)
     if query.detector is not None:
         result["points"] = [p for p in result["points"] if p["detector"] == query.detector]
@@ -124,6 +159,19 @@ def photometry(query: PhotometryQuery):
 
 def astrometry(query: ScienceQuery):
     result = sample("astrometry_barnard.json")
+    if query.target_key != result["target"]["target_key"]:
+        entry = targets().get(query.target_key)
+        record = entry[0] if entry is not None else {}
+        result.update(
+            points=[],
+            fit=None,
+            catalog_pm={
+                "pmra": record.get("pmra"),
+                "pmdec": record.get("pmdec"),
+                "epoch": record.get("epoch", "unknown"),
+                "source": record.get("source", "unknown"),
+            },
+        )
     result["target"] = target(query)
     # The supplied astrometry sample contains D6 measurements only.
     if query.detector is not None and query.detector != 6:
