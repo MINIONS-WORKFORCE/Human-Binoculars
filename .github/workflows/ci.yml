@@ -105,6 +105,10 @@ jobs:
     needs: layout
     if: needs.layout.outputs.frontend == 'true'
     runs-on: ubuntu-latest
+    container:
+      # Includes Chromium and its OS dependencies. Match frontend/package-lock.json.
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
+      options: --user 1001 --ipc=host
     defaults:
       run:
         working-directory: frontend
@@ -118,7 +122,6 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
 
       # playwright.config.ts builds with `--mode mock` and serves it with vite preview.
       - run: npm run e2e
