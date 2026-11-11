@@ -20,6 +20,12 @@ from astropy.visualization import AsinhStretch, ImageNormalize
 from frames import make_frames
 from tan_pipeline import FOV, ROOT, load_cutout
 
+import sys
+
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from shared.pipeline.irsa import download_cutout
+
 BASE = ROOT / "data" / "five_targets"
 TARGETS = {
     "barnard": "GJ 699",
@@ -124,12 +130,14 @@ def acquire_target(info):
         path.parent.mkdir(parents=True, exist_ok=True)
         url = str(row["access_url"])
         if not path.exists():
-            response = get(f"{url}?center={ra},{dec}&size={FOV}")
-            with fits.open(io.BytesIO(response.content)) as h:
-                h.verify("exception")
-                if str(h["IMAGE"].header["OBSID"]) != str(row["obs_id"]):
-                    raise ValueError("Unexpected observation")
-            path.write_bytes(response.content)
+            download_cutout(
+                url,
+                ra,
+                dec,
+                FOV,
+                path,
+                expected_obs_id=str(row["obs_id"]),
+            )
         return {
             "path": str(path.relative_to(ROOT)),
             "url": url,
