@@ -4,7 +4,7 @@ import time
 from threading import Event
 
 import pytest
-from app import frame_jobs
+from app.legacy import frame_jobs
 from app.legacy_main import app
 from fastapi.testclient import TestClient
 
@@ -88,7 +88,7 @@ def test_failure_is_public_and_can_retry(client, monkeypatch):
 def test_key_covers_request_and_processing_mode():
     from pathlib import Path
 
-    from app.schemas import FramesQuery
+    from app.legacy.schemas import FramesQuery
 
     first = frame_jobs.identity(FramesQuery(**QUERY), "live", Path("."))
     second = frame_jobs.identity(FramesQuery(**{**QUERY, "t_min": 60902}), "live", Path("."))

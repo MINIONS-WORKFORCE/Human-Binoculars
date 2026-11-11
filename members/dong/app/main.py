@@ -13,15 +13,17 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .api_models import ErrorResponse
 from .fixture_api import router
+from .services.fixtures import FixtureError
 
 app = FastAPI(title="Human Binoculars API", version="0.1")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        v.strip()
-        for v in os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:5173").split(",")
-        if v.strip()
-    ],
+    allow_origins=sorted(
+        {
+            "http://localhost:5173",
+            *(v.strip() for v in os.getenv("CORS_ALLOW_ORIGINS", "").split(",") if v.strip()),
+        }
+    ),
     allow_methods=["GET"],
     expose_headers=["Server-Timing", "Cache-Control"],
 )
@@ -32,6 +34,11 @@ logger = logging.getLogger("uvicorn.error")
 def error_response(status, code, message, details):
     body = ErrorResponse(error={"code": code, "message": message, "details": details})
     return JSONResponse(body.model_dump(), status_code=status)
+
+
+@app.exception_handler(FixtureError)
+def fixture_error(request: Request, exc: FixtureError):
+    return error_response(exc.status, exc.code, exc.message, exc.details)
 
 
 @app.exception_handler(RequestValidationError)
