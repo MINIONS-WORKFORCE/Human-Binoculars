@@ -56,7 +56,8 @@ def load_cutout(path, ra=RA, dec=DEC):
             if k.startswith("MP_") and k not in {"MP_SOURCE", "MP_FULLSAMPLE"}
         }
         bits = sum(1 << bit for bit in set(rejected.values()))
-        good = np.isfinite(raw) & ((flags & bits) == 0)
+        flagged = (flags & bits) != 0
+        good = np.isfinite(raw) & ~flagged
         spectral = header.copy()
         for k in list(spectral):
             if k.startswith(("A_", "B_", "AP_", "BP_")):
@@ -72,6 +73,7 @@ def load_cutout(path, ra=RA, dec=DEC):
             "bandwidth_um": float(width),
             "rejected_flags": rejected,
             "valid_pixels": int(good.sum()),
+            "bad_pixel_frac": float(flagged.mean()),
             "flag_counts": {
                 k: int(((flags & (1 << int(fh[k]))) != 0).sum()) for k in fh if k.startswith("MP_")
             },

@@ -18,11 +18,12 @@ from .services.fixtures import FixtureError
 app = FastAPI(title="Human Binoculars API", version="0.1")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        v.strip()
-        for v in os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:5173").split(",")
-        if v.strip()
-    ],
+    allow_origins=sorted(
+        {
+            "http://localhost:5173",
+            *(v.strip() for v in os.getenv("CORS_ALLOW_ORIGINS", "").split(",") if v.strip()),
+        }
+    ),
     allow_methods=["GET"],
     expose_headers=["Server-Timing", "Cache-Control"],
 )
