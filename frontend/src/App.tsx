@@ -1,7 +1,7 @@
 // Demo page: type a target (name or coordinates), load /api/frames, blink them.
 // Thạch's real page will import BlinkViewer the same way.
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { api, friendlyMessage, ApiError, type Frames } from "./api";
+import { api, describeError, type ErrorInfo, type Frames } from "./api";
 import { apiBase, useMock } from "./config";
 import { BlinkViewer } from "./blink/BlinkViewer";
 import { CoordinatePreview, type Lookup } from "./coords/CoordinatePreview";
@@ -12,8 +12,11 @@ import { DETECTORS, TARGET_PRESETS } from "./targets";
 
 type State =
   | { status: "loading" }
-  | { status: "error"; message: string; code: string }
+  | { status: "error"; error: ErrorInfo }
   | { status: "ready"; data: Frames };
+
+/** After this many seconds the loading line explains that the archive can be slow. */
+const SLOW_AFTER_S = 3;
 
 interface Request {
   ra: number;
@@ -39,11 +42,7 @@ async function fetchFrames(request: Request): Promise<State> {
   try {
     return { status: "ready", data: await api.frames(request) };
   } catch (error) {
-    return {
-      status: "error",
-      message: friendlyMessage(error),
-      code: error instanceof ApiError ? error.code : "UNKNOWN",
-    };
+    return { status: "error", error: describeError(error) };
   }
 }
 
@@ -82,6 +81,8 @@ export default function App() {
     setState({ status: "loading" });
     setRequest(next);
   };
+  // A copy is a new object, so the effect above sends the same request again.
+  const reload = () => load({ ...request });
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -170,23 +171,68 @@ export default function App() {
       </form>
 
       <section>
-        {state.status === "loading" && (
-          <p className="muted" role="status">
-            Loading frames…
-          </p>
-        )}
+        {state.status === "loading" && <LoadingFrames />}
         {state.status === "error" && (
-          <p className="error" role="alert">
-            {state.message} <code>{state.code}</code>
-          </p>
+          <FramesError error={state.error} onRetry={reload} />
         )}
-        {state.status === "ready" && <FrameSummary data={state.data} />}
+        {state.status === "ready" && (
+          <FrameSummary data={state.data} onReload={reload} />
+        )}
       </section>
     </main>
   );
 }
 
-function FrameSummary({ data }: { data: Frames }) {
+/** "Loading frames…", then a seconds counter: a live IRSA query can take 2 minutes. */
+function LoadingFrames() {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const started = performance.now();
+    const id = setInterval(
+      () => setSeconds(Math.floor((performance.now() - started) / 1000)),
+      1000,
+    );
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <p className="muted loading" role="status" data-testid="frames-loading">
+      <span className="spinner" aria-hidden="true" />
+      Loading frames…
+      {seconds >= SLOW_AFTER_S && (
+        <> {seconds} s. The NASA archive can take up to 2 minutes.</>
+      )}
+    </p>
+  );
+}
+
+function FramesError({
+  error,
+  onRetry,
+}: {
+  error: ErrorInfo;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="error" role="alert" data-testid="frames-error">
+      <p>
+        {error.message} <code>{error.code}</code>
+      </p>
+      {error.retry && (
+        <button type="button" className="secondary" onClick={onRetry}>
+          Try again
+        </button>
+      )}
+    </div>
+  );
+}
+
+function FrameSummary({
+  data,
+  onReload,
+}: {
+  data: Frames;
+  onReload: () => void;
+}) {
   const { grid, target } = data;
   return (
     <>
@@ -199,12 +245,20 @@ function FrameSummary({ data }: { data: Frames }) {
           <> · warnings: {data.warnings.join(", ")}</>
         )}
       </p>
-      <BlinkViewer
-        frames={data.frames}
-        grid={grid}
-        detector={data.detector}
-        imageUrl={api.imageUrl}
-      />
+      {data.frames.length === 0 ? (
+        // The contract's answer when images exist but every one was filtered out.
+        <p className="muted" role="status" data-testid="frames-empty">
+          No frames are left for these settings. Try another detector.
+        </p>
+      ) : (
+        <BlinkViewer
+          frames={data.frames}
+          grid={grid}
+          detector={data.detector}
+          imageUrl={api.imageUrl}
+          onReload={onReload}
+        />
+      )}
     </>
   );
 }
