@@ -5,8 +5,8 @@ import socket
 
 import pytest
 from app.api_models import Astrometry, ErrorResponse, Frames, Health, Photometry, Resolve
-from app.services.fixtures import image_lock, images
 from app.main import app
+from app.services.fixtures import image_lock, images
 from fastapi.testclient import TestClient
 from PIL import Image
 
@@ -14,8 +14,9 @@ QUERY = {"ra": 269.4521, "dec": 4.6934, "target_key": "barnard"}
 
 
 @pytest.fixture
-def client(monkeypatch):
+def client(monkeypatch, tmp_path):
     monkeypatch.setenv("DATA_MODE", "fixture")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
     monkeypatch.setattr(
         socket, "create_connection", lambda *a, **k: pytest.fail("Fixture called network")
     )
@@ -39,6 +40,39 @@ def test_json_routes(client, path, params, model):
     result = client.get(path, params=params)
     assert result.status_code == 200, result.text
     model.model_validate(result.json())
+
+
+@pytest.mark.parametrize(
+    "name,key",
+    [
+        ("Barnard's Star", "barnard"),
+        ("WISE 0855-0714", "wise0855"),
+        ("eps Ind B", "epsindib"),
+        ("RW Aur", "rwaur"),
+        ("R Dra", "rdra"),
+    ],
+)
+def test_resolve_five_targets_from_epoch_tagged_catalog(client, name, key):
+    response = client.get("/api/resolve", params={"name": name})
+    assert response.status_code == 200, response.text
+    result = Resolve.model_validate(response.json())
+    assert result.target_key == key
+    assert result.epoch == "J2000.0"
+    assert result.source == "targets_table"
+
+
+def test_fixture_health_and_localhost_cors(client):
+    response = client.get("/api/health", headers={"Origin": "http://localhost:5173"})
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+    assert response.json()["mode"] == "fixture"
+    assert response.json()["irsa_reachable"] is None
+
+
+def test_science_samples_are_not_relabelled_as_other_objects(client):
+    photometry = client.get("/api/photometry", params=QUERY).json()
+    astrometry = client.get("/api/astrometry", params={**QUERY, "target_key": "rdra"}).json()
+    assert photometry["points"] == []
+    assert astrometry["points"] == []
 
 
 @pytest.mark.parametrize("key", ["barnard", "wise0855", "epsindib", "rwaur", "rdra"])
