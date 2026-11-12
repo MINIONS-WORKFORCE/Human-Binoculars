@@ -225,3 +225,35 @@ Kết quả: **13/13 tests PASSED (100%)** trong 9.15 giây.
    - **Màu dữ liệu khuyết/NaN:** Tất cả các pixel bị che bởi cờ chất lượng (`OVERFLOW`, `NONLINEAR`, transient...) hoặc nằm ngoài footprint khi xuất ra PNG phải luôn hiển thị bằng màu tím chuẩn của dự án: **`#703090`**.
    - **Ảnh hiệu (Diff):** Luôn dùng colormap hai cực đối xứng **`RdBu_r`** với cận đối xứng $[-limit, +limit]$. Sao có chuyển động riêng phải thể hiện rõ cấu trúc lưỡng cực: vùng cũ màu xanh lam (âm) và vùng mới màu đỏ (dương).
 
+---
+
+## 4. Nghiệm thu hoàn tất Task QA-19 (Ảnh hiệu Barnard & Câu kết luận tiếng Anh trên Website)
+
+**Cập nhật 12/11/2026:**
+Đã hoàn thành và nghiệm thu trực tiếp trên website theo tiêu chí **Done when: Hoàn thành khi đã có chạy kết quả trên website luôn**.
+
+### 4.1. Ảnh hiệu Barnard thành cặp sáng–tối (Mục QA-19 trong QA-Matrix: ĐẠT)
+* **Giao diện Blink Viewer:**
+  - Bổ sung chỉ dẫn chế độ ảnh hiệu (`mode === "diff"`) giải thích rõ hiện tượng vật lý: *"Difference image: Stationary background sources vanish, revealing moving objects like Barnard's Star as a distinct bright–dark dipole pair."*
+  - Trên ảnh hiệu giữa các đợt chụp, các ngôi sao nền bất động bị triệt tiêu về mức nền trung tính, trong khi sao Barnard dịch chuyển tạo thành cặp cực sáng–tối (dipole) rõ nét.
+  - Cập nhật trạng thái trong [`docs/QA-matrix.md`](QA-matrix.md) dòng `QA-19`: **Đạt**.
+
+### 4.2. Một câu kết luận tiếng Anh cho mỗi mục tiêu (5 Target Scientific Conclusions)
+Đã chuẩn hóa và đưa 5 câu kết luận tiếng Anh khoa học vào [`frontend/src/targets.ts`](../frontend/src/targets.ts), đồng thời thiết kế thẻ hiển thị `Scientific Conclusion` (`.target-conclusion-card`) xuất hiện trực quan trên giao diện [`frontend/src/App.tsx`](../frontend/src/App.tsx):
+
+1. **Barnard's Star (`barnard`):**
+   > *"Barnard's Star exhibits rapid proper motion across observation epochs, producing a pronounced bright–dark dipole signature in difference imaging that directly confirms its transverse motion relative to the background sky."*
+2. **WISE 0855-0714 (`wise0855`):**
+   > *"WISE 0855 is an ultra-cold sub-stellar brown dwarf whose thermal emission peaks predominantly in SPHEREx mid-infrared Detector 6 (4.5–5.0 µm) with noticeable proper motion displacement across survey visits."*
+3. **Epsilon Indi B (`epsindib`):**
+   > *"Epsilon Indi B is a nearby benchmark T-dwarf binary companion displaying shared proper motion with the host star and strong atmospheric methane absorption features in SPHEREx channels."*
+4. **RW Aurigae (`rwaur`):**
+   > *"RW Aurigae is a young T Tauri binary system exhibiting prominent infrared excess and irregular multi-magnitude dimming episodes caused by circumstellar dust occultation."*
+5. **R Draconis (`rdra`):**
+   > *"R Draconis is a high-amplitude pulsating Mira variable demonstrating substantial seasonal brightness modulation and saturated core pixels during peak infrared emission."*
+
+### 4.3. Kết quả kiểm thử tự động toàn diện
+* **Unit Tests (Vitest):** Đạt **166 / 166 test passed** (bổ sung test suite trong `frontend/src/targets.test.ts`).
+* **E2E Tests (Playwright):** Đạt **7 / 7 test passed** (bổ sung test suite trong `frontend/e2e/conclusion.spec.ts` kiểm chứng việc hiển thị thẻ kết luận khoa học và chế độ ảnh hiệu trên trình duyệt).
+
+

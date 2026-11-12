@@ -52,6 +52,17 @@
    - **Mã nguồn:** [`members/huu-hoang/tasks_def.py`](members/huu-hoang/tasks_def.py).
    - **Kết quả:** Sửa màu NaN tím `#703090` trên ảnh hiệu; trích 58 cặp dipole ứng viên; phát hiện bẫy cờ `SOURCE` chiếm trọn vành nền gần và thử nghiệm thành công vành nền rộng 12–25 px (`data/tasks_def/F_wide/spectrum.png`).
 
+6. **Task: Ảnh hiệu Barnard thành cặp sáng–tối (QA-19) & Một câu kết luận tiếng Anh cho mỗi mục tiêu trên website:**
+   - **Trạng thái:** ✅ **HOÀN THÀNH 100% & NGHIỆM THU TRỰC TIẾP TRÊN WEBSITE**
+   - **Mã nguồn:** [`frontend/src/targets.ts`](frontend/src/targets.ts), [`frontend/src/App.tsx`](frontend/src/App.tsx), [`frontend/src/blink/BlinkViewer.tsx`](frontend/src/blink/BlinkViewer.tsx), [`frontend/src/index.css`](frontend/src/index.css).
+   - **Kiểm thử tự động:**
+     * Unit tests: [`frontend/src/targets.test.ts`](frontend/src/targets.test.ts) đạt **166/166 vitest passed**.
+     * E2E tests: [`frontend/e2e/conclusion.spec.ts`](frontend/e2e/conclusion.spec.ts) đạt **7/7 Playwright passed**.
+   - **Tiêu chí Done when ("Hoàn thành khi đã có chạy kết quả trên website luôn"):**
+     * **Ảnh hiệu Barnard:** Bật tab "Difference" thấy rõ cặp cực sáng–tối (dipole) do chuyển động riêng của sao Barnard. Dòng chỉ dẫn trực quan giải thích rõ hiện tượng.
+     * **5 câu kết luận tiếng Anh:** Hiển thị thẻ card `Scientific Conclusion` trực quan cho cả 5 mục tiêu (Barnard's Star, WISE 0855, Epsilon Indi B, RW Aurigae, R Draconis) trên giao diện website.
+     * Nghiệm thu đạt tiêu chuẩn QA-19 trong [`docs/QA-matrix.md`](docs/QA-matrix.md).
+
 ---
 
 ### B. CÁC CÔNG VIỆC CHƯA XONG (CẦN LÀM TIẾP)

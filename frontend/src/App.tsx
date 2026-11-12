@@ -8,7 +8,7 @@ import { CoordinatePreview, type Lookup } from "./coords/CoordinatePreview";
 import { formatDec, formatRa } from "./coords/format";
 import { locate, previewInput, type Location } from "./coords/locate";
 import { CoordError } from "./coords/parse";
-import { DETECTORS, TARGET_PRESETS } from "./targets";
+import { DETECTORS, TARGET_PRESETS, findPresetForTarget } from "./targets";
 
 type State =
   | { status: "loading" }
@@ -188,6 +188,8 @@ export default function App() {
 
 function FrameSummary({ data }: { data: Frames }) {
   const { grid, target } = data;
+  const preset = findPresetForTarget(target);
+
   return (
     <>
       <p className="summary" data-testid="frame-summary">
@@ -205,6 +207,20 @@ function FrameSummary({ data }: { data: Frames }) {
         detector={data.detector}
         imageUrl={api.imageUrl}
       />
+      {preset && (
+        <section
+          className="target-conclusion-card"
+          data-testid="target-conclusion"
+          aria-label="Scientific Conclusion"
+        >
+          <header className="target-conclusion-header">
+            <span className="badge badge-conclusion">Scientific Conclusion</span>
+            <strong className="target-conclusion-name">{preset.name}</strong>
+            <span className="target-conclusion-type">({preset.objectType})</span>
+          </header>
+          <p className="target-conclusion-text">{preset.conclusion}</p>
+        </section>
+      )}
     </>
   );
 }
