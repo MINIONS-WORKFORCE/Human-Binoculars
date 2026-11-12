@@ -1,0 +1,28 @@
+{
+  "data_kind": "mock",
+  "n_rows": 6,
+  "warnings": [
+    "APPARENT_LINEAR_TREND_NO_PARALLAX_FIT",
+    "NO_REFERENCE_STAR_REGISTRATION",
+    "GAUSSIAN_PSF_APPROXIMATION",
+    "PIXELS_REQUIRE_MATCHING_PNG_GRID",
+    "ERRORS_INFLATED_BY_RESIDUAL_SCATTER;SYSTEMATIC_FLOOR_IS_ASSUMED"
+  ],
+  "fit": {
+    "pmra": -801.5747794107792,
+    "pmdec": 10362.390766624523,
+    "pmra_err": 97.1296211588379,
+    "pmdec_err": 97.12955318002427,
+    "n_points": 6,
+    "baseline_days": 450.0,
+    "pmdec_sign_matches_catalog": true
+  },
+  "catalog_pm": {
+    "pmra": -801.5509783684709,
+    "pmdec": 10362.394206546573,
+    "source": "gaia_dr3",
+    "epoch": "J2016.0"
+  },
+  "pmdec_sign_matches_catalog": true,
+  "api_payload_status": "written"
+}

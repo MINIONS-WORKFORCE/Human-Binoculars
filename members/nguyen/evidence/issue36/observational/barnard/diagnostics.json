@@ -1,0 +1,163 @@
+{
+  "data_kind": "observational",
+  "api_version": "0.1",
+  "target": {
+    "ra": 269.44850252543836,
+    "dec": 4.739420051112412,
+    "name": "Barnard's Star",
+    "target_key": "barnard"
+  },
+  "catalog_pm": {
+    "pmra": -801.5509783684709,
+    "pmdec": 10362.394206546573,
+    "source": "gaia_dr3",
+    "epoch": "J2016.0"
+  },
+  "points": [
+    {
+      "frame_id": "2025W35_1A_0432_4",
+      "mjd": 60914.213196455,
+      "measured": {
+        "ra": 269.4461554858928,
+        "dec": 4.767320167053178,
+        "err_arcsec": 0.14868348201236606
+      },
+      "predicted": {
+        "ra": 269.4463458218615,
+        "dec": 4.767205305515044
+      },
+      "offset_arcsec": 0.7982810504291528,
+      "measured_px": null,
+      "warnings": []
+    },
+    {
+      "frame_id": "2025W35_2A_0233_2",
+      "mjd": 60916.724146016,
+      "measured": {
+        "ra": 269.44614870570155,
+        "dec": 4.767389323822145,
+        "err_arcsec": 0.14882349296747852
+      },
+      "predicted": {
+        "ra": 269.4463442858345,
+        "dec": 4.767225093663753
+      },
+      "offset_arcsec": 0.9175334632110576,
+      "measured_px": null,
+      "warnings": []
+    },
+    {
+      "frame_id": "2025W35_2A_0474_4",
+      "mjd": 60917.949660275,
+      "measured": {
+        "ra": 269.44611904733097,
+        "dec": 4.7673602391163055,
+        "err_arcsec": 0.14682970694596353
+      },
+      "predicted": {
+        "ra": 269.4463435361488,
+        "dec": 4.767234751626928
+      },
+      "offset_arcsec": 0.9234140601518984,
+      "measured_px": null,
+      "warnings": []
+    },
+    {
+      "frame_id": "2025W36_2B_0123_1",
+      "mjd": 60923.107869337,
+      "measured": {
+        "ra": 269.4459738453084,
+        "dec": 4.767476252404171,
+        "err_arcsec": 0.1463889691305595
+      },
+      "predicted": {
+        "ra": 269.4463403807094,
+        "dec": 4.767275402147941
+      },
+      "offset_arcsec": 1.5006475378277033,
+      "measured_px": null,
+      "warnings": []
+    },
+    {
+      "frame_id": "2025W40_1A_0500_1",
+      "mjd": 60949.266580483,
+      "measured": {
+        "ra": 269.44602754952024,
+        "dec": 4.767707991781487,
+        "err_arcsec": 0.1537838498156121
+      },
+      "predicted": {
+        "ra": 269.44632437859394,
+        "dec": 4.7674815522324065
+      },
+      "offset_arcsec": 1.3410844348866142,
+      "measured_px": null,
+      "warnings": []
+    },
+    {
+      "frame_id": "2026W11_1A_0511_2",
+      "mjd": 61110.435216664,
+      "measured": {
+        "ra": 269.44664086308387,
+        "dec": 4.768774928846697,
+        "err_arcsec": 0.15439270158357568
+      },
+      "predicted": {
+        "ra": 269.4462257864034,
+        "dec": 4.7687516808387445
+      },
+      "offset_arcsec": 1.491453421342692,
+      "measured_px": null,
+      "warnings": []
+    },
+    {
+      "frame_id": "2026W11_1A_0539_4",
+      "mjd": 61110.570230194,
+      "measured": {
+        "ra": 269.4466754969139,
+        "dec": 4.768791843382196,
+        "err_arcsec": 0.14802038361862235
+      },
+      "predicted": {
+        "ra": 269.44622570381097,
+        "dec": 4.768752744845663
+      },
+      "offset_arcsec": 1.6197770366037332,
+      "measured_px": null,
+      "warnings": []
+    },
+    {
+      "frame_id": "2026W11_1A_0587_1",
+      "mjd": 61110.771045055,
+      "measured": {
+        "ra": 269.44672776191453,
+        "dec": 4.768492095639551,
+        "err_arcsec": 0.14325096797599787
+      },
+      "predicted": {
+        "ra": 269.44622558096563,
+        "dec": 4.7687543274159525
+      },
+      "offset_arcsec": 2.033947009909003,
+      "measured_px": null,
+      "warnings": []
+    }
+  ],
+  "fit": {
+    "pmra": 4107.619864209465,
+    "pmdec": 8745.19905458386,
+    "pmra_err": 487.09863008896366,
+    "pmdec_err": 571.0647215074022,
+    "n_points": 8,
+    "baseline_days": 196.55784860000128,
+    "pmdec_sign_matches_catalog": true
+  },
+  "warnings": [
+    "APPARENT_LINEAR_TREND_NO_PARALLAX_FIT",
+    "NO_REFERENCE_STAR_REGISTRATION",
+    "GAUSSIAN_PSF_APPROXIMATION",
+    "PMRA_DISAGREES_WITH_CATALOG_BEYOND_3SIGMA",
+    "PIXELS_REQUIRE_MATCHING_PNG_GRID",
+    "ERRORS_INFLATED_BY_RESIDUAL_SCATTER;SYSTEMATIC_FLOOR_IS_ASSUMED"
+  ]
+}
