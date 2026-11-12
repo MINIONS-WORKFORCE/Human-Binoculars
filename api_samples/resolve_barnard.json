@@ -1,0 +1,14 @@
+{
+  "api_version": "0.1",
+  "query": "Barnard's Star",
+  "target_key": "barnard",
+  "name": "Barnard's Star",
+  "ra": 269.4521,
+  "dec": 4.6934,
+  "epoch": "J2016.0",
+  "pmra": -801.6,
+  "pmdec": 10362.4,
+  "parallax_mas": 546.9,
+  "kind": "high_pm",
+  "source": "targets_table"
+}

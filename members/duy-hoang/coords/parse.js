@@ -17,6 +17,14 @@ const RA_HMS = String.raw`(\d{1,2})\s*h\s*(\d{1,2})\s*m\s*(${SECONDS})\s*s`;
 const DEC_DMS = String.raw`([+-]?)\s*(\d{1,2})\s*d\s*(\d{1,2})\s*m\s*(${SECONDS})\s*s`;
 const SEXAGESIMAL = new RegExp(String.raw`^${RA_HMS}\s*,?\s*${DEC_DMS}$`, "i");
 
+// The same numbers separated by colons or spaces, as SIMBAD prints them:
+// "08:55:10.831 -07:14:42.53" or "08 55 10.831 -07 14 42.53".
+const RA_SEPARATED = String.raw`(\d{1,2})[: ](\d{1,2})[: ](${SECONDS})`;
+const DEC_SEPARATED = String.raw`([+-]?)(\d{1,2})[: ](\d{1,2})[: ](${SECONDS})`;
+const SEPARATED = new RegExp(
+  String.raw`^${RA_SEPARATED}\s*(?:,\s*|\s+)${DEC_SEPARATED}$`,
+);
+
 // Unicode minus (copied from Wikipedia) and dashes become a plain hyphen.
 function normalize(input) {
   return String(input ?? "")
@@ -30,7 +38,7 @@ function normalize(input) {
 // "M31" and "R Dra" are names; "25h00m00s +10d00m00s" is (invalid) coordinates.
 export function looksLikeCoordinates(input) {
   const text = normalize(input);
-  return /^[\d+\-.]/.test(text) && /^[\d\s+\-.,hmsd]+$/i.test(text);
+  return /^[\d+\-.]/.test(text) && /^[\d\s+\-.,:hmsd]+$/i.test(text);
 }
 
 function checkMinutesSeconds(minutes, seconds, label) {
@@ -94,8 +102,9 @@ function parseSexagesimal(match) {
 }
 
 /**
- * Parse "133.795 -7.245" (decimal degrees) or "08h55m10.831s -7d14m42.53s"
- * (RA in hours, Dec in degrees) into { raDeg, decDeg }. Throws CoordError.
+ * Parse "133.795 -7.245" (decimal degrees), "08h55m10.831s -7d14m42.53s" or
+ * "08:55:10.831 -07:14:42.53" / "08 55 10.831 -07 14 42.53" (RA in hours,
+ * Dec in degrees) into { raDeg, decDeg }. Throws CoordError.
  */
 export function parseCoordinates(input) {
   const text = normalize(input);
@@ -106,11 +115,11 @@ export function parseCoordinates(input) {
   const decimal = text.match(DECIMAL);
   if (decimal) return parseDecimal(decimal);
 
-  const sexagesimal = text.match(SEXAGESIMAL);
+  const sexagesimal = text.match(SEXAGESIMAL) ?? text.match(SEPARATED);
   if (sexagesimal) return parseSexagesimal(sexagesimal);
 
   throw new CoordError(
     "UNSUPPORTED_FORMAT",
-    'Use decimal degrees ("133.795 -7.245") or h/m/s d/m/s ("08h55m10.831s -7d14m42.53s")',
+    'Use decimal degrees ("133.795 -7.245"), h/m/s d/m/s ("08h55m10.831s -7d14m42.53s") or colons ("08:55:10.831 -07:14:42.53")',
   );
 }

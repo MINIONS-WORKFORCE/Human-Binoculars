@@ -1,0 +1,14 @@
+{
+  "api_version": "0.1",
+  "status": "ok",
+  "mode": "fixture",
+  "fixture_targets": [
+    "barnard",
+    "wise0855",
+    "epsindib",
+    "rwaur",
+    "rdra"
+  ],
+  "irsa_reachable": null,
+  "git_sha": "unknown"
+}
