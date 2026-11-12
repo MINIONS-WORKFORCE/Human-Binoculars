@@ -51,6 +51,20 @@ codes included; skipped when `LIVE_API_URL` is unset):
 LIVE_API_URL=http://127.0.0.1:8000 npx vitest run src/api/parity.test.ts
 ```
 
+## Before a demo: smoke test
+
+From the repo root, checks `/api/health`, then `/api/resolve`, `/api/frames` and the
+first PNG and difference PNG for all five targets in `shared/targets.json`:
+
+```bash
+npm run smoke -- https://human-binoculars.onrender.com --origin https://<frontend-domain>
+```
+
+`--origin` also checks that the API's CORS lets that frontend read the answers.
+Without a URL it tests `http://127.0.0.1:8000`. CI runs it against the fixture
+backend after pytest. A sleeping Render instance takes about a minute to answer
+the first request; the script waits up to 2 minutes.
+
 ## Loading and error states
 
 The page reads only `error.code`, never the server's `message`
