@@ -712,6 +712,7 @@ components:
             - FEW_FRAMES
             - TRUNCATED
             - MIXED_WAVELENGTH
+            - TARGET_OUTSIDE_COVERAGE
           type: array
           title: Warnings
       additionalProperties: false

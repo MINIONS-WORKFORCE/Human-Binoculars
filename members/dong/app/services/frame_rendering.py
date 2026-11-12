@@ -75,6 +75,16 @@ def build_frames(cutouts, query, identity):
                 has_coverage = bool(geometric.any())
             if not valid or cutout.detector != query.detector:
                 continue
+            # A partial cutout may overlap the grid while missing the target.
+            # Test geometry separately from the quality mask: a saturated target
+            # can be masked even though the detector actually observed it.
+            predicted_input = position_at(query.target_key, cutout.mjd)
+            if predicted_input is not None:
+                px, py = native_wcs.world_to_pixel(predicted_input)
+                height, width = image.shape
+                if not (-0.5 <= px < width - 0.5 and -0.5 <= py < height - 0.5):
+                    frame_warnings.append("TARGET_OUTSIDE_COVERAGE")
+                    continue
             if not info["bunit"]:
                 raise ValueError("Fixture image has no brightness unit")
             brightness_unit = brightness_unit or info["bunit"]
