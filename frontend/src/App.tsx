@@ -1,6 +1,14 @@
-// Demo page: type a target (name or coordinates), load /api/frames, blink them.
-// Thạch's real page will import BlinkViewer the same way.
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+// Page: type a target (name or coordinates), then see its SPHEREx frames blink
+// (/api/frames), where it sits on the sky with Gaia DR3 (Aladin Lite), and its
+// light curve and spectrum (/api/photometry).
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
 import { api, friendlyMessage, ApiError, type Frames } from "./api";
 import { apiBase, useMock } from "./config";
 import { BlinkViewer } from "./blink/BlinkViewer";
@@ -23,7 +31,27 @@ interface Request {
   detector: number;
 }
 
+// Plotly and Aladin Lite are large, so their panels load after the viewer is usable.
+const PhotometryPanel = lazy(() =>
+  import("./science/PhotometryPanel").then((m) => ({
+    default: m.PhotometryPanel,
+  })),
+);
+const SkyPanel = lazy(() =>
+  import("./science/SkyPanel").then((m) => ({ default: m.SkyPanel })),
+);
+
 const FIRST = TARGET_PRESETS[0];
+
+/** Map width in degrees: twice the frames' footprint for context, never under 6'. */
+const MIN_MAP_FOV_DEG = 0.1;
+function mapFov(
+  grid: Pick<Frames["grid"], "width" | "pixscale_arcsec"> | null,
+) {
+  if (!grid) return MIN_MAP_FOV_DEG;
+  const footprintDeg = (grid.width * grid.pixscale_arcsec) / 3600;
+  return Math.max(MIN_MAP_FOV_DEG, 2 * footprintDeg);
+}
 
 function requestFor(location: Location, detector: number): Request {
   return {
@@ -169,20 +197,45 @@ export default function App() {
         </div>
       </form>
 
-      <section>
-        {state.status === "loading" && (
-          <p className="muted" role="status">
-            Loading frames…
-          </p>
-        )}
-        {state.status === "error" && (
-          <p className="error" role="alert">
-            {state.message} <code>{state.code}</code>
-          </p>
-        )}
-        {state.status === "ready" && <FrameSummary data={state.data} />}
-      </section>
+      <div className="workspace">
+        <section aria-label="Blink viewer">
+          {state.status === "loading" && (
+            <p className="muted" role="status">
+              Loading frames…
+            </p>
+          )}
+          {state.status === "error" && (
+            <p className="error" role="alert">
+              {state.message} <code>{state.code}</code>
+            </p>
+          )}
+          {state.status === "ready" && <FrameSummary data={state.data} />}
+        </section>
+        <Suspense fallback={<PanelLoading>Loading sky map…</PanelLoading>}>
+          <SkyPanel
+            ra={request.ra}
+            dec={request.dec}
+            fovDeg={mapFov(state.status === "ready" ? state.data.grid : null)}
+          />
+        </Suspense>
+      </div>
+
+      <Suspense fallback={<PanelLoading>Loading photometry…</PanelLoading>}>
+        <PhotometryPanel
+          ra={request.ra}
+          dec={request.dec}
+          targetKey={request.targetKey}
+        />
+      </Suspense>
     </main>
+  );
+}
+
+function PanelLoading({ children }: { children: string }) {
+  return (
+    <p className="muted" role="status">
+      {children}
+    </p>
   );
 }
 

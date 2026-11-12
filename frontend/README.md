@@ -59,9 +59,13 @@ src/coords/parse.ts             decimal degrees / hours-degrees -> degrees (Coor
 src/coords/format.ts            degrees -> "269.4521°", "17h57m48.50s", "+04°41′36.2″"
 src/coords/locate.ts            input -> position: coordinates, the 5 targets, then /api/resolve
 src/coords/CoordinatePreview.tsx shows the position in every notation while typing
-src/App.tsx                     demo page: type a target, load /api/frames, blink
+src/science/PhotometryPanel.tsx loads /api/photometry, shows shared/charts PhotometryChart
+src/science/SkyPanel.tsx        shared/skymap SkyMap (Aladin Lite) with a Gaia DR3 layer switch
+src/shared-modules.d.ts         types for the plain-JS components imported from ../shared
+src/App.tsx                     page: type a target, then blink, sky map and photometry
 e2e/blink.spec.ts               Playwright: play, step, difference, crosshair pixels
 e2e/target-input.spec.ts        Playwright: the three ways to type a target, errors
+e2e/science.spec.ts             Playwright: photometry chart and table, Gaia layer, 390px width
 ```
 
 ## Target input
@@ -99,6 +103,24 @@ loops with requestAnimationFrame. Controls: Play/Pause (Space), previous/next
 Each frame shows its UTC date, wavelength and detector. Pixels stay square
 (whole device pixels per SPHEREx pixel, no smoothing) and the crosshair sits at
 `predicted_px` using the PNG top-left origin.
+
+## Photometry chart and sky map
+
+Owner: Thạch. The page imports two components that live in `../shared/` because
+other modules use them too: `PhotometryChart` (`shared/charts/`, Plotly) and
+`SkyMap` (`shared/skymap/`, Aladin Lite). Both panels are loaded lazily, so the
+blink viewer does not wait for the two large libraries.
+
+- `/api/photometry` is called without `detector`; the chart filters D1 to D6 itself.
+  Points with `detected: false` are drawn as 3σ upper limits, `flagged` points
+  hollow. Each target without photometry gets an empty-state message. In the
+  fixture (and in the mock) only R Draconis has measurements.
+- The map centres on the requested RA/Dec and is twice as wide as the frames' footprint
+  (at least 6′). "Gaia layer" chooses real Gaia DR3 from VizieR, synthetic stars that work
+  offline, or no layer. Aladin and VizieR are at CDS; where CDS is blocked the map stays
+  grey and says so.
+- `vite.config.ts` lists React, Plotly and Aladin under `resolve.dedupe`, so files in
+  `../shared` use this folder's copies (one React, and CI installs only `frontend/`).
 
 ## When the API contract changes
 

@@ -214,12 +214,18 @@ export const handlers = [
       });
       const echoed = target(url, q.ra!, q.dec!);
       if (echoed instanceof Response) return echoed;
-      const points = samples.photometry.points.filter(
-        (p) => q.detector === undefined || p.detector === q.detector,
-      );
+      // Like the backend, only the sample's own target (R Draconis) has measurements.
+      const hasSample =
+        echoed.target_key === samples.photometry.target.target_key;
+      const points = hasSample
+        ? samples.photometry.points.filter(
+            (p) => q.detector === undefined || p.detector === q.detector,
+          )
+        : [];
       return HttpResponse.json({
         ...samples.photometry,
         target: echoed,
+        reference_star: hasSample ? samples.photometry.reference_star : null,
         points,
         variability: null,
       });
