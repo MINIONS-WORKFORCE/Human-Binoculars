@@ -1,0 +1,10 @@
+# Python 3.12 subset of libraries already used by the root astronomy/backend stack.
+numpy==2.5.4
+astropy==8.0.2
+photutils==3.1.1
+scipy==1.18.1
+pydantic==2.14.3
+pytest==9.2.0
+requests==2.34.2
+matplotlib==3.11.2
+ruff==0.17.3

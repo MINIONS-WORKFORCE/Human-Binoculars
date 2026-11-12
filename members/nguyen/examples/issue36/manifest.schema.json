@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Issue 36 offline measurement manifest",
+  "type": "object",
+  "required": [
+    "target_id",
+    "data_kind",
+    "entries"
+  ],
+  "properties": {
+    "target_id": {
+      "enum": [
+        "barnard",
+        "r-dra"
+      ]
+    },
+    "data_kind": {
+      "enum": [
+        "mock",
+        "observational"
+      ]
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "mjd",
+          "detector",
+          "release"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mjd": {
+            "type": "number"
+          },
+          "detector": {
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 6
+              },
+              {
+                "type": "string",
+                "pattern": "^(SPHEREx-)?D[1-6]$"
+              }
+            ]
+          },
+          "release": {
+            "type": "string",
+            "minLength": 1
+          },
+          "survey": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Team-supplied visit index. Required as integer for API E6; not guessed by this code."
+          },
+          "wavelength_um": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "bandwidth_um": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "exclusiveMinimum": 0
+          },
+          "spectral_wcs_path": {
+            "type": "string"
+          },
+          "sapm_path": {
+            "type": "string"
+          },
+          "source_obs_publisher_did": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "reference_stars": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "additionalProperties": false
+}
