@@ -247,7 +247,7 @@ input:focus-visible {
 
 .chip {
   height: auto;
-  min-height: 2.25rem;
+  min-height: var(--control-height);
   padding: var(--space-1) var(--space-3);
   font-size: var(--text-sm);
 }
@@ -303,4 +303,29 @@ input:focus-visible {
   font-size: var(--text-sm);
   line-height: var(--leading-relaxed);
   color: var(--color-text);
+}
+
+.warnings {
+  margin: var(--space-2) 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.warnings li {
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--color-warning);
+  background: var(--color-surface);
+}
+
+.warnings strong {
+  color: var(--color-warning);
+}
+
+.warnings code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
 }

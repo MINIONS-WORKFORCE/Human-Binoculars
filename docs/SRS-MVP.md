@@ -37,7 +37,7 @@ Người viết: Thạch · Bản chụp ngày 9/11/2026, **cập nhật ngày 1
 
 | Người | Đã có (nơi nằm) | Còn thiếu cho MVP |
 | --- | --- | --- |
-| Duy Hoàng | `frontend/` trên `main`: bộ khung Vite + React + TS với mock MSW và CI (Issue 18); viewer blink có preload, dấu thập, nút ảnh hiệu và e2e; ô nhập tên và hai dạng toạ độ | Chọn FOV (`size`); URL lưu detector và vị trí; trạng thái "đang chậm" |
+| Duy Hoàng | `frontend/` trên `main`: bộ khung Vite + React + TS với mock MSW và CI (Issue 18); viewer blink có preload, dấu thập, nút ảnh hiệu và e2e; ô nhập tên và hai dạng toạ độ | Đã nối ô FOV và URL ngày 12/11 (làm trên nhánh tích hợp, chưa vào `main`). Deploy công khai |
 | Đông | `app.main` bảy endpoint theo hợp đồng 0.1 (Issue 14), phục vụ khung fixture (Issue 24), CI/CD đóng gói bản dựng, Playwright trong CI; mã lỗi và `openapi.yaml` sinh từ model | `DATA_MODE=live` chưa có (trả `INTERNAL`); resolver chỉ biết Barnard; chưa có bản deploy công khai |
 | Khôi | Fixture 5 mục tiêu và `manifest.json`, `find_frames` ngoại tuyến (Issue 21), SIA2/TAN pipeline (Issue 15), `shared/pipeline/irsa.py`; Issue 34 (gộp tải cutout, gói fixture trên drive) đang ở nhánh `khoi/issue-34-drive-cutout-refactor`, chưa vào `dev` | Nối đường dữ liệu thật vào API 0.1 cùng Đông và Hữu Hoàng |
 | Hữu Hoàng | Bài A–F xử lý ảnh trên cutout thật (đưa về cùng lưới TAN, median theo detector × đợt, ảnh hiệu, kiểm tra nhảy sao nền), `tan_pipeline.py` được CI đóng gói; nhánh `huu-hoang` chưa vào `dev` | Đầu ra theo dạng `Frames` của hợp đồng 0.1 (`grid`, `norm`, `predicted_px`) |
@@ -77,17 +77,17 @@ Mỗi yêu cầu có một người sở hữu và một người đỡ theo vò
 | ID | Yêu cầu | Mức | Sở hữu | Đỡ | Trạng thái 12/11 |
 | --- | --- | --- | --- | --- | --- |
 | FR-01 | Nhập vị trí dạng độ thập phân, giờ–phút–giây (kể cả dấu hai chấm hoặc khoảng trắng) hoặc tên vật thể, ra RA/Dec theo độ; nhập sai thì báo lỗi ngay tại ô nhập | Must | Duy Hoàng | Thạch | Xong (test đơn vị và e2e) |
-| FR-02 | Chọn detector D1–D6 (`detector`) và FOV 2′, 5′ hoặc 10′ (`size` = 0,0333; 0,0833; 0,1667). Không còn chọn release | Must | Duy Hoàng | Thạch | Một phần: có detector, chưa có FOV |
-| FR-03 | URL `?q=&fov=&det=` mở lại đúng khung nhìn đang xem | Must | Duy Hoàng | Thạch | Chưa làm |
+| FR-02 | Chọn detector D1–D6 (`detector`) và FOV 2′, 5′ hoặc 10′ (`size` = 0,0333; 0,0833; 0,1667). Không còn chọn release | Must | Duy Hoàng | Thạch | Xong (ô chọn detector và FOV; `size` gửi đúng 0,0333 / 0,0833 / 0,1667; mặc định không gửi `size`). Test: `e2e/view-url.spec.ts` |
+| FR-03 | URL `?q=&fov=&det=` mở lại đúng khung nhìn đang xem | Must | Duy Hoàng | Thạch | Xong (`?q=&fov=&det=`, ghi bằng `history.replaceState`; mở link tên lạ thì báo lỗi rồi mở Barnard). Test: `urlState.test.ts`, `e2e/view-url.spec.ts` |
 | FR-04 | 5 nút mục tiêu gửi `target_key` để có `predicted_px` | Must | Duy Hoàng | Hữu Hoàng | Xong (khoá theo API) |
 | FR-05 | `/api/frames`: JSON đồng bộ, khung xếp theo `mjd` tăng dần, `grid`, `norm`, `reference_frame_id`, `warnings` | Must | Đông | Duy Hoàng | Xong ở chế độ fixture (mẫu tổng hợp đã chạy; dựng từ FITS cần gói fixture); live chưa có |
 | FR-06 | PNG xám 8-bit cùng một thang `norm` (mẫu tổng hợp: 39×39); ảnh hiệu xám 128 = 0; vị trí pixel theo gốc trên-trái, tâm pixel ở số nguyên | Must | Hữu Hoàng | Khôi | Xong ở fixture; ảnh từ IRSA chưa nối |
 | FR-07 | Backend kiểm tra đầu vào và trả lỗi theo mục 5; mọi JSON mang `api_version` = `0.1` | Must | Đông | Duy Hoàng | Xong |
 | FR-08 | Viewer blink các khung theo thời gian; ghi ngày, bước sóng, detector; play, pause, tốc độ, thanh trượt khung; dấu thập ở `predicted_px` | Must | Duy Hoàng | Thạch | Xong |
-| FR-09 | Hiển thị đang tải, lỗi theo `error.code` và cảnh báo; nhãn dữ liệu mock/fixture | Must | Duy Hoàng | Đông | Một phần: có lỗi và nhãn mock; chưa có "đang chậm" |
+| FR-09 | Hiển thị đang tải, lỗi theo `error.code` và cảnh báo; nhãn dữ liệu mock/fixture | Must | Duy Hoàng | Đông | Xong cho API đồng bộ: có trạng thái chờ kèm đếm giây, đủ mã lỗi hợp đồng, nút thử lại và nhãn mock/fixture (nhánh `duy-hoang/frontend-real-api`) |
 | FR-10 | Fixture cho 5 mục tiêu chạy khi mất mạng | Must | Khôi (dựng), Đông (phục vụ) | Hữu Hoàng | Xong (fixture cục bộ) |
 | FR-11 | Ảnh hiệu (`diff_png`) có nút bật/tắt | Should | Hữu Hoàng (ảnh), Duy Hoàng (nút) | Nguyên | Xong |
-| FR-12 | Hiển thị cảnh báo của phản hồi: `SATURATION_POSSIBLE`, `MIXED_WAVELENGTH`, `FEW_FRAMES`, `TRUNCATED` | Should | Hữu Hoàng | Nguyên | Một phần: viewer in `warnings`, chưa giải thích từng mã |
+| FR-12 | Hiển thị cảnh báo của phản hồi: `SATURATION_POSSIBLE`, `MIXED_WAVELENGTH`, `FEW_FRAMES`, `TRUNCATED` | Should | Hữu Hoàng | Nguyên | Xong: mỗi mã có một câu riêng (`src/warnings.ts`); test `e2e/warnings.spec.ts` |
 | FR-13 | Deploy frontend và backend lên link công khai | Should | Duy Hoàng | Đông | Chưa làm |
 | FR-14 | Panel đường cong ánh sáng và phổ từ `/api/photometry` (E6): điểm không phát hiện vẽ thành giới hạn trên 3σ, điểm có `flagged` vẽ rỗng, lọc detector, bảng số liệu | Could | Thạch | Nguyên | Xong trên mock và fixture |
 | FR-15 | Bản đồ Aladin + overlay Gaia DR3 cạnh viewer, tâm theo vị trí đang xem, chọn Gaia thật, sao giả hoặc tắt | Could | Thạch | Duy Hoàng | Xong; Gaia thật chưa kiểm vì không vào được CDS |
@@ -236,7 +236,7 @@ Kế hoạch của năm người còn lại được giữ trong tài liệu tr�
 
 - [x] **9/11:** hợp đồng vào `main` và Duy Hoàng chạy được mock trên máy mình. Đạt trễ: hợp đồng 0.1 vào `main` ngày 11/11 (PR #47), mock MSW chạy từ ngày 10/11.
 - [ ] **10/11:** một mục tiêu chạy đầu–cuối bằng dữ liệu thật. **Không đạt:** API 0.1 mới chạy fixture, `DATA_MODE=live` chưa nối.
-- [ ] **11/11:** toàn bộ mục Must trong checklist mục 9 đạt. **Chưa đạt:** còn FR-02 (FOV), FR-03 (URL) và các dòng cần dữ liệu thật.
+- [ ] **11/11:** toàn bộ mục Must trong checklist mục 9 đạt. **Chưa đạt:** các dòng cần dữ liệu thật (QA-05 đến QA-07) và lần chạy QA trên máy khác. FR-02 và FR-03 đã làm ngày 12/11 trên nhánh tích hợp, chưa merge vào `main`.
 - [ ] **12/11:** nghiệm thu xong, bản hợp đồng cuối đã ghi lại. Đang làm: QA matrix đã điền phần chạy tự động trên mock và fixture.
 
 ## 9. Tiêu chí nghiệm thu
@@ -257,7 +257,7 @@ MVP đạt khi tất cả các mục Must dưới đây đạt trên một máy 
 - [ ] Một toạ độ ngoài 5 mục tiêu trả về khung hoặc `NO_FRAMES`/`FEW_FRAMES` rõ ràng. (Fixture trả 3 khung cho mọi toạ độ hợp lệ.)
 - [ ] Mất mạng thì 5 mục tiêu vẫn chạy trên fixture cục bộ.
 - [x] Nhập sai thì báo lỗi ngay tại ô nhập; tham số sai gửi tới API thì nhận `BAD_COORDS` hoặc `BAD_PARAM` kèm `details.fields` (test đơn vị và e2e trên mock).
-- [ ] Tải lại trang với URL đang xem thì mở lại đúng vị trí, FOV và detector. (Chưa làm.)
+- [x] Tải lại trang với URL đang xem thì mở lại đúng vị trí, FOV và detector (`e2e/view-url.spec.ts`, bản build mock).
 - [x] Phản hồi của chế độ mock và chế độ fixture khớp `openapi.yaml` (test tự động: `src/mocks/samples.test.ts` và `validate_api_samples.py`).
 - [ ] Mỗi module có README, và người đỡ đã tự chạy lại được trong ngày đổi vai.
 

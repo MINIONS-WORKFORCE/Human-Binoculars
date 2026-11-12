@@ -17,6 +17,14 @@ import { formatDec, formatRa } from "./coords/format";
 import { locate, previewInput, type Location } from "./coords/locate";
 import { CoordError } from "./coords/parse";
 import { DETECTORS, TARGET_PRESETS, findPresetForTarget } from "./targets";
+import { describeWarning } from "./warnings";
+import {
+  FOV_OPTIONS,
+  buildSearch,
+  fovToSize,
+  parseUrlState,
+  type Fov,
+} from "./urlState";
 
 type State =
   | { status: "loading" }
@@ -32,6 +40,10 @@ interface Request {
   /** Only known targets have one; without it the API sends no predicted_px. */
   targetKey?: string;
   detector: number;
+  /** Cutout width in arcminutes; null means the API's default size. */
+  fov: Fov | null;
+  /** The text typed in the target field, kept in the URL. */
+  q: string;
 }
 
 // Plotly and Aladin Lite are large, so their panels load after the viewer is usable.
@@ -56,8 +68,15 @@ function mapFov(
   return Math.max(MIN_MAP_FOV_DEG, 2 * footprintDeg);
 }
 
-function requestFor(location: Location, detector: number): Request {
+function requestFor(
+  location: Location,
+  detector: number,
+  fov: Fov | null,
+  q: string,
+): Request {
   return {
+    fov,
+    q,
     ra: location.raDeg,
     dec: location.decDeg,
     targetKey:
@@ -68,26 +87,37 @@ function requestFor(location: Location, detector: number): Request {
 
 async function fetchFrames(request: Request): Promise<State> {
   try {
-    return { status: "ready", data: await api.frames(request) };
+    const size = request.fov === null ? undefined : fovToSize(request.fov);
+    return { status: "ready", data: await api.frames({ ...request, size }) };
   } catch (error) {
     return { status: "error", error: describeError(error) };
   }
 }
 
 export default function App() {
-  const [text, setText] = useState(FIRST.name);
-  const [detector, setDetector] = useState(6);
+  // The URL can name the view to open: ?q=<target text>&fov=<arcmin>&det=D<n>.
+  const [fromUrl] = useState(() => parseUrlState(window.location.search));
+  const [text, setText] = useState(fromUrl.q ?? FIRST.name);
+  const [detector, setDetector] = useState(fromUrl.detector ?? 6);
+  const [fov, setFov] = useState<Fov | null>(fromUrl.fov);
   // A name lookup belongs to the text it was made for; typing again hides it.
   const [lookup, setLookup] = useState<{ input: string; result: Lookup }>({
     input: "",
     result: { status: "idle" },
   });
-  const [request, setRequest] = useState<Request>({
-    ra: FIRST.ra,
-    dec: FIRST.dec,
-    targetKey: FIRST.key,
-    detector: 6,
-  });
+  // null while a q from the URL is still being turned into a position.
+  const [request, setRequest] = useState<Request | null>(
+    fromUrl.q
+      ? null
+      : {
+          ra: FIRST.ra,
+          dec: FIRST.dec,
+          targetKey: FIRST.key,
+          detector: fromUrl.detector ?? 6,
+          fov: fromUrl.fov,
+          q: FIRST.name,
+        },
+  );
   const [state, setState] = useState<State>({ status: "loading" });
 
   const preview = useMemo(() => previewInput(text), [text]);
@@ -96,6 +126,7 @@ export default function App() {
 
   // Only the latest request may update the page; a slower earlier one is ignored.
   useEffect(() => {
+    if (!request) return undefined;
     let current = true;
     void fetchFrames(request).then((next) => {
       if (current) setState(next);
@@ -105,12 +136,63 @@ export default function App() {
     };
   }, [request]);
 
+  // Keep the URL equal to the view on screen, so reloading the page reopens it.
+  useEffect(() => {
+    if (!request) return;
+    const search = buildSearch({
+      q: request.q,
+      fov: request.fov,
+      detector: request.detector,
+    });
+    if (search !== window.location.search) {
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${search}`,
+      );
+    }
+  }, [request]);
+
   const load = (next: Request) => {
     setState({ status: "loading" });
     setRequest(next);
   };
   // A copy is a new object, so the effect above sends the same request again.
-  const reload = () => load({ ...request });
+  const reload = () => {
+    if (request) load({ ...request });
+  };
+
+  // First load from a URL that names a target: turn its text into a position.
+  useEffect(() => {
+    const input = fromUrl.q;
+    if (!input) return undefined;
+    let current = true;
+    locate(input, api.resolve).then(
+      (location) => {
+        if (!current) return;
+        setLookup({ input, result: { status: "found", location } });
+        load(requestFor(location, detector, fov, input));
+      },
+      (error: unknown) => {
+        if (!current) return;
+        if (!(error instanceof CoordError)) throw error;
+        // Say why the link did not work, then open the default target.
+        setLookup({ input, result: { status: "error", error } });
+        load({
+          ra: FIRST.ra,
+          dec: FIRST.dec,
+          targetKey: FIRST.key,
+          detector,
+          fov,
+          q: FIRST.name,
+        });
+      },
+    );
+    return () => {
+      current = false;
+    };
+    // Runs once, with the values the URL gave.
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -121,7 +203,7 @@ export default function App() {
     try {
       const location = await locate(input, api.resolve);
       setLookup({ input, result: { status: "found", location } });
-      load(requestFor(location, detector));
+      load(requestFor(location, detector, fov, input));
     } catch (error) {
       if (!(error instanceof CoordError)) throw error;
       setLookup({ input, result: { status: "error", error } });
@@ -166,11 +248,35 @@ export default function App() {
           Detector
           <select
             value={detector}
-            onChange={(e) => setDetector(Number(e.target.value))}
+            onChange={(e) => {
+              const next = Number(e.target.value);
+              setDetector(next);
+              if (request) load({ ...request, detector: next });
+            }}
           >
             {DETECTORS.map((d) => (
               <option key={d} value={d}>
                 D{d}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Field of view
+          <select
+            value={fov ?? ""}
+            onChange={(e) => {
+              const next = e.target.value
+                ? (Number(e.target.value) as Fov)
+                : null;
+              setFov(next);
+              if (request) load({ ...request, fov: next });
+            }}
+          >
+            <option value="">Default (6′)</option>
+            {FOV_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}′
               </option>
             ))}
           </select>
@@ -189,7 +295,14 @@ export default function App() {
               className="secondary chip"
               onClick={() => {
                 setText(t.name);
-                load({ ra: t.ra, dec: t.dec, targetKey: t.key, detector });
+                load({
+                  ra: t.ra,
+                  dec: t.dec,
+                  targetKey: t.key,
+                  detector,
+                  fov,
+                  q: t.name,
+                });
               }}
             >
               {t.name}
@@ -208,22 +321,26 @@ export default function App() {
             <FrameSummary data={state.data} onReload={reload} />
           )}
         </section>
-        <Suspense fallback={<PanelLoading>Loading sky map…</PanelLoading>}>
-          <SkyPanel
-            ra={request.ra}
-            dec={request.dec}
-            fovDeg={mapFov(state.status === "ready" ? state.data.grid : null)}
-          />
-        </Suspense>
+        {request && (
+          <Suspense fallback={<PanelLoading>Loading sky map…</PanelLoading>}>
+            <SkyPanel
+              ra={request.ra}
+              dec={request.dec}
+              fovDeg={mapFov(state.status === "ready" ? state.data.grid : null)}
+            />
+          </Suspense>
+        )}
       </div>
 
-      <Suspense fallback={<PanelLoading>Loading photometry…</PanelLoading>}>
-        <PhotometryPanel
-          ra={request.ra}
-          dec={request.dec}
-          targetKey={request.targetKey}
-        />
-      </Suspense>
+      {request && (
+        <Suspense fallback={<PanelLoading>Loading photometry…</PanelLoading>}>
+          <PhotometryPanel
+            ra={request.ra}
+            dec={request.dec}
+            targetKey={request.targetKey}
+          />
+        </Suspense>
+      )}
     </main>
   );
 }
@@ -296,10 +413,17 @@ function FrameSummary({
         {target.name ?? "custom position"} · RA {formatRa(target.ra)} Dec{" "}
         {formatDec(target.dec)} · detector D{data.detector} · grid {grid.width}×
         {grid.height} at {grid.pixscale_arcsec}″/px
-        {data.warnings.length > 0 && (
-          <> · warnings: {data.warnings.join(", ")}</>
-        )}
       </p>
+      {data.warnings.length > 0 && (
+        <ul className="warnings" data-testid="frame-warnings">
+          {data.warnings.map((code) => (
+            <li key={code} role="status">
+              <strong>Warning:</strong> {describeWarning(code)}{" "}
+              <code>{code}</code>
+            </li>
+          ))}
+        </ul>
+      )}
       {data.frames.length === 0 ? (
         // The contract's answer when images exist but every one was filtered out.
         <p className="muted" role="status" data-testid="frames-empty">
