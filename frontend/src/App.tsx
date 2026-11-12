@@ -201,6 +201,9 @@ function FrameSummary({ data }: { data: Frames }) {
           <> · warnings: {data.warnings.join(", ")}</>
         )}
       </p>
+      {data.warnings.includes("TARGET_OUTSIDE_COVERAGE") && (
+        <p role="status">Some observations were omitted because they do not cover the predicted target position.</p>
+      )}
       <BlinkViewer
         frames={data.frames}
         grid={grid}
@@ -218,6 +221,7 @@ function FrameSummary({ data }: { data: Frames }) {
             <strong className="target-conclusion-name">{preset.name}</strong>
             <span className="target-conclusion-type">({preset.objectType})</span>
           </header>
+          <p>Background information; the displayed frames have not independently confirmed these claims.</p>
           <p className="target-conclusion-text">{preset.conclusion}</p>
         </section>
       )}
