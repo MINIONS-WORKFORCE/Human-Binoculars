@@ -128,6 +128,19 @@ def test_openapi_and_sample_schema(client):
     Frames.model_validate_json((root / "api_samples/frames_barnard_d6.json").read_text())
 
 
+def test_unexpected_error_is_contract_json_with_cors(client, monkeypatch):
+    def broken():
+        raise RuntimeError("simulated bug")
+
+    monkeypatch.setattr("app.services.fixtures.health", broken)
+    response = client.get("/api/health", headers={"Origin": "http://localhost:5173"})
+    assert response.status_code == 500
+    assert ErrorResponse.model_validate(response.json()).error.code == "INTERNAL"
+    # Without this header the browser hides the 500 and the page can only say NETWORK.
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+    assert "Server-Timing" in response.headers
+
+
 def test_unavailable_mode_uses_contract_error(client, monkeypatch):
     monkeypatch.setenv("DATA_MODE", "live")
     response = client.get("/api/health")
