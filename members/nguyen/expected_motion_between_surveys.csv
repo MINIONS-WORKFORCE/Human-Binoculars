@@ -1,0 +1,6 @@
+id,start_mjd,end_mjd,baseline_days,east_mas,north_mas,separation_arcsec,pixel_scale_arcsec,separation_pixels,north_up_png_dx_px,north_up_png_dy_px,tolerance_pixels,model
+barnard,60900,61083,183,-401.61446666919676,5191.833581752107,5.207343864237547,6.15,0.8467225795508206,0.06530316531206451,-0.8442005823987166,0.3,angular-only; no annual parallax; engineering tolerance assumes reference registration
+r-dra,60900,61083,183,-10.342606652005813,3.080699192750623,0.010791673616246845,6.15,0.0017547436774385113,0.0016817246588627338,-0.0005009266980082314,0.3,angular-only; no annual parallax; engineering tolerance assumes reference registration
+rw-aur,60900,61083,183,3.6224176081235298,-10.185874526529535,0.0108108255568358,6.15,0.001757857814119642,-0.0005890109931908178,0.0016562397604113065,0.3,angular-only; no annual parallax; engineering tolerance assumes reference registration
+eps-ind-b,60900,61083,183,1995.4269616169972,-1235.3826357583682,2.346891351485669,6.15,0.3816083498350681,-0.3244596685556093,0.20087522532656393,0.3,angular-only; no annual parallax; engineering tolerance assumes reference registration
+wise-0855,60900,61083,183,-4070.143014899938,337.81277310122005,4.0841378075403005,6.15,0.6640874483805367,0.6618118723414533,-0.054928906195320336,0.3,angular-only; no annual parallax; engineering tolerance assumes reference registration
