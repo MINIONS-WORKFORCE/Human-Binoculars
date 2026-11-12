@@ -181,8 +181,10 @@ export function BlinkViewer({
 
   return (
     <section className="blink" aria-label="Blink viewer">
-      <p className="blink-hint">
-        Watch the crosshair: a moving star jumps between frames.
+      <p className="blink-hint" data-testid="blink-hint">
+        {mode === "diff"
+          ? "Difference image: Stationary background sources vanish, revealing moving objects like Barnard's Star as a distinct bright–dark dipole pair."
+          : "Watch the crosshair: a moving star jumps between frames."}
       </p>
 
       <div className="blink-stage" style={{ maxWidth: cssWidth }}>
