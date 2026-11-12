@@ -19,6 +19,18 @@ from astropy.wcs import WCS
 from PIL import Image
 from reproject import reproject_interp
 
+# Official API 0.1 build_frames implementation by Huu Hoang (Contract section 6)
+import sys
+from pathlib import Path
+
+_HH_DIR = Path(__file__).resolve().parents[1] / "members" / "huu-hoang"
+if str(_HH_DIR) not in sys.path:
+    sys.path.insert(0, str(_HH_DIR))
+try:
+    from build_frames import build_frames
+except ImportError:
+    build_frames = None
+
 VERSION = "fixed-grid-median-gap30-preview-v1"
 
 

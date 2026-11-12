@@ -13,6 +13,9 @@ from astropy.visualization import AsinhStretch, ImageNormalize
 from reproject import reproject_interp
 from tan_pipeline import DEC, FOV, OUT, RA, ROOT, load_cutout, tan_grid
 
+# Official build_frames per section 6 of the API contract
+from build_frames import build_frames
+
 
 def make_frames(ra, dec, fov, det, *, manifest=None, output=None, gap_days=30):
     """FOV in degrees, detector 1..6. Median values stay in original MJy/sr units.

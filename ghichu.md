@@ -1,6 +1,87 @@
 # Ghi chú workspace và thực hành reproject
 
-> **Cập nhật 07/11/2026:** đã triển khai các task ưu tiên mới trong [members/huu-hoang/TASKS.md](members/huu-hoang/TASKS.md): TAN tâm mục tiêu/tâm tìm kiếm, centroid nguồn nền, benchmark 10/50 ảnh, median/ảnh hiệu, `make_frames`, bộ mẫu năm mục tiêu, flags bão hòa và RGB giả. Xem [ảnh tổng quan](data/five_targets/overview.png) và [kiểm chứng đầu ra](data/five_targets/verification.json). Phần bên dưới giữ nguyên ghi chép demo hai ảnh ngày 06/11; checklist cũ không mô tả toàn bộ trạng thái hiện tại.
+> **Cập nhật 11/11/2026 (Hoàn tất hàm build_frames & nghiệm thu dấu thập bám sao Barnard):**
+> - **Đã hoàn thành chính thức Task build_frames():**
+>   * Đóng gói module chuẩn [`members/huu-hoang/build_frames.py`](members/huu-hoang/build_frames.py) với hàm `build_frames()` tuân thủ 100% Pydantic model `Frames` của Backend Đông (API 0.1 / Issue #14).
+>   * Đặt tâm lưới TAN tự động ở vị trí mục tiêu tại **thời điểm trung vị giữa chuỗi khung (temporal midpoint MJD)**.
+>   * Tính `predicted_px` chuẩn gốc trên-trái ($x_{png} = x_{fits}, y_{png} = \text{height} - 1 - y_{fits}$).
+>   * Áp dụng chung thang AsinhStretch (`vmin=0.4202`, `vmax=4.4321`), xuất đầy đủ PNG khung và PNG ảnh hiệu diff dipole.
+>   * **Nghiệm thu dấu thập (Done when):** Xuất trọn bộ ảnh nghiệm thu [`data/five_targets/barnard/verification_crosshairs/`](data/five_targets/barnard/verification_crosshairs/) gồm ảnh so sánh [`barnard_d6_movement_comparison.png`](data/five_targets/barnard/verification_crosshairs/barnard_d6_movement_comparison.png) và GIF blink [`barnard_d6_movement_blink.gif`](data/five_targets/barnard/verification_crosshairs/barnard_d6_movement_blink.gif) chứng minh dấu thập bám chính xác vào sao Barnard khi sao dịch chuyển hơn 1 pixel về phía Bắc.
+> - **Kiểm thử tự động:** `pytest members/huu-hoang/` đạt **11/11 test passed** (thêm bộ test mới trong [`test_build_frames.py`](members/huu-hoang/test_build_frames.py)).
+> - **Quy ước đặt tên rõ nghĩa:** Đã bổ sung [`data/tasks_def/README.md`](data/tasks_def/README.md) giải thích tường minh toàn bộ các thư mục bài tập (D, E, F) để toàn đội dễ hiểu và không dùng tên viết tắt khó hiểu.
+
+---
+
+## 📌 BẢNG THEO DÕI TIẾN ĐỘ CÔNG VIỆC CỦA HỮU HOÀNG
+
+### A. CÁC CÔNG VIỆC ĐÃ HOÀN THÀNH (100% ĐẠT TIÊU CHÍ)
+
+1. **Task: Viết hàm `build_frames()` & Nghiệm thu dấu thập trên sao Barnard:**
+   - **Trạng thái:** ✅ **HOÀN THÀNH 100%**
+   - **Mã nguồn:** [`members/huu-hoang/build_frames.py`](members/huu-hoang/build_frames.py), kiểm thử [`members/huu-hoang/test_build_frames.py`](members/huu-hoang/test_build_frames.py).
+   - **Tiêu chí Done when ("PNG Barnard cho thấy sao dịch chỗ qua các khung. Dấu thập nằm trên sao"):**
+     * Đặt tâm lưới TAN tại thời điểm trung vị chuỗi ảnh (MJD 61033.97) giúp sao đi ngang qua tâm khung.
+     * Tính `predicted_px` đúng chuẩn PNG lật trục dọc:
+       - Visit 00 (MJD 60908.67): `[28.96, 29.57]`
+       - Visit 01 (MJD 61141.70): `[29.04, 28.51]` (sao dịch chuyển 1.06 px về phía Bắc theo Dec).
+     * Dùng chung thang norm AsinhStretch (`vmin=0.4202`, `vmax=4.4321`) cho cả hai khung ảnh.
+     * Xuất ảnh hiệu dipole [`D6_visit01_minus_D6_visit00.png`](data/five_targets/barnard/frames/D6_visit01_minus_D6_visit00.png) thể hiện rõ cặp tín hiệu âm/dương do sao dịch chuyển.
+     * Đạt tiêu chí trực quan với bộ ảnh nghiệm thu [`data/five_targets/barnard/verification_crosshairs/barnard_d6_movement_comparison.png`](data/five_targets/barnard/verification_crosshairs/barnard_d6_movement_comparison.png) và ảnh động [`barnard_d6_movement_blink.gif`](data/five_targets/barnard/verification_crosshairs/barnard_d6_movement_blink.gif): dấu thập đỏ 4 cạnh có khe giữa bám chính xác vào tâm sao Barnard trên từng khung.
+     * Xác thực hợp đồng dữ liệu: Kết quả validate đạt chuẩn 100% với model `Frames` của backend Đông.
+
+2. **Task: Mở cutout thật, đọc 6 HDU và bit FLAGS, viết make_grid() và căn 2 cutout bằng reproject_interp:**
+   - **Trạng thái:** ✅ **HOÀN THÀNH 100%**
+   - **Mã nguồn:** [`members/huu-hoang/reproject_demo.py`](members/huu-hoang/reproject_demo.py) và hàm `tan_grid()` trong [`members/huu-hoang/tan_pipeline.py`](members/huu-hoang/tan_pipeline.py).
+   - **Tiêu chí Done when ("2 ảnh đã căn, chồng lên nhau thấy sao trùng chỗ"):**
+     * Minh chứng định lượng: [`data/tan_wise0855/alignment_evidence.png`](data/tan_wise0855/alignment_evidence.png) (7 nguồn sao nền trùng khớp, độ lệch trung vị chỉ **0.057 px ≈ 0.35 arcsec**).
+     * Minh chứng trực quan: [`data/reproject_wise0855/blink_aligned.gif`](data/reproject_wise0855/blink_aligned.gif) (sao nền đứng yên bất động khi blink luân phiên).
+     * Đọc chuẩn 7 HDU và 14 bit FLAGS loại trừ: [`data/reproject_wise0855/report.json`](data/reproject_wise0855/report.json).
+
+3. **Task: Gom nhóm 30 ngày, cộng median theo detector × đợt quét, xuất PNG cùng thang asinh:**
+   - **Trạng thái:** ✅ **HOÀN THÀNH 100%**
+   - **Mã nguồn:** [`members/huu-hoang/frames.py`](members/huu-hoang/frames.py) và [`members/huu-hoang/five_targets.py`](members/huu-hoang/five_targets.py).
+   - **Kết quả:** Đủ các khung median và ảnh hiệu diff trong `data/tan_wise0855/frames/` và `data/five_targets/`.
+
+4. **Task: Xử lý cờ bão hòa (`OVERFLOW`, `NONLINEAR`) & ghép ảnh màu giả RGB 3 detector cho 5 mục tiêu:**
+   - **Trạng thái:** ✅ **HOÀN THÀNH 100%**
+   - **Mã nguồn:** [`members/huu-hoang/five_targets.py`](members/huu-hoang/five_targets.py), [`members/huu-hoang/verify_products.py`](members/huu-hoang/verify_products.py).
+   - **Kết quả:** Lọc 56 lượt pixel bão hòa ở Barnard, 342 lượt ở R Draconis; xuất 13 ảnh RGB giả và [`data/five_targets/overview.png`](data/five_targets/overview.png).
+
+5. **Task: Thực hành ngày đổi vai 10/11 (Trích phổ Luhman 16 làm phần của Nguyên) & tìm dipole:**
+   - **Trạng thái:** ✅ **HOÀN THÀNH 100%**
+   - **Mã nguồn:** [`members/huu-hoang/tasks_def.py`](members/huu-hoang/tasks_def.py).
+   - **Kết quả:** Sửa màu NaN tím `#703090` trên ảnh hiệu; trích 58 cặp dipole ứng viên; phát hiện bẫy cờ `SOURCE` chiếm trọn vành nền gần và thử nghiệm thành công vành nền rộng 12–25 px (`data/tasks_def/F_wide/spectrum.png`).
+
+6. **Task: Ảnh hiệu Barnard thành cặp sáng–tối (QA-19) & Một câu kết luận tiếng Anh cho mỗi mục tiêu trên website:**
+   - **Trạng thái:** ✅ **HOÀN THÀNH 100% & NGHIỆM THU TRỰC TIẾP TRÊN WEBSITE**
+   - **Mã nguồn:** [`frontend/src/targets.ts`](frontend/src/targets.ts), [`frontend/src/App.tsx`](frontend/src/App.tsx), [`frontend/src/blink/BlinkViewer.tsx`](frontend/src/blink/BlinkViewer.tsx), [`frontend/src/index.css`](frontend/src/index.css).
+   - **Kiểm thử tự động:**
+     * Unit tests: [`frontend/src/targets.test.ts`](frontend/src/targets.test.ts) đạt **166/166 vitest passed**.
+     * E2E tests: [`frontend/e2e/conclusion.spec.ts`](frontend/e2e/conclusion.spec.ts) đạt **7/7 Playwright passed**.
+   - **Tiêu chí Done when ("Hoàn thành khi đã có chạy kết quả trên website luôn"):**
+     * **Ảnh hiệu Barnard:** Bật tab "Difference" thấy rõ cặp cực sáng–tối (dipole) do chuyển động riêng của sao Barnard. Dòng chỉ dẫn trực quan giải thích rõ hiện tượng.
+     * **5 câu kết luận tiếng Anh:** Hiển thị thẻ card `Scientific Conclusion` trực quan cho cả 5 mục tiêu (Barnard's Star, WISE 0855, Epsilon Indi B, RW Aurigae, R Draconis) trên giao diện website.
+     * Nghiệm thu đạt tiêu chuẩn QA-19 trong [`docs/QA-matrix.md`](docs/QA-matrix.md).
+
+---
+
+### B. CÁC CÔNG VIỆC CHƯA XONG (CẦN LÀM TIẾP)
+
+#### 🟡 Việc 1: Tích hợp hàm xử lý ảnh vào `shared/frames_pipeline.py` cho Backend (Đông)
+- **Nội dung:**
+  - Trao đổi với Đông để kết nối trực tiếp hàm `build_frames()` từ `members/huu-hoang/build_frames.py` vào router `/api/frames` của backend.
+
+#### 🟡 Việc 2: Bàn giao báo cáo khoa học cho Nguyên
+- **Nội dung:**
+  - Bàn giao báo cáo trích phổ Luhman 16 (kết quả vành nền gần 0/18 vs vành nền rộng 5/18) để Nguyên duyệt vào runbook.
+  - Bàn giao danh sách 58 cặp dipole ứng viên để Nguyên kiểm tra chuyển động riêng.
+
+#### 🟡 Việc 3: Diễn tập bấm giờ (Chuẩn bị ngày thi 14–15/11)
+- **Nội dung:**
+  - Tự code tay từ đầu luồng xử lý: *Cutout $\to$ Mask flags $\to$ Căn TAN $\to$ Median $\to$ PNG + Diff* trong một thư mục trắng, bấm giờ để đảm bảo hoàn thành dưới 90 phút.
+  - Tự code tay từ đầu luồng xử lý: *Cutout $\to$ Mask flags $\to$ Căn TAN $\to$ Median $\to$ PNG + Diff* trong một thư mục trắng, bấm giờ để đảm bảo hoàn thành dưới 90 phút.
+
+---
 
 Cập nhật: 06/11/2026. Người học đã nắm SPHEREx, LVF, WCS không gian/phổ, flags, asinh và FITS; ghi chú này tập trung vào việc chạy và đọc kết quả.
 
