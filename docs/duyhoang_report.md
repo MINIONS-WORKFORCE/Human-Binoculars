@@ -87,7 +87,24 @@ Backend fixture không bao giờ trả 502/504, nên test tự trả response b�
 - `.venv` chỉ cài fastapi, uvicorn, pillow, httpx (bản ghim trong `requirements.txt`).
 - `.env`: `DATA_MODE=fixture`, `VITE_USE_MOCK=false`, `CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:5180`.
 
-## 8. Việc tiếp theo
+## 8. Cập nhật 12/11: rebase lên PR #47 của Đông
+`main` mới có PR #47 (`f8541d1`):
+- `/api/frames` dựng khung từ FITS thật nếu có fixture trong `DATA_DIR`; nếu không có thì vẫn dùng `api_samples/`.
+- Có thêm `shared/targets.json` và CI/CD mới (pytest, Playwright chạy trong image dựng sẵn, đóng gói bản build).
+
+Đã rebase nhánh này lên đó, không xung đột.
+
+| Việc | Kết quả |
+| --- | --- |
+| `.venv` | Cài thêm các thư viện ghim trong `requirements.txt` (trừ Jupyter). Backend mới cần numpy, astropy, reproject, matplotlib, requests. `pytest members`: 72 pass, 1 bỏ qua |
+| Test so mock với backend mới | Bắt được **3 chỗ lệch**, đã sửa mock: `/api/resolve` tra cả 5 mục tiêu từ `targets.json` (tọa độ J2000); photometry chỉ có điểm đo khi `target_key=rdra`; astrometry chỉ có điểm đo khi `target_key=barnard`, các mục tiêu khác lấy `catalog_pm` từ `targets.json`. Thêm 8 trường hợp, **32/32 khớp** |
+| Tọa độ WISE 0855 (mục 5) | **Đã rõ.** `targets.json` dùng SIMBAD J2000 `133.8189, -7.2470`, trùng với preset của frontend. Không cần đổi |
+| Lỗi CORS ở response 500 (mục 5) | **Vẫn còn** trên `main` mới (`ACAO=None`) |
+| Kiểm tra lại | lint, typecheck sạch; Vitest 170 pass; build thành công; Playwright 8/8; gốc repo 197/197; trình duyệt chạy blink đủ 3 khung với backend mới |
+
+Lưu ý: test so mock với backend chỉ đúng khi backend dùng `api_samples/`, tức không có FITS fixture trong `DATA_DIR`. Khung dựng từ FITS thật thì mock không mô phỏng được.
+
+## 9. Việc tiếp theo
 1. Mở PR `duy-hoang/frontend-real-api` vào `main`. Máy chưa có `gh`, nên mở trên web.
 2. Báo Đông lỗi CORS ở response 500.
 3. Deploy frontend và kiểm tra CORS với domain thật.
