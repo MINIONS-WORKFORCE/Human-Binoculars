@@ -1,0 +1,29 @@
+{
+  "data_kind": "observational",
+  "n_rows": 8,
+  "warnings": [
+    "APPARENT_LINEAR_TREND_NO_PARALLAX_FIT",
+    "NO_REFERENCE_STAR_REGISTRATION",
+    "GAUSSIAN_PSF_APPROXIMATION",
+    "PMRA_DISAGREES_WITH_CATALOG_BEYOND_3SIGMA",
+    "PIXELS_REQUIRE_MATCHING_PNG_GRID",
+    "ERRORS_INFLATED_BY_RESIDUAL_SCATTER;SYSTEMATIC_FLOOR_IS_ASSUMED"
+  ],
+  "fit": {
+    "pmra": 4107.619864209465,
+    "pmdec": 8745.19905458386,
+    "pmra_err": 487.09863008896366,
+    "pmdec_err": 571.0647215074022,
+    "n_points": 8,
+    "baseline_days": 196.55784860000128,
+    "pmdec_sign_matches_catalog": true
+  },
+  "catalog_pm": {
+    "pmra": -801.5509783684709,
+    "pmdec": 10362.394206546573,
+    "source": "gaia_dr3",
+    "epoch": "J2016.0"
+  },
+  "pmdec_sign_matches_catalog": true,
+  "api_payload_status": "written"
+}
