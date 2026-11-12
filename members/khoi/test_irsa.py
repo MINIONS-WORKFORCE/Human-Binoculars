@@ -60,6 +60,16 @@ def test_group_images_into_visits():
     assert len(visits[1]) == 2
 
 
+# The FITS pack is shared through the team drive and is never committed (data/ is
+# gitignored), so a fresh checkout or CI has none. Run `python scripts/download_fixtures.py`
+# to get it; these tests then run for real.
+needs_fixture_pack = pytest.mark.skipif(
+    not (ROOT_DIR / "data" / "fixtures" / "manifest.json").is_file(),
+    reason="FITS fixture pack not downloaded (python scripts/download_fixtures.py)",
+)
+
+
+@needs_fixture_pack
 @pytest.mark.parametrize("target_key", ["barnard", "wise0855", "epsindib", "rwaur", "rdra"])
 def test_find_frames_five_targets_offline(target_key: str):
     """Verify that find_frames in fixture mode works 100% offline and returns >= 3 frames for each target."""
@@ -146,6 +156,7 @@ def test_download_cutout_mock(tmp_path):
         assert res.read_bytes().startswith(b"SIMPLE  =")
 
 
+@needs_fixture_pack
 def test_verify_fixtures_script():
     """Verify scripts/download_fixtures.py verify_fixtures() passes on current fixtures."""
     import importlib.util
