@@ -1,0 +1,77 @@
+[
+  {
+    "id": "barnard",
+    "name": "Barnard's Star",
+    "ra_epoch": 269.4463802522241,
+    "dec_epoch": 4.7667652625,
+    "total_frames": 266,
+    "counts": {
+      "SPHEREx-D1": 45,
+      "SPHEREx-D2": 45,
+      "SPHEREx-D3": 42,
+      "SPHEREx-D4": 44,
+      "SPHEREx-D5": 48,
+      "SPHEREx-D6": 42
+    }
+  },
+  {
+    "id": "wise-0855",
+    "name": "WISE 0855-0714",
+    "ra_epoch": 133.76094243924288,
+    "dec_epoch": -7.242231333333334,
+    "total_frames": 284,
+    "counts": {
+      "SPHEREx-D1": 46,
+      "SPHEREx-D2": 51,
+      "SPHEREx-D3": 46,
+      "SPHEREx-D4": 46,
+      "SPHEREx-D5": 51,
+      "SPHEREx-D6": 44
+    }
+  },
+  {
+    "id": "eps-ind-b",
+    "name": "Epsilon Indi B",
+    "ra_epoch": 331.0953686362904,
+    "dec_epoch": -56.800823625,
+    "total_frames": 356,
+    "counts": {
+      "SPHEREx-D1": 48,
+      "SPHEREx-D2": 75,
+      "SPHEREx-D3": 66,
+      "SPHEREx-D4": 46,
+      "SPHEREx-D5": 60,
+      "SPHEREx-D6": 61
+    }
+  },
+  {
+    "id": "rw-aur",
+    "name": "RW Aurigae",
+    "ra_epoch": 76.95653421255116,
+    "dec_epoch": 30.40129633333333,
+    "total_frames": 240,
+    "counts": {
+      "SPHEREx-D1": 45,
+      "SPHEREx-D2": 38,
+      "SPHEREx-D3": 38,
+      "SPHEREx-D4": 44,
+      "SPHEREx-D5": 39,
+      "SPHEREx-D6": 36
+    }
+  },
+  {
+    "id": "r-dra",
+    "name": "R Draconis",
+    "ra_epoch": 248.16738844782734,
+    "dec_epoch": 66.755066125,
+    "total_frames": 584,
+    "counts": {
+      "SPHEREx-D1": 95,
+      "SPHEREx-D2": 97,
+      "SPHEREx-D3": 106,
+      "SPHEREx-D4": 93,
+      "SPHEREx-D5": 96,
+      "SPHEREx-D6": 97
+    }
+  }
+]
