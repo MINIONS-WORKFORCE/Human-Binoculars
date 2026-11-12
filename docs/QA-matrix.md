@@ -26,5 +26,5 @@ Mỗi dòng là một phép thử có kết quả đạt hoặc không đạt, l
 | QA-16 | Giao diện ở bề rộng 390px và chỉ dùng bàn phím | Must | Không cuộn ngang; Tab đến được mọi nút; nút cao ít nhất 44px; toàn bộ chữ bằng tiếng Anh | Thạch | Chưa chạy |  |
 | QA-17 | Mỗi người chạy module của người mình đỡ, chỉ dùng README | Must | Cả 6 module chạy được | Cả nhóm | Chưa chạy |  |
 | QA-18 | Đo thời gian trả về của một mục tiêu dựng sẵn | Must | Dưới 2 giây | Đông | Chưa chạy |  |
-| QA-19 | Bật ảnh hiệu với Barnard | Should | Thấy một cặp sáng–tối | Hữu Hoàng | Chưa chạy |  |
+| QA-19 | Bật ảnh hiệu với Barnard | Should | Thấy một cặp sáng–tối | Hữu Hoàng | Đạt | Đã kiểm thử e2e; ảnh hiệu hiển thị cặp cực sáng–tối do chuyển động riêng, kèm câu kết luận khoa học tiếng Anh cho từng mục tiêu |
 | QA-20 | Mở link công khai ở tab ẩn danh trên máy khác | Should | Trang chạy và 5 mục tiêu đều ra khung | Duy Hoàng | Chưa chạy |  |

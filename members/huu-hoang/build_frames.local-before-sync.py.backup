@@ -1,0 +1,198 @@
+"""Build cached Barnard products and measure local source agreement independently."""
+
+import io
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+from astropy.io import fits
+from PIL import Image, ImageDraw
+from scipy.optimize import least_squares
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from shared.image_processing import build_frames
+
+
+def measure_source(pixels, predicted):
+    """Fit unsaturated native-intensity wings, excluding NaNs; no forced center."""
+    x, y = predicted
+    yy, xx = np.indices(pixels.shape)
+    select = np.isfinite(pixels) & (np.abs(xx - x) < 8) & (np.abs(yy - y) < 8)
+    if select.sum() < 30:
+        return None
+    values, sx, sy = pixels[select], xx[select], yy[select]
+    background = float(np.percentile(values, 20))
+    amplitude = max(float(values.max() - background), 1e-6)
+
+    def residual(params):
+        cx, cy, amp, sigma, bg = params
+        model = bg + amp * np.exp(-((sx - cx) ** 2 + (sy - cy) ** 2) / (2 * sigma**2))
+        return model - values
+
+    fit = least_squares(
+        residual,
+        [x, y, amplitude, 2, background],
+        bounds=([x - 4, y - 4, 0, 0.5, -np.inf], [x + 4, y + 4, np.inf, 6, np.inf]),
+        loss="soft_l1",
+        f_scale=max(amplitude * 0.1, 1e-6),
+    )
+    if not fit.success:
+        return None
+    return {
+        "centroid_px": fit.x[:2].tolist(),
+        "sigma_px": float(fit.x[3]),
+        "valid_fit_pixels": int(select.sum()),
+        "residual_px": float(np.linalg.norm(fit.x[:2] - [x, y])),
+    }
+
+
+def main():
+    folder = ROOT / "data/target_observations/barnard"
+    output = ROOT / "data/observation_products/barnard_motion"
+    report, images = build_frames(
+        json.loads((folder / "observation_manifest.json").read_text(encoding="utf-8")),
+        json.loads((folder / "target_coordinates.json").read_text(encoding="utf-8")),
+        root=ROOT,
+        output=output,
+        interpolation="wcs-bilinear",
+    )
+    checks, panels = [], []
+    for frame in report["frames"]:
+        # Fit original intensities; the masked core remains missing.
+        pixels = np.flipud(fits.getdata(output / (frame["frame_id"] + ".fits")))
+        x, y = frame["predicted_px"]
+        fit = measure_source(pixels, [x, y])
+        measured = fit["centroid_px"] if fit else None
+        residual = fit["residual_px"] if fit else None
+        checks.append(
+            {
+                "frame_id": frame["frame_id"],
+                "predicted_px": [x, y],
+                "wing_fit": fit,
+                "measured_px": measured,
+                "residual_px": residual,
+                "status": "within_1px" if residual is not None and residual < 1 else "needs_review",
+            }
+        )
+        image = Image.open(io.BytesIO(images[frame["crosshair_url"]])).resize(
+            (354, 354), Image.Resampling.NEAREST
+        )
+        panel = Image.new("RGB", (354, 390), "white")
+        panel.paste(image, (0, 36))
+        ImageDraw.Draw(panel).text(
+            (5, 5), f"{frame['frame_id']} MJD {frame['mjd']:.2f}", fill="black"
+        )
+        panels.append(panel)
+    overview = Image.new("RGB", (354 * 3, 390 * ((len(panels) + 2) // 3)), "white")
+    for index, panel in enumerate(panels):
+        overview.paste(panel, (index % 3 * 354, index // 3 * 390))
+    overview.save(output / "overview.png")
+    for detector in ("D1", "D3", "D6"):
+        sequence = [
+            Image.open(io.BytesIO(images[f["crosshair_url"]])).resize(
+                (354, 354), Image.Resampling.NEAREST
+            )
+            for f in report["frames"]
+            if f["detector"] == detector
+        ]
+        if sequence:
+            sequence[0].save(
+                output / f"{detector}-blink.gif",
+                save_all=True,
+                append_images=sequence[1:],
+                duration=900,
+                loop=0,
+            )
+    result = {
+        "checks": checks,
+        "method": "Robust Gaussian fit to valid intensity wings in a 16x16 pixel window; "
+        "masked saturated core remains NaN. Center free within +/-4 pixels. "
+        "Display alignment diagnostic, not precision astrometry or photometry.",
+    }
+    shifts = []
+    for detector in ("D1", "D3", "D6"):
+        subset = [row for row in checks if row["frame_id"].startswith(detector)]
+        if len(subset) >= 2 and all(row["measured_px"] for row in subset):
+            first, last = subset[0], subset[-1]
+            delta = np.array(last["measured_px"]) - first["measured_px"]
+            predicted = np.array(last["predicted_px"]) - first["predicted_px"]
+            shifts.append(
+                {
+                    "detector": detector,
+                    "measured_delta_px": delta.tolist(),
+                    "predicted_delta_px": predicted.tolist(),
+                    "measured_distance_px": float(np.linalg.norm(delta)),
+                }
+            )
+    result["shifts"] = shifts
+    d6_checks = [row for row in checks if row["frame_id"].startswith("D6")]
+    d6_shift = next((row for row in shifts if row["detector"] == "D6"), None)
+    result["display_acceptance"] = {
+        "criterion": "D6: crosshair within 0.5px of fitted wings in both epochs; "
+        "measured upward movement >0.5px on the fixed sky grid",
+        "passed": bool(
+            len(d6_checks) == 2
+            and d6_shift
+            and all(
+                row["residual_px"] is not None and row["residual_px"] < 0.5 for row in d6_checks
+            )
+            and d6_shift["measured_delta_px"][1] < -0.5
+        ),
+        "limit": "Saturated core excluded; validates display behavior, not precision proper motion.",
+    }
+
+    # Direct regression against the actual FITS produced by the previous run.
+    from astropy.wcs import WCS
+
+    from shared.image_processing import mask_flags, reproject_bilinear
+
+    previous = ROOT / "data/wise0855_two_epoch_comparison"
+    if (previous / "reprojected.fits").exists():
+        with (
+            fits.open(previous / "wise0855_2026.fits") as native,
+            fits.open(previous / "reprojected.fits") as old,
+        ):
+            hdu, flags = native["IMAGE"], native["FLAGS"]
+            pixels = mask_flags(hdu.data.astype(float), flags.data, flags.header)
+            actual, _ = reproject_bilinear(
+                (pixels, WCS(hdu.header, fobj=native).celestial),
+                WCS(old["ALIGNED2026"].header),
+                old["ALIGNED2026"].data.shape,
+            )
+            expected = old["ALIGNED2026"].data
+            common = np.isfinite(actual) & np.isfinite(expected)
+            error = float(np.max(np.abs(actual[common] - expected[common])))
+            np.testing.assert_allclose(actual[common], expected[common], rtol=1e-5, atol=1e-6)
+            result["previous_run_regression"] = {
+                "common_pixels": int(common.sum()),
+                "max_abs_error": error,
+                "new_finite_pixels": int(np.isfinite(actual).sum()),
+                "old_finite_pixels": int(np.isfinite(expected).sum()),
+                "status": "pass",
+                "edge_policy": "conservative native-center bounds",
+            }
+
+    # D6 magnified central crops: raw on top, predicted crosshair below.
+    frames = [frame for frame in report["frames"] if frame["detector"] == "D6"]
+    detail = Image.new("RGB", (360 * len(frames), 760), "white")
+    for index, frame in enumerate(frames):
+        for row, name in enumerate((frame["image_url"], frame["crosshair_url"])):
+            crop = Image.open(io.BytesIO(images[name])).crop((19, 19, 40, 40))
+            detail.paste(
+                crop.resize((336, 336), Image.Resampling.NEAREST),
+                (index * 360 + 12, row * 380 + 35),
+            )
+            ImageDraw.Draw(detail).text(
+                (index * 360 + 12, row * 380 + 8),
+                f"{frame['frame_id']} / {'raw' if row == 0 else 'predicted crosshair'}",
+                fill="black",
+            )
+    detail.save(output / "D6-motion-detail.png")
+    (output / "validation.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+    print(json.dumps(result, indent=2))
+
+
+if __name__ == "__main__":
+    main()

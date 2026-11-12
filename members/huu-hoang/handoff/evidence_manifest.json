@@ -1,0 +1,35 @@
+{
+  "local_background": {
+    "path": "data/observation_products/luhman16_spectrum/local_background/spectrum_extraction_report.json",
+    "sha256": "eb5ac8e568f6d0699bb0824106747f5a8097c1ddede311075ea99d64bd39c680",
+    "total": 18,
+    "accepted": 0,
+    "limits": [
+      "No aperture/PSF correction; Luhman binary unresolved/blended",
+      "Linear proper motion only; no parallax/orbit/RV",
+      "Three detector subsets, non-simultaneous samples; no interpolation across gaps",
+      "Projection-plane solid angle approximation; independent native variance plus approximate background error",
+      "No upper limits or molecular-feature claims; source identity needs review"
+    ]
+  },
+  "wide_background": {
+    "path": "data/observation_products/luhman16_spectrum/wide_background/spectrum_extraction_report.json",
+    "sha256": "fe1fac7776518207a81a917fb315e748a62a8f34a1e2adae4a1c1d5b40f9408b",
+    "total": 18,
+    "accepted": 5,
+    "limits": [
+      "No aperture/PSF correction; Luhman binary unresolved/blended",
+      "Linear proper motion only; no parallax/orbit/RV",
+      "Three detector subsets, non-simultaneous samples; no interpolation across gaps",
+      "Projection-plane solid angle approximation; independent native variance plus approximate background error",
+      "No upper limits or molecular-feature claims; source identity needs review"
+    ]
+  },
+  "dipoles": {
+    "path": "data/observation_products/change_candidates/change_candidates_report.json",
+    "sha256": "df120a6c564e3f8e4ebd89359e64edd8775a19acf78778170d56d5b677ac32f4",
+    "count": 58,
+    "status": "unvalidated_candidates; PSF, wavelengths, background and alignment can mimic motion",
+    "coordinates": "native difference FITS x,y, zero-based, bottom-left; NOT PNG coordinates"
+  }
+}

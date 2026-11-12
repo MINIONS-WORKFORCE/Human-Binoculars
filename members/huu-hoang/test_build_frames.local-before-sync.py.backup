@@ -1,0 +1,115 @@
+"""Moving-source geometry, PNG orientation, saturation and difference checks."""
+
+import io
+
+import numpy as np
+import pytest
+from astropy.io import fits
+from astropy.wcs import WCS
+from PIL import Image
+
+from shared.image_processing import (
+    build_frames,
+    diff_png,
+    mask_flags,
+    reproject_bilinear,
+    rgb_png,
+    target_at,
+)
+
+
+def test_motion_on_fixed_grid_and_png_flip(tmp_path):
+    target = {"j2000_deg": [269.45, 4.69], "pm_mas_yr": [-800, 10360]}
+    grid = WCS(naxis=2)
+    grid.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    center = target_at(target, 61000)
+    grid.wcs.crval = [center.ra.deg, center.dec.deg]
+    grid.wcs.crpix = [30, 30]
+    grid.wcs.cdelt = [-6.2 / 3600, 6.2 / 3600]
+    entries = []
+    for index, mjd in enumerate([60800, 61200]):
+        x, y = grid.world_to_pixel(target_at(target, mjd))
+        yy, xx = np.indices((59, 59))
+        image = 100 * np.exp(-((xx - x) ** 2 + (yy - y) ** 2) / 2)
+        header = grid.to_header()
+        header.update(OBSID=f"obs{index}", DETECTOR=3, BUNIT="MJy / sr")
+        flags = fits.ImageHDU(np.zeros((59, 59), dtype=np.int32), name="FLAGS")
+        flags.header["MP_OVERFLOW"] = 0
+        path = tmp_path / f"{index}.fits"
+        fits.HDUList(
+            [fits.PrimaryHDU(), fits.ImageHDU(image, header, name="IMAGE"), flags]
+        ).writeto(path)
+        entries.append({"path": str(path), "mjd": mjd, "obs_id": f"obs{index}", "detector": "D3"})
+    report, images = build_frames(entries[::-1], target, interpolation="wcs-bilinear")
+    assert report["center_mjd"] == 61000
+    np.testing.assert_allclose(report["center_deg"], [center.ra.deg, center.dec.deg])
+    for frame in report["frames"]:
+        px = frame["predicted_px"]
+        data = np.asarray(Image.open(io.BytesIO(images[frame["image_url"]])))
+        # Use the bright region centroid because the display clips the peak.
+        yy, xx = np.where(data[:, :, 0] > 200)
+        measured = [xx.mean(), yy.mean()]
+        assert np.linalg.norm(np.array(measured) - px) < 0.5
+    first, last = report["frames"]
+    assert first["predicted_px"][1] > last["predicted_px"][1]
+    assert abs(first["predicted_px"][1] - last["predicted_px"][1]) > 1
+    assert last["diff_png"] in images
+    with pytest.raises(ValueError, match="Duplicate"):
+        build_frames(entries + entries, target, interpolation="wcs-bilinear")
+
+
+def test_catalog_motion_and_top_left_coordinates():
+    target = {"j2000_deg": [269.45, 4.69], "pm_mas_yr": [-800, 10360]}
+    center = target_at(target, 61000)
+    wcs = WCS(naxis=2)
+    wcs.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    wcs.wcs.crval = [center.ra.deg, center.dec.deg]
+    wcs.wcs.crpix = [30, 30]
+    wcs.wcs.cdelt = [-6.2 / 3600, 6.2 / 3600]
+    np.testing.assert_allclose(wcs.world_to_pixel(center), [29, 29], atol=1e-8)
+    early = np.array(wcs.world_to_pixel(target_at(target, 60800)))
+    late = np.array(wcs.world_to_pixel(target_at(target, 61200)))
+    assert late[1] > early[1]
+    assert 58 - late[1] < 58 - early[1]
+    expected = np.hypot(800, 10360) / 1000 * 400 / 365.25 / 6.2
+    assert np.linalg.norm(late - early) == pytest.approx(expected, rel=1e-4)
+
+
+def test_bilinear_shift_rotation_and_missing_pixels():
+    source = WCS(naxis=2)
+    source.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+    source.wcs.crval = [120, 30]
+    source.wcs.crpix = [16, 16]
+    source.wcs.cdelt = [-0.001, 0.001]
+    grid = source.deepcopy()
+    angle = 0.3
+    grid.wcs.pc = [[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]]
+    grid.wcs.crpix = [15.3, 16.2]
+    yy, xx = np.indices((31, 31), dtype=float)
+    plane = 2 * xx + 3 * yy + 7
+    actual, footprint = reproject_bilinear((plane, source), grid, (31, 31))
+    from astropy.wcs.utils import pixel_to_pixel
+
+    sx, sy = pixel_to_pixel(grid, source, xx, yy)
+    valid = footprint > 0
+    np.testing.assert_allclose(actual[valid], (2 * sx + 3 * sy + 7)[valid], atol=1e-8)
+    masked = plane.copy()
+    masked[15, 15] = np.nan
+    identical, _ = reproject_bilinear((masked, source), source, masked.shape)
+    assert np.isnan(identical[15, 15])
+    np.testing.assert_allclose(identical[5:10, 5:10], plane[5:10, 5:10], atol=1e-8)
+
+
+def test_saturation_source_and_missing_pixel_colors():
+    flags = np.array([[1, 2, 4, 8, 0]])
+    header = {"MP_OVERFLOW": 0, "MP_NONLINEAR": 1, "MP_SOURCE": 2, "MP_FULLSAMPLE": 3}
+    masked = mask_flags(np.ones((1, 5)), flags, header)
+    assert np.isnan(masked[0, :2]).all()
+    assert np.isfinite(masked[0, 2:]).all()
+    diff = np.array([[1.0, -1.0], [np.nan, 0.0]])
+    pixels = np.asarray(Image.open(io.BytesIO(diff_png(diff, 1))))
+    assert pixels[0, 0].tolist() == [112, 48, 144]
+    assert pixels[1, 0].tolist() == [255, 0, 0]
+    assert pixels[1, 1].tolist() == [0, 0, 255]
+    rgb = np.asarray(Image.open(io.BytesIO(rgb_png(diff, diff, diff))))
+    assert rgb[0, 0].tolist() == [112, 48, 144]
