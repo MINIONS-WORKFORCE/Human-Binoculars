@@ -1,6 +1,8 @@
 // Checks that the MSW mock answers exactly like the real backend, so a page that
 // works on mocks also works on the API. Skipped unless a backend is running:
 //   LIVE_API_URL=http://127.0.0.1:8000 npx vitest run src/api/parity.test.ts
+// The backend must use the api_samples/ frames, i.e. have no FITS fixtures under
+// DATA_DIR: frames rendered from real cutouts are not something MSW can copy.
 import { bypass, getResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { handlers } from "../mocks/handlers";
@@ -12,6 +14,11 @@ const live = process.env.LIVE_API_URL;
 const CASES = [
   "/api/health",
   "/api/resolve?name=Barnard%27s%20Star",
+  "/api/resolve?name=WISE%200855-0714",
+  "/api/resolve?name=%20eps%20ind%20b%20",
+  "/api/resolve?name=RW%20Aur",
+  "/api/resolve?name=rdra",
+  "/api/resolve?name=GJ%20699",
   "/api/resolve?name=Vega",
   "/api/resolve",
   "/api/frames?ra=269.4521&dec=4.6934&detector=6&target_key=barnard",
@@ -31,9 +38,12 @@ const CASES = [
   "/api/frames/not-published/diff.png",
   "/api/photometry?ra=248.1676&dec=66.755&target_key=rdra",
   "/api/photometry?ra=248.1676&dec=66.755&detector=3",
+  "/api/photometry?ra=133.8189&dec=-7.247&target_key=wise0855",
   "/api/photometry?ra=1&dec=1&aperture_arcsec=0",
   "/api/astrometry?ra=269.4521&dec=4.6934&target_key=barnard",
+  "/api/astrometry?ra=269.4521&dec=4.6934&target_key=barnard&detector=2",
   "/api/astrometry?ra=269.4521&dec=4.6934&detector=2",
+  "/api/astrometry?ra=248.1676&dec=66.755&target_key=rdra",
 ];
 
 /** Frame ids hash the query differently on each side; git_sha is environment data. */

@@ -106,8 +106,9 @@ One text field accepts a name or coordinates (RA and Dec together):
 | A name          | `Barnard's Star`, `R Dra`, `GJ 699` | the name, decimal degrees and hours / degrees |
 
 The five challenge targets (and their aliases) are found offline. Other names are
-sent to `/api/resolve` when the form is submitted; the fixture backend only knows
-Barnard's Star for now. Typed coordinates send no `target_key`, so the API returns
+sent to `/api/resolve` when the form is submitted; the fixture backend (and the
+mock) resolves the five targets from `shared/targets.json` and nothing else yet.
+Typed coordinates send no `target_key`, so the API returns
 no `predicted_px` and the viewer shows no crosshair.
 
 ## Using BlinkViewer
