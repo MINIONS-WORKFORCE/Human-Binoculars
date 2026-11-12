@@ -13,3 +13,6 @@
 *.pdf binary
 *.fits binary
 *.fz binary
+
+# Preserve byte-for-byte catalogue records and their provenance hashes.
+fixtures/sources/* -text -whitespace

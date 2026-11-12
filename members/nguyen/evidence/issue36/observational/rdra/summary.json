@@ -1,0 +1,16 @@
+{
+  "data_kind": "observational",
+  "n_rows": 32,
+  "warnings": [
+    "NO_ABSOLUTE_APERTURE_CORRECTION",
+    "CALIBRATION_SYSTEMATICS_NOT_INCLUDED",
+    "INSUFFICIENT_COMPARABLE_MEASUREMENTS"
+  ],
+  "aperture_arcsec": 12.3,
+  "aperture_is": "radius",
+  "n_target_rows": 32,
+  "n_valid_target_fluxes": 0,
+  "variability": null,
+  "api_payload_status": "not_exportable",
+  "api_payload_reason": "API 0.1 requires integer survey; supply the team's visit index"
+}
