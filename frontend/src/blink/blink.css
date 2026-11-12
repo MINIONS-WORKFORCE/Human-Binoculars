@@ -12,6 +12,14 @@
   font-weight: var(--weight-medium);
 }
 
+.blink-single {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--color-marker);
+  background: var(--color-surface);
+  font-size: var(--text-sm);
+}
+
 .blink-stage {
   position: relative;
   width: 100%;

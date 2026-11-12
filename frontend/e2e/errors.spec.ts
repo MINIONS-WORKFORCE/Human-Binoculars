@@ -109,3 +109,27 @@ test("400 BAD_COORDS offers no retry; an expired image offers Reload frames", as
   await expect(overlay).toHaveCount(0);
   await expect(page.getByTestId("frame-counter")).toHaveText(/^Frame \d \/ 3$/);
 });
+
+test("one visit only: the viewer explains why there is nothing to blink", async ({
+  page,
+}) => {
+  // What the real-FITS fixture gives today: every cutout falls in one visit.
+  const oneFrame = {
+    ...framesSample,
+    frames: framesSample.frames.slice(0, 1),
+    warnings: ["FEW_FRAMES"],
+  };
+  await page.route(
+    (url) => url.pathname === "/api/frames",
+    (route) => route.fulfill({ json: oneFrame }),
+  );
+  await serveImages(page, () => true);
+
+  await page.goto("/");
+  await expect(page.getByTestId("frame-counter")).toHaveText("Frame 1 / 1");
+  await expect(page.getByTestId("frame-summary")).toContainText("1 frame ·");
+  await expect(page.getByTestId("single-frame")).toContainText(
+    "nothing to blink yet",
+  );
+  await expect(page.getByRole("button", { name: "Play" })).toBeDisabled();
+});
