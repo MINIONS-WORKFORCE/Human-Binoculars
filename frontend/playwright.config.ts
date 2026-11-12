@@ -26,7 +26,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npm.cmd run build:mock && npx.cmd vite preview --port ${PORT} --strictPort`,
+    command: `${process.platform === "win32" ? "npm.cmd" : "npm"} run build:mock && ${process.platform === "win32" ? "npx.cmd" : "npx"} vite preview --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
