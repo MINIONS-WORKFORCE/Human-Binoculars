@@ -43,7 +43,7 @@ test("a name shows the name and both notations", async ({ page }) => {
     "RA 248.1676° · Dec +66.7550°",
   );
   await expect(page.getByTestId("coord-sexagesimal")).toContainText(
-    "RA 16h32m40.22s · Dec +66°45′18.0″",
+    "RA 16h32m40.23s · Dec +66°45′17.9″",
   );
 
   await page.getByRole("button", { name: "Load frames" }).click();
