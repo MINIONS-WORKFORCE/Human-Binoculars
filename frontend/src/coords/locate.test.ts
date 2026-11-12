@@ -85,8 +85,8 @@ describe("locate (resolves names through /api/resolve)", () => {
   });
 
   it("asks the API for names the presets do not know and keeps its target key", async () => {
-    // The fixture resolver only knows Barnard's Star, so the request is
-    // pointed at that name while the typed text is unknown to the presets.
+    // The typed text is unknown to the presets, so the request goes to the API
+    // (pointed at a name the fixture resolver knows).
     const asked: string[] = [];
     const location = await locate("Some Alias", (name) => {
       asked.push(name);
@@ -99,8 +99,9 @@ describe("locate (resolves names through /api/resolve)", () => {
       name: "Barnard's Star",
       targetKey: "barnard",
       objectType: null,
-      raDeg: 269.4521,
-      decDeg: 4.6934,
+      // shared/targets.json, SIMBAD ICRS at epoch J2000.
+      raDeg: 269.45207695861876,
+      decDeg: 4.693364966576667,
     });
   });
 
