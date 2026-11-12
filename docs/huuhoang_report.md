@@ -1,23 +1,31 @@
-# Báo cáo 11/11/2026: Pipeline căn ảnh, hàm build_frames(), chuẩn hóa norm và nghiệm thu dấu thập bám sao Barnard
+# Báo cáo tiến độ: Pipeline căn ảnh build_frames(), nghiệm thu dấu thập Barnard, ảnh hiệu cặp sáng–tối (QA-19) & Kết luận khoa học 5 mục tiêu
 
-**Người làm:** Nguyễn Hữu Hoàng (Xử lý ảnh SPHEREx + Pipeline reproject + Kiểm thử khoa học)  
-**Nhánh:** `huu-hoang`, đã cập nhật code mới nhất từ `main` (commit `fe93446` của Duy Hoàng)
+**Người thực hiện:** Nguyễn Hữu Hoàng (Xử lý ảnh SPHEREx + Pipeline reproject + Tích hợp sản phẩm khoa học)  
+**Nhánh:** `huu-hoang` (đã đồng bộ hoàn toàn với `origin/huu-hoang`)  
+**Commit mới nhất:** `a192d6e` (`feat(frontend): display target scientific conclusions and QA-19 Barnard dipole verification`)
+
+---
+
+## 📌 Bảng tổng hợp các file và sản phẩm bàn giao
 
 | Commit / File | Nội dung chính |
 | :--- | :--- |
 | [`members/huu-hoang/build_frames.py`](../members/huu-hoang/build_frames.py) | Đóng gói hàm chính thức `build_frames(cutouts, target, size)` theo Mục 6 hợp đồng API, tính `predicted_px` lật trục dọc, định vị tâm lưới tại trung vị thời gian, chuẩn hóa chung norm `AsinhStretch`, tạo PNG khung, PNG ảnh hiệu và xuất bộ ảnh nghiệm thu dấu thập |
 | [`members/huu-hoang/test_build_frames.py`](../members/huu-hoang/test_build_frames.py) | Bộ kiểm thử tự động 3 bài test: lật trục tọa độ PNG, tính toán tâm động qua trung vị thời gian, và kiểm tra tính tương thích 100% với Pydantic model `Frames` của backend |
 | [`shared/frames_pipeline.py`](../shared/frames_pipeline.py) & [`members/huu-hoang/frames.py`](../members/huu-hoang/frames.py) | Re-export `build_frames` dùng chung để Backend của Đông và toàn đội có thể import trực tiếp |
-| [`data/tasks_def/README.md`](../data/tasks_def/README.md) | Tài liệu hóa toàn bộ các thư mục bài tập (D, E, F) để toàn đội dễ đọc, xóa bỏ việc dùng tên viết tắt gây khó hiểu |
+| [`frontend/src/targets.ts`](../frontend/src/targets.ts) | Định nghĩa 5 câu kết luận tiếng Anh khoa học cho 5 mục tiêu thử thách và hàm tra cứu `findPresetForTarget` |
+| [`frontend/src/App.tsx`](../frontend/src/App.tsx) | Thiết kế thẻ hiển thị `Scientific Conclusion` (`.target-conclusion-card`) xuất hiện trực quan ngay dưới viewer trên website |
+| [`frontend/src/blink/BlinkViewer.tsx`](../frontend/src/blink/BlinkViewer.tsx) | Bổ sung chỉ dẫn chế độ ảnh hiệu (Difference image) làm nổi bật cặp sáng–tối (dipole) do chuyển động riêng của sao Barnard |
+| [`frontend/src/targets.test.ts`](../frontend/src/targets.test.ts) | Bộ unit test kiểm tra 5 câu kết luận tiếng Anh và cơ chế tra cứu mục tiêu (đạt **166/166 vitest pass**) |
+| [`frontend/e2e/conclusion.spec.ts`](../frontend/e2e/conclusion.spec.ts) | Bộ e2e test Playwright chạy trên trình duyệt thật kiểm chứng giao diện kết luận khoa học và chế độ ảnh hiệu (đạt **7/7 Playwright pass**) |
+| [`docs/QA-matrix.md`](QA-matrix.md) | Đánh dấu nghiệm thu mục **QA-19: Đạt** (Thấy một cặp sáng–tối trên website khi bật ảnh hiệu với Barnard) |
 | [`data/five_targets/barnard/verification_crosshairs/`](../data/five_targets/barnard/verification_crosshairs/) | Bộ sản phẩm nghiệm thu trực quan tiêu chí **Done when**: ảnh so sánh `barnard_d6_movement_comparison.png` và ảnh động `barnard_d6_movement_blink.gif` |
-
-**Trạng thái:** ✅ Đã hoàn thành 100% các tiêu chí nghiệm thu của Task. Toàn bộ 13/13 unit tests pass.
 
 ---
 
 ## 1. Tóm tắt kết quả công việc
 
-### Đóng gói `build_frames()` và nghiệm thu dấu thập trên sao Barnard
+### A. Đóng gói `build_frames()` và nghiệm thu dấu thập trên sao Barnard
 
 | Yêu cầu kỹ thuật | Kết quả đạt được | Minh chứng cụ thể |
 | :--- | :--- | :--- |
@@ -31,7 +39,17 @@
 
 ---
 
-## 2. Chi tiết các bước đã thực hiện
+### B. Nghiệm thu Task QA-19 & 5 câu kết luận tiếng Anh trên website
+
+| Hạng mục nghiệm thu | Kết quả đạt được | Minh chứng cụ thể |
+| :--- | :--- | :--- |
+| **Ảnh hiệu Barnard thành cặp sáng–tối (QA-19)** | ✅ **ĐẠT.** Khi người dùng bấm tab **Difference** trên website, các ngôi sao nền bất động biến mất, vị trí cũ của sao thành cực tối và vị trí mới thành cực sáng (dipole). Dòng hint giải thích rõ hiện tượng. | Đánh dấu `Đạt` cho QA-19 trong [`docs/QA-matrix.md`](QA-matrix.md) |
+| **Một câu kết luận tiếng Anh cho mỗi mục tiêu** | ✅ **ĐẠT.** Hiển thị thẻ card `Scientific Conclusion` trực quan ngay dưới Blink Viewer cho cả 5 mục tiêu thử thách (Barnard, WISE 0855, Epsilon Indi B, RW Aurigae, R Draconis). | [`frontend/src/targets.ts`](../frontend/src/targets.ts) & [`frontend/src/App.tsx`](../frontend/src/App.tsx) |
+| **Kiểm thử tự động trên website** | ✅ **100% PASS.** 166 unit tests Vitest và 7 Playwright e2e tests chạy tự động trên trình duyệt thật đều vượt qua. | [`frontend/e2e/conclusion.spec.ts`](../frontend/e2e/conclusion.spec.ts) |
+
+---
+
+## 2. Chi tiết các bước kỹ thuật đã thực hiện
 
 ### 2.1. Căn chỉnh tọa độ & Tự động đặt tâm lưới tại trung vị thời gian ($t_{mid}$)
 - Trước đây, việc căn ảnh dùng vị trí sao cố định tại epoch J2026.0 khiến sao bị lệch tâm ở các đợt chụp đầu (năm 2025).
@@ -74,26 +92,59 @@
   * Xuất ảnh so sánh 2 khung hình cạnh nhau: [`barnard_d6_movement_comparison.png`](../data/five_targets/barnard/verification_crosshairs/barnard_d6_movement_comparison.png) phóng to vùng trung tâm $24 \times 24$ px, thấy rõ dấu thập đỏ nằm ngay ngắn trên sao ở cả 2 thời điểm.
   * Xuất ảnh động GIF blink: [`barnard_d6_movement_blink.gif`](../data/five_targets/barnard/verification_crosshairs/barnard_d6_movement_blink.gif) đổi khung mỗi 0.8 giây, chứng minh trực quan sao nhảy vị trí và dấu thập bám sát theo sao.
 
+### 2.7. Tích hợp 5 câu kết luận tiếng Anh khoa học lên website
+Đã chuẩn hóa nội dung khoa học cho 5 mục tiêu thử thách vào [`frontend/src/targets.ts`](../frontend/src/targets.ts):
+1. **Barnard's Star (`barnard`):**
+   > *"Barnard's Star exhibits rapid proper motion across observation epochs, producing a pronounced bright–dark dipole signature in difference imaging that directly confirms its transverse motion relative to the background sky."*
+2. **WISE 0855-0714 (`wise0855`):**
+   > *"WISE 0855 is an ultra-cold sub-stellar brown dwarf whose thermal emission peaks predominantly in SPHEREx mid-infrared Detector 6 (4.5–5.0 µm) with noticeable proper motion displacement across survey visits."*
+3. **Epsilon Indi B (`epsindib`):**
+   > *"Epsilon Indi B is a nearby benchmark T-dwarf binary companion displaying shared proper motion with the host star and strong atmospheric methane absorption features in SPHEREx channels."*
+4. **RW Aurigae (`rwaur`):**
+   > *"RW Aurigae is a young T Tauri binary system exhibiting prominent infrared excess and irregular multi-magnitude dimming episodes caused by circumstellar dust occultation."*
+5. **R Draconis (`rdra`):**
+   > *"R Draconis is a high-amplitude pulsating Mira variable demonstrating substantial seasonal brightness modulation and saturated core pixels during peak infrared emission."*
+
+Khối thẻ `.target-conclusion-card` được render ngay dưới Blink Viewer trong [`frontend/src/App.tsx`](../frontend/src/App.tsx), đồng bộ màu sắc và typography theo design tokens chuẩn.
+
+### 2.8. Nghiệm thu trực tiếp chế độ Difference Image trên website (QA-19)
+- Trong [`frontend/src/blink/BlinkViewer.tsx`](../frontend/src/blink/BlinkViewer.tsx), khi chuyển sang chế độ `Difference`, chỉ dẫn trên giao diện tự động đổi thành:  
+  *"Difference image: Stationary background sources vanish, revealing moving objects like Barnard's Star as a distinct bright–dark dipole pair."*
+- Trên ảnh hiệu, mức nền triệt tiêu về giá trị xám trung tính (128), vị trí cũ của sao bị âm ($<128$) và vị trí mới bị dương ($>128$), tạo thành cặp sáng–tối (dipole) trực quan.
+
 ---
 
 ## 3. Kiểm chứng & Số liệu thực tế
 
-### 3.1. Kết quả chạy kiểm thử tự động (Unit Tests)
+### 3.1. Kết quả kiểm thử tự động toàn diện
 
-Chạy lệnh `pytest` từ thư mục gốc của repository:
+1. **Python Unit Tests:**
+   ```bash
+   .venv/Scripts/pytest members/huu-hoang/
+   ```
+   Kết quả: **11/11 tests PASSED (100%)** trong 18.60s.
 
-```bash
-.venv/Scripts/pytest members/huu-hoang/ members/dong/tests/test_frames_pipeline.py
-```
+2. **Frontend Unit Tests (Vitest):**
+   ```bash
+   npm --prefix frontend test
+   ```
+   Kết quả: **166/166 tests PASSED (100%)** trong 10.10s qua 9 test files.
 
-Kết quả: **13/13 tests PASSED (100%)** trong 9.15 giây.
+3. **Frontend End-to-End Tests (Playwright):**
+   ```bash
+   cd frontend && npm run e2e
+   ```
+   Kết quả: **7/7 tests PASSED (100%)** trong 21.1s trên trình duyệt thật.
 
-| File kiểm thử | Số test | Kết quả | Nội dung kiểm tra |
+| Suite kiểm thử | Số test | Kết quả | Nội dung kiểm tra |
 | :--- | :---: | :---: | :--- |
-| [`members/huu-hoang/test_build_frames.py`](../members/huu-hoang/test_build_frames.py) | 3 | **3/3 PASS** | Kiểm tra lật trục dọc PNG gốc trên-trái; kiểm tra tính tâm lưới động theo thời gian trung vị; kiểm tra chữ ký hàm `build_frames(cutouts, target, size)` và tính tương thích với Pydantic model `Frames`. |
-| [`members/huu-hoang/test_pipeline.py`](../members/huu-hoang/test_pipeline.py) | 4 | **4/4 PASS** | Kiểm tra hình học WCS TAN, căn chỉnh sao xoay góc, lọc ngoại lai thời gian bằng median, kiểm tra dấu ảnh hiệu. |
-| [`members/huu-hoang/test_tasks_def.py`](../members/huu-hoang/test_tasks_def.py) | 4 | **4/4 PASS** | Kiểm tra thuật toán ghép cặp dipole, loại bỏ lân cận NaN, trắc lượng khẩu độ và kiểm tra loại trừ nguồn sáng khi đo nền. |
-| [`members/dong/tests/test_frames_pipeline.py`](../members/dong/tests/test_frames_pipeline.py) | 2 | **2/2 PASS** | Kiểm tra tích hợp pipeline khung ảnh với backend của Đông không bị xung đột. |
+| [`members/huu-hoang/test_build_frames.py`](../members/huu-hoang/test_build_frames.py) | 3 | **3/3 PASS** | Lật trục dọc PNG gốc trên-trái, tâm động $t_{mid}$, tương thích Pydantic model `Frames`. |
+| [`members/huu-hoang/test_pipeline.py`](../members/huu-hoang/test_pipeline.py) | 4 | **4/4 PASS** | Hình học WCS TAN, căn chỉnh sao xoay góc, lọc median, dấu ảnh hiệu. |
+| [`members/huu-hoang/test_tasks_def.py`](../members/huu-hoang/test_tasks_def.py) | 4 | **4/4 PASS** | Thuật toán ghép dipole, loại bỏ lân cận NaN, trắc lượng khẩu độ và đo nền. |
+| [`frontend/src/targets.test.ts`](../frontend/src/targets.test.ts) | 7 | **7/7 PASS** | Cấu trúc 5 mục tiêu, kiểm tra 5 câu kết luận tiếng Anh, hàm `findPresetForTarget`. |
+| [`frontend/e2e/conclusion.spec.ts`](../frontend/e2e/conclusion.spec.ts) | 1 | **1/1 PASS** | Hiển thị thẻ kết luận khoa học trên website, chuyển đổi chế độ Difference, cập nhật khi đổi mục tiêu. |
+| [`frontend/e2e/blink.spec.ts`](../frontend/e2e/blink.spec.ts) | 2 | **2/2 PASS** | Blink viewer loop, phím tắt, chuyển ảnh hiệu, vẽ dấu thập đỏ chính xác tại sao. |
+| [`frontend/e2e/target-input.spec.ts`](../frontend/e2e/target-input.spec.ts) | 4 | **4/4 PASS** | Nhập tọa độ decimal, sexagesimal, tìm theo tên mục tiêu, xử lý lỗi đầu vào. |
 
 ### 3.2. Đối chiếu số liệu tọa độ tính toán vs Đỉnh sáng thực tế
 
@@ -101,8 +152,6 @@ Kết quả: **13/13 tests PASSED (100%)** trong 9.15 giây.
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Visit 00** | 60908.67 | $(28.96, 28.43)$ | **`[28.96, 29.57]`** | $(29, 28)$ / $(29, 29)$ | $< 0.45\ \text{px}$ |
 | **Visit 01** | 61141.70 | $(29.04, 29.49)$ | **`[29.04, 28.51]`** | $(29, 30)$ | $< 0.50\ \text{px}$ |
-
-*Nhận xét:* Tọa độ dự đoán từ mô hình không gian chuyển động riêng của sao Barnard trùng khớp tuyệt đối với đỉnh sáng centroid trên các khung ảnh FITS thực tế với sai số dưới nửa pixel.
 
 ---
 
@@ -113,18 +162,20 @@ Kết quả: **13/13 tests PASSED (100%)** trong 9.15 giây.
 | **Sao bị lệch tâm khi xem blink** | Trước đây dùng tâm lưới cố định ở epoch `J2026.0`, khiến ảnh chụp năm 2025 bị kéo lệch về phía Nam. | Tính thời điểm trung vị $t_{mid} = \frac{t_{min} + t_{max}}{2}$ của cả chuỗi ảnh và chiếu tâm TAN theo vị trí sao tại $t_{mid}$. |
 | **Lệch trục tọa độ giữa FITS và PNG** | FITS có gốc tọa độ dưới-trái (Bắc hướng lên), trong khi PNG/Canvas có gốc tọa độ trên-trái (Nam hướng xuống). Nếu không lật trục $y$, dấu thập trên giao diện web sẽ chỉ sai hướng. | Áp dụng công thức lật trục chuẩn: $x_{png} = x_{fits}$, $y_{png} = (\text{height} - 1) - y_{fits}$. Đã viết test unit xác thực tính chất này. |
 | **Lõi sao Barnard bị mất trên ảnh** | Do sao Barnard quá sáng, các pixel trung tâm dính cờ `MP_OVERFLOW` và `MP_NONLINEAR` nên bị mask thành NaN (màu tím `#703090`). | Giữ nguyên nguyên tắc khoa học không vá pixel bão hòa; thiết kế dấu thập có khe hở rỗng $\pm 1.5$ px ở tâm để vừa thấy quầng sáng sao, vừa xác nhận cờ bão hòa được xử lý đúng. |
-| **Tên thư mục bài tập cũ khó hiểu (D, E, F)** | Các bài tập thực hành đổi vai trước đây đặt tên theo mã đề (D, E, F), gây khó hiểu cho các thành viên khác khi xem code. | Tạo file tài liệu giải nghĩa chi tiết [`data/tasks_def/README.md`](../data/tasks_def/README.md) giải thích rõ từng thư mục (D: benchmark tái dựng, E: trích cặp dipole, F: phổ Luhman 16); các module mới dùng tên tường minh hoàn toàn (`build_frames.py`). |
+| **Website chưa hiển thị câu kết luận khoa học** | Giao diện frontend cũ chỉ nạp dữ liệu khung ảnh mà chưa có component hiển thị phân tích khoa học cho từng mục tiêu. | Thêm trường `conclusion` vào `TargetPreset`, xây dựng component `.target-conclusion-card` ngay dưới viewer trong `App.tsx` và viết bài test e2e kiểm chứng. |
+| **Trình duyệt e2e Playwright thiếu file thực thi Chromium mặc định** | Môi trường Windows chưa tải headless Chromium của Playwright qua lệnh cài đặt riêng. | Tận dụng kênh trình duyệt có sẵn (`PW_CHANNEL=msedge`) cấu hình trực tiếp trong `playwright.config.ts`, giúp chạy e2e trơn tru mà không cần tải thêm gói nặng. |
 
 ---
 
 ## 5. Quyết định kỹ thuật cần team biết
 
 1. **Chuẩn hóa chữ ký hàm bàn giao:** Hàm chính thức là `build_frames(cutouts, target, size=0.1, detector=6, ...)`. Hàm hỗ trợ truyền `target` dưới dạng chuỗi (ví dụ `"barnard"`) hoặc dictionary có chứa thông tin tọa độ/epoch/proper motion.
-2. **Re-export dùng chung:** Hàm `build_frames` được xuất khẩu đồng thời ở cả [`members/huu-hoang/frames.py`](../members/huu-hoang/frames.py) và [`shared/frames_pipeline.py`](../shared/frames_pipeline.py) để Đông có thể import trực tiếp vào backend FastAPI mà không lo lệch đường dẫn.
+2. **Re-export dùng chung:** Hàm `build_frames` được xuất khẩu đồng thời ở cả [`members/huu-hoang/frames.py`](../members/huu-hoang/frames.py) và [`shared/frames_pipeline.py`](../shared/frames_pipeline.py) để Đông có thể import trực tiếp vào backend FastAPI.
 3. **Quy chuẩn hiển thị:**
    - Dùng chung chuẩn hóa `AsinhStretch` giữa các visit trong cùng một detector.
    - Vùng thiếu dữ liệu do mask cờ chất lượng luôn được tô màu tím `#703090`.
    - Ảnh hiệu luôn dùng colormap `RdBu_r` với dải hiển thị đối xứng $[-limit, +limit]$.
+4. **Kết luận khoa học thống nhất:** Cả 5 mục tiêu đều có một câu kết luận tiếng Anh chuẩn xác, ngắn gọn, súc tích, tuân thủ đúng yêu cầu giao diện tiếng Anh (QA-16) và hỗ trợ Thạch đưa vào slide/video thuyết trình.
 
 ---
 
@@ -143,24 +194,28 @@ Kết quả: **13/13 tests PASSED (100%)** trong 9.15 giây.
 - ✅ **Bắt buộc 4:** Dùng chung thang norm AsinhStretch cho toàn bộ khung của detector.
 - ✅ **Bắt buộc 5:** Tạo PNG khung và PNG ảnh hiệu diff dipole.
 - ✅ **Bắt buộc 6:** Nghiệm thu tiêu chí Done when: Dict khớp model `Frames`, ảnh Barnard có dấu thập đỏ bám sát tâm sao.
-- ✅ **Bắt buộc 7:** Viết bộ test tự động và tài liệu hóa thư mục rõ nghĩa.
-- 🟡 **Bàn giao:** Tích hợp endpoint vào backend của Đông (code đã sẵn sàng trong `shared/frames_pipeline.py`).
+- ✅ **Bắt buộc 7 (Mới):** Nghiệm thu QA-19 trên website: Bật ảnh hiệu Barnard thấy cặp sáng–tối (dipole) và hiển thị một câu kết luận tiếng Anh cho mỗi mục tiêu.
+- 🟡 **Bàn giao Backend:** Trao đổi với Đông để tích hợp pipeline vào live endpoint backend (mã pipeline đã sẵn sàng trong `shared/frames_pipeline.py`).
 - 🟡 **Khoa học:** Bàn giao báo cáo trích phổ Luhman 16 và 58 cặp dipole cho Nguyên duyệt vào runbook.
+- 🟡 **Diễn tập:** Tự code tay từ đầu luồng xử lý dưới 90 phút trước ngày thi 14–15/11.
 
 ---
 
 ## 8. Hướng dẫn chạy lại từ đầu (Reproduce)
 
 ```bash
-# 1. Chạy toàn bộ test suite kiểm tra tự động
+# 1. Chạy toàn bộ test suite Python
 .venv/Scripts/pytest members/huu-hoang/ -v
 
-# 2. Chạy pipeline build_frames cho sao Barnard (Detector D6)
-.venv/Scripts/python members/huu-hoang/build_frames.py
+# 2. Chạy toàn bộ test suite Frontend (Vitest)
+npm --prefix frontend test
 
-# 3. Kiểm tra các sản phẩm nghiệm thu dấu thập đã tạo
-# Xem ảnh đối chiếu: data/five_targets/barnard/verification_crosshairs/barnard_d6_movement_comparison.png
-# Xem ảnh động blink: data/five_targets/barnard/verification_crosshairs/barnard_d6_movement_blink.gif
+# 3. Chạy kiểm thử End-to-End trên trình duyệt (Playwright)
+cd frontend && npm run e2e
+
+# 4. Mở giao diện website xem trực tiếp
+npm --prefix frontend run dev
+# -> Truy cập http://localhost:5173
 ```
 
 ---
@@ -174,86 +229,38 @@ Kết quả: **13/13 tests PASSED (100%)** trong 9.15 giây.
      ```bash
      .venv/Scripts/pytest members/huu-hoang/
      ```
-     (hoặc `pytest members/huu-hoang/` nếu virtual environment đã được kích hoạt).
    - Nếu đứng từ bên trong thư mục `members/huu-hoang`:
      ```bash
      cd members/huu-hoang && pytest
      ```
-     (Pytest sẽ tự động định vị file cấu hình `pyproject.toml` ở gốc repo để thiết lập PYTHONPATH).
 
 2. **Các package đã ghi vào `requirements.txt` chưa? Có gói nào chỉ cài trên máy mà quên ghi không?**
    - Các thư viện cốt lõi gồm `numpy`, `astropy`, `reproject`, `photutils`, `matplotlib`, `pillow`, `pytest` đều **đã được ghim phiên bản cụ thể** trong [`requirements.txt`](../requirements.txt).
-   - **Phát hiện quan trọng:** Có 2 package được code import trực tiếp nhưng đang được cài gián tiếp (qua dependency cấp 2) chứ chưa được ghi tên trực tiếp vào `requirements.txt`:
-     * `scipy`: Được import trong `tan_pipeline.py` và `tasks_def.py` (`from scipy.ndimage import ...`). Hiện tại `scipy` đang có mặt trên môi trường máy nhờ là dependency của `photutils` và `reproject`.
-     * `requests`: Được import trong `five_targets.py` và `tan_pipeline.py`. Hiện đang có mặt nhờ dependency của `astroquery` / `pyvo`.
-     * *Khuyến nghị:* Nên bổ sung trực tiếp `scipy` vào `requirements.txt` để đảm bảo khi build môi trường tối giản không bao giờ bị thiếu.
+   - `scipy` và `requests` hiện có mặt qua dependency cấp 2; khuyến nghị ghi rõ thêm `scipy` vào file cấu hình.
 
 3. **Test nào gọi mạng (IRSA, SIMBAD, MAST, Gaia...)?**
-   - **KHÔNG CÓ TEST NÀO GỌI MẠNG.** Cả 3 file test (`test_pipeline.py`, `test_tasks_def.py`, `test_build_frames.py`) đều chạy **100% offline**, an toàn tuyệt đối cho CI:
-     * `test_pipeline.py` dùng `monkeypatch` giả lập hàm tải ảnh;
-     * `test_tasks_def.py` tự tạo mảng ma trận số nhân tạo trong bộ nhớ;
-     * `test_build_frames.py` kiểm tra hình học và đọc file offline nội bộ.
-   - Các lệnh gọi mạng ra ngoài (`requests.get` tới IRSA SIA2 và SIMBAD) chỉ nằm trong các hàm download dữ liệu ban đầu (`acquire()`, `resolve()`) của các script thực thi độc lập, không bao giờ bị kích hoạt trong quá trình chạy test.
+   - **KHÔNG CÓ TEST NÀO GỌI MẠNG.** Cả 3 file test (`test_pipeline.py`, `test_tasks_def.py`, `test_build_frames.py`) đều chạy **100% offline**, an toàn tuyệt đối cho CI.
 
 4. **Test có cần file dữ liệu không có trên git (FITS, cutout trong `data/`...) không?**
-   - `test_pipeline.py` và `test_tasks_def.py`: **Hoàn toàn tự tạo dữ liệu giả trong thư mục tạm (`tmp_path`) và bộ nhớ RAM**, không cần bất kỳ file nào từ thư mục `data/`.
-   - `test_build_frames.py`: Hiện có 2 test đọc file mẫu thật từ `data/five_targets/barnard/inputs.json`. Để đảm bảo CI chạy trên server ngoài (môi trường git clone trắng không có `data/`) không bao giờ bị fail, test đã được thiết kế sẵn cơ chế fallback: nếu không tìm thấy thư mục `data/` trên máy, test sẽ tự động bỏ qua hoặc dùng fixture giả lập nhỏ trong `tmp_path`.
+   - `test_pipeline.py` và `test_tasks_def.py`: Hoàn toàn tự tạo dữ liệu giả trong thư mục tạm (`tmp_path`) và bộ nhớ RAM.
+   - `test_build_frames.py`: Có cơ chế fallback: nếu không tìm thấy `data/` trên máy, test sẽ tự động dùng fixture nhỏ trong thư mục tạm.
 
 5. **Test chạy mất bao nhiêu lâu? Có phần nào sai mà làm hỏng sản phẩm không?**
-   - Toàn bộ 11 test của `members/huu-hoang/` chạy mất **khoảng 6.5 – 7.5 giây** trên Windows (và dự kiến chỉ mất ~3 – 4 giây trên môi trường Linux CI Runner).
-   - **Không có phần nào sai làm hỏng sản phẩm.** Quy trình xử lý luôn giữ nguyên các file FITS gốc (chỉ đọc `memmap=False`, không ghi đè), các mảng mask cờ chất lượng được tách riêng, các sản phẩm mới sinh ra đều được ghi vào thư mục sản phẩm chuyên biệt.
-
----
+   - Toàn bộ 11 test của `members/huu-hoang/` chạy mất **khoảng 15 – 18 giây** trên Windows.
+   - **Không có phần nào sai làm hỏng sản phẩm.** Quy trình xử lý luôn giữ nguyên các file FITS gốc (chỉ đọc `memmap=False`, không ghi đè).
 
 ### Nhóm 2: Liên quan đến Phần của Hữu Hoàng
 
 1. **`test_pipeline.py` và `test_tasks_def.py` có cần file nào ngoài thư mục tạm không, hay tự tạo FITS giả hết?**
-   - **Tự tạo FITS giả và dữ liệu giả 100% trong thư mục tạm:**
-     * `test_pipeline.py`: Tạo các file FITS giả lập với header WCS nhân tạo trong `tmp_path`, gán giá trị pixel giả định để kiểm tra tính năng reproject, căn chỉnh góc xoay và tính median lọc nhiễu.
-     * `test_tasks_def.py`: Tạo trực tiếp các ma trận 2D số học bằng `numpy` trong RAM (dùng `np.random.normal`, chèn nguồn Gaussian âm/dương nhân tạo để kiểm tra thuật toán ghép dipole). Hoàn toàn độc lập với mọi file bên ngoài.
+   - Tự tạo FITS giả và dữ liệu giả 100% trong thư mục tạm và RAM.
 
-2. **Hai file test chạy mất bao lâu? (Áng chừng được thời gian CI)**
-   - `test_pipeline.py`: Chạy mất **~2.5 giây**.
-   - `test_tasks_def.py`: Chạy mất **~1.5 giây**.
-   - $\implies$ Tổng thời gian chạy cả 2 file test này là **khoảng 4.0 giây** trên máy local, và chỉ khoảng **2 – 3 giây** trên máy chủ CI GitHub Actions.
+2. **Hai file test chạy mất bao lâu?**
+   - `test_pipeline.py` chạy mất **~2.5 giây**, `test_tasks_def.py` chạy mất **~1.5 giây**.
 
 3. **Điều gì về ảnh xuất ra phải LUÔN LUÔN ĐÚNG (Invariants)?**
-   - **Kích thước ảnh phải là số lẻ $N \times N$:** Để tâm yêu cầu rơi chính xác vào pixel trung tâm $((N+1)/2, (N+1)/2)$. Với cấu hình chuẩn FOV $0.1^\circ$ và scale $6.2''/\text{px}$, kích thước ảnh **luôn luôn là $59 \times 59$ pixel**.
-   - **Tọa độ `predicted_px` và gốc tọa độ:** Phải tuân thủ chuẩn **PNG (gốc trên-trái, zero-based pixel centres)** với công thức bắt buộc $x_{png} = x_{fits}$, $y_{png} = (\text{height} - 1) - y_{fits}$. Dấu thập phải bám sát vị trí thực tế của sao (độ lệch $< 0.5$ px).
-   - **Tâm lưới WCS TAN:** Phải luôn được đặt tại vị trí mục tiêu ở thời điểm trung vị của chuỗi ảnh ($t_{mid}$), đảm bảo mục tiêu đi ngang qua trung tâm khung hình khi xem blink.
-   - **Thang chuẩn hóa (Norm):** Phải dùng **chung một thang `AsinhStretch`** với cùng cặp $[vmin, vmax]$ cho toàn bộ các khung visit trong cùng một detector. Tuyệt đối không stretch riêng lẻ từng ảnh.
-   - **Màu dữ liệu khuyết/NaN:** Tất cả các pixel bị che bởi cờ chất lượng (`OVERFLOW`, `NONLINEAR`, transient...) hoặc nằm ngoài footprint khi xuất ra PNG phải luôn hiển thị bằng màu tím chuẩn của dự án: **`#703090`**.
-   - **Ảnh hiệu (Diff):** Luôn dùng colormap hai cực đối xứng **`RdBu_r`** với cận đối xứng $[-limit, +limit]$. Sao có chuyển động riêng phải thể hiện rõ cấu trúc lưỡng cực: vùng cũ màu xanh lam (âm) và vùng mới màu đỏ (dương).
-
----
-
-## 4. Nghiệm thu hoàn tất Task QA-19 (Ảnh hiệu Barnard & Câu kết luận tiếng Anh trên Website)
-
-**Cập nhật 12/11/2026:**
-Đã hoàn thành và nghiệm thu trực tiếp trên website theo tiêu chí **Done when: Hoàn thành khi đã có chạy kết quả trên website luôn**.
-
-### 4.1. Ảnh hiệu Barnard thành cặp sáng–tối (Mục QA-19 trong QA-Matrix: ĐẠT)
-* **Giao diện Blink Viewer:**
-  - Bổ sung chỉ dẫn chế độ ảnh hiệu (`mode === "diff"`) giải thích rõ hiện tượng vật lý: *"Difference image: Stationary background sources vanish, revealing moving objects like Barnard's Star as a distinct bright–dark dipole pair."*
-  - Trên ảnh hiệu giữa các đợt chụp, các ngôi sao nền bất động bị triệt tiêu về mức nền trung tính, trong khi sao Barnard dịch chuyển tạo thành cặp cực sáng–tối (dipole) rõ nét.
-  - Cập nhật trạng thái trong [`docs/QA-matrix.md`](QA-matrix.md) dòng `QA-19`: **Đạt**.
-
-### 4.2. Một câu kết luận tiếng Anh cho mỗi mục tiêu (5 Target Scientific Conclusions)
-Đã chuẩn hóa và đưa 5 câu kết luận tiếng Anh khoa học vào [`frontend/src/targets.ts`](../frontend/src/targets.ts), đồng thời thiết kế thẻ hiển thị `Scientific Conclusion` (`.target-conclusion-card`) xuất hiện trực quan trên giao diện [`frontend/src/App.tsx`](../frontend/src/App.tsx):
-
-1. **Barnard's Star (`barnard`):**
-   > *"Barnard's Star exhibits rapid proper motion across observation epochs, producing a pronounced bright–dark dipole signature in difference imaging that directly confirms its transverse motion relative to the background sky."*
-2. **WISE 0855-0714 (`wise0855`):**
-   > *"WISE 0855 is an ultra-cold sub-stellar brown dwarf whose thermal emission peaks predominantly in SPHEREx mid-infrared Detector 6 (4.5–5.0 µm) with noticeable proper motion displacement across survey visits."*
-3. **Epsilon Indi B (`epsindib`):**
-   > *"Epsilon Indi B is a nearby benchmark T-dwarf binary companion displaying shared proper motion with the host star and strong atmospheric methane absorption features in SPHEREx channels."*
-4. **RW Aurigae (`rwaur`):**
-   > *"RW Aurigae is a young T Tauri binary system exhibiting prominent infrared excess and irregular multi-magnitude dimming episodes caused by circumstellar dust occultation."*
-5. **R Draconis (`rdra`):**
-   > *"R Draconis is a high-amplitude pulsating Mira variable demonstrating substantial seasonal brightness modulation and saturated core pixels during peak infrared emission."*
-
-### 4.3. Kết quả kiểm thử tự động toàn diện
-* **Unit Tests (Vitest):** Đạt **166 / 166 test passed** (bổ sung test suite trong `frontend/src/targets.test.ts`).
-* **E2E Tests (Playwright):** Đạt **7 / 7 test passed** (bổ sung test suite trong `frontend/e2e/conclusion.spec.ts` kiểm chứng việc hiển thị thẻ kết luận khoa học và chế độ ảnh hiệu trên trình duyệt).
-
-
+   - **Kích thước ảnh phải là số lẻ $N \times N$:** Chuẩn $59 \times 59$ pixel.
+   - **Tọa độ `predicted_px` và gốc tọa độ:** Chuẩn PNG (gốc trên-trái), $x_{png} = x_{fits}$, $y_{png} = (\text{height} - 1) - y_{fits}$.
+   - **Tâm lưới WCS TAN:** Đặt tại vị trí mục tiêu ở thời điểm trung vị của chuỗi ảnh ($t_{mid}$).
+   - **Thang chuẩn hóa (Norm):** Chung một thang `AsinhStretch` với cùng cặp $[vmin, vmax]$ cho toàn bộ các khung trong detector.
+   - **Màu dữ liệu khuyết/NaN:** Luôn hiển thị bằng màu tím chuẩn: **`#703090`**.
+   - **Ảnh hiệu (Diff):** Luôn dùng colormap đối xứng **`RdBu_r`** và làm nổi bật cặp cực sáng–tối (dipole) khi vật thể dịch chuyển.
