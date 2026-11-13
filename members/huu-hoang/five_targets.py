@@ -111,7 +111,7 @@ def acquire_target(info):
         groups[-1].append(row)
     selected = []
     for group_id, group in enumerate(groups):
-        for det in (1, 3, 6):
+        for det in range(1, 7):
             candidates = [r for r in group if str(r["energy_bandpassname"]) == f"SPHEREx-D{det}"]
             # At most two distinct exposures per detector/visit; deterministic evenly spaced sample.
             if candidates:
@@ -152,7 +152,7 @@ def acquire_target(info):
             "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
         }
 
-    with ThreadPoolExecutor(max_workers=4) as pool:
+    with ThreadPoolExecutor(max_workers=12) as pool:
         entries = list(pool.map(fetch, selected))
     (folder / "inputs.json").write_text(json.dumps(entries, indent=2), encoding="utf-8")
     (folder / "catalog_groups.json").write_text(
@@ -178,11 +178,11 @@ def acquire_target(info):
 def render(info):
     folder = BASE / info["id"]
     # Remove only named products owned by this renderer, to avoid stale visit labels.
-    for pattern in ("D[136]_visit*.fits", "D[136]_visit*.png", "rgb_visit*.png"):
+    for pattern in ("D[1-6]_visit*.fits", "D[1-6]_visit*.png", "rgb_visit*.png"):
         for path in (folder / "frames").glob(pattern):
             path.unlink()
     reports = {}
-    for det in (1, 3, 6):
+    for det in range(1, 7):
         reports[det] = make_frames(
             info["ra_deg"],
             info["dec_deg"],
@@ -193,7 +193,7 @@ def render(info):
         )
     # One global scale per RGB channel across visits, preserving changes between frames.
     visits = sorted(
-        set.intersection(*[{f["cluster_id"] for f in r["frames"]} for r in reports.values()])
+        set.intersection(*[{f["cluster_id"] for f in reports[d]["frames"]} for d in (1, 3, 6)])
     )
     rgb_report = []
     for visit in visits:

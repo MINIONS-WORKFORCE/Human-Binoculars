@@ -170,6 +170,11 @@ def image(frame_id, difference):
 
 
 def photometry(query: PhotometryQuery):
+    from .observed_frames import observed_photometry
+
+    observed = observed_photometry(query, target(query))
+    if observed is not None:
+        return observed
     result = sample("photometry_rdra.json")
     if query.target_key != result["target"]["target_key"]:
         result.update(reference_star=None, points=[], variability=None)

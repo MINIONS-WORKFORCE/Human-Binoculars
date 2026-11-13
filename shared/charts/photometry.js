@@ -7,6 +7,7 @@
 import {
   addDetectorBands,
   baseLayout,
+  dateTickFormat,
   formatValue,
   mjdToIso,
 } from "./chartData.js";
@@ -168,7 +169,9 @@ export function photometryFigure(
     top: 12,
   });
   layout.xaxis.type = "date";
-  layout.xaxis.tickformat = "%b %Y";
+  layout.xaxis.tickformat = dateTickFormat(
+    points.filter(markKind).map((point) => point.mjd),
+  );
   layout.xaxis.nticks = 6;
   return { data, layout };
 }
