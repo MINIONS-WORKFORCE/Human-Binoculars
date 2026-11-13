@@ -8,6 +8,7 @@ Things more than one person depends on. Changes here need a review from the owne
 | `targets.json` | Nguyên | 3/11 (5-target table from SIMBAD) |
 | `data-layout.md` | Khôi | 4/11 (fixture pack folder structure) |
 | `design-tokens.css` | Thạch | 4/11 (colors, type, spacing) |
-| `charts/` | Thạch | 6/11 (spectrum and light-curve components) |
+| `charts/` | Thạch | 6/11 (spectrum and light-curve components); 10/11 E6 photometry chart |
+| `skymap/` | Thạch | 10/11 (Aladin Lite map that follows a position, Gaia DR3 layer) |
 
 Rule: contract first, code second. Frontend codes against the mock, image processing against the fixture pack; nobody waits for the real thing.

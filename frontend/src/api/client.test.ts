@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { http, HttpResponse } from "msw";
 import { server } from "../test/setup";
-import { ApiError, createApiClient, friendlyMessage } from "./client";
+import {
+  ApiError,
+  ERROR_CODES,
+  createApiClient,
+  describeError,
+  friendlyMessage,
+} from "./client";
 
 const BASE = "http://api.test";
 const api = createApiClient(BASE);
@@ -113,6 +119,61 @@ describe("errors become ApiError with a readable message", () => {
     );
     const error = await failure(api.frames(barnard));
     expect(error).toMatchObject({ status: 502, code: "HTTP_ERROR" });
+  });
+
+  it("a 200 that is not JSON (wrong VITE_API_BASE_URL) is an error, not data", async () => {
+    server.use(
+      http.get(
+        `${BASE}/api/frames`,
+        () => new HttpResponse("<!doctype html>", { status: 200 }),
+      ),
+    );
+    const error = await failure(api.frames(barnard));
+    expect(error).toMatchObject({ status: 200, code: "HTTP_ERROR" });
+  });
+});
+
+describe("describeError follows the contract's error table", () => {
+  const contract: [number, string, boolean][] = [
+    [400, "BAD_COORDS", false],
+    [400, "BAD_PARAM", false],
+    [404, "UNKNOWN_TARGET", false],
+    [404, "NO_FRAMES", false],
+    [404, "FRAME_NOT_FOUND", true],
+    [502, "UPSTREAM_ERROR", true],
+    [504, "UPSTREAM_TIMEOUT", true],
+    [500, "INTERNAL", true],
+  ];
+
+  it.each(contract)("%i %s -> retry %s", async (status, code, retry) => {
+    server.use(
+      http.get(`${BASE}/api/frames`, () =>
+        HttpResponse.json(
+          { api_version: "0.1", error: { code, message: "m", details: {} } },
+          { status },
+        ),
+      ),
+    );
+    const info = describeError(await failure(api.frames(barnard)));
+    expect(info.code).toBe(code);
+    expect(info.retry).toBe(retry);
+    expect(info.message).not.toMatch(/Something went wrong on the server/);
+  });
+
+  it("covers every code it lists", () => {
+    for (const code of ERROR_CODES) {
+      const info = describeError(new ApiError(500, code, "m"));
+      expect(info.message.length).toBeGreaterThan(20);
+    }
+  });
+
+  it("a code newer than the table still gets a message, retry by status", () => {
+    expect(describeError(new ApiError(503, "BUSY", "m"))).toMatchObject({
+      code: "BUSY",
+      retry: true,
+    });
+    expect(describeError(new ApiError(422, "ODD", "m")).retry).toBe(false);
+    expect(describeError(new Error("x")).code).toBe("UNKNOWN");
   });
 });
 

@@ -51,7 +51,7 @@ test("draws the crosshair on the star at (x + 0.5) * pixel size", async ({
 
   // Frame 1 has predicted_px (17, 19). Read canvas pixels around that spot.
   const probe = await page
-    .locator("canvas")
+    .locator("canvas.blink-canvas")
     .evaluate((canvas: HTMLCanvasElement) => {
       const ctx = canvas.getContext("2d")!;
       const size = canvas.width / 39; // canvas pixels per SPHEREx pixel

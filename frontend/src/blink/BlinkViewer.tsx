@@ -29,6 +29,11 @@ export interface BlinkViewerProps {
   imageUrl?: (path: string) => string;
   /** Screen pixels per SPHEREx pixel (before devicePixelRatio). */
   zoom?: number;
+  /**
+   * Asks /api/frames again. Offered when an image fails, usually FRAME_NOT_FOUND
+   * after the backend restarted or evicted it (an <img> cannot read the error code).
+   */
+  onReload?: () => void;
 }
 
 const identity = (path: string) => path;
@@ -136,6 +141,7 @@ export function BlinkViewer({
   detector,
   imageUrl = identity,
   zoom = 10,
+  onReload,
 }: BlinkViewerProps) {
   const preload = usePreloadedFrames(frames, imageUrl);
   const ready = preload.status === "ready";
@@ -209,7 +215,12 @@ export function BlinkViewer({
         )}
         {preload.status === "error" && (
           <div className="blink-overlay blink-overlay-error" role="alert">
-            An image failed to load. Load the frames again.
+            <span>An image failed to load. Load the frames again.</span>
+            {onReload && (
+              <button type="button" onClick={onReload}>
+                Reload frames
+              </button>
+            )}
           </div>
         )}
       </div>

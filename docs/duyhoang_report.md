@@ -1,3 +1,117 @@
+# Báo cáo 11/11/2026: Nối frontend với backend thật, trạng thái chờ và lỗi
+
+**Người làm:** Duy Hoàng
+**Nhánh:** `duy-hoang/frontend-real-api`, tạo từ `main` (`fe93446`)
+
+**Task:** Chạy frontend với `VITE_USE_MOCK=false` trỏ vào backend của Đông. Sửa chỗ lệch kiểu dữ liệu. Thêm trạng thái chờ và lỗi theo bảng mã lỗi của hợp đồng.
+
+| Done when | Kết quả |
+| --- | --- |
+| Blink chạy từ API thật | **Đạt.** Frontend ở `localhost:5180`, backend `npm run dev:be` (`DATA_MODE=fixture`) ở `127.0.0.1:8000`. `/api/frames` trả 200 qua CORS, 6 PNG tải được, viewer đi đủ 3 khung (05/2025, 11/2025, 04/2026), dấu thập nằm trên sao |
+| Playwright có thêm 1 test cho trường hợp lỗi | **Đạt, thêm 2 test** trong `e2e/errors.spec.ts`. Cả bộ: 8/8 pass |
+
+## 1. Kiểm tra lệch kiểu dữ liệu
+
+| Cách kiểm tra | Kết quả |
+| --- | --- |
+| Sinh kiểu TS từ `/openapi.json` của backend đang chạy, so với `src/api/schema.d.ts` | Giống hệt (diff 0 dòng) |
+| Test mới `src/api/parity.test.ts`: gửi cùng 24 request vào mock MSW và backend thật, so status và JSON (bỏ qua hash trong ID khung và `git_sha`) | **24/24 khớp.** Gồm các trường hợp thành công, `max_frames`, không có `target_key`, và mọi mã lỗi backend fixture trả được |
+| Cố ý sửa mock (detector mặc định 6 thành 5) | Test báo đỏ 2 trường hợp, rồi đã trả lại như cũ |
+
+**Kết luận:** schema và mock không lệch nhau. Các chỗ lệch thật nằm ở cách frontend xử lý response, và đã sửa:
+
+| Chỗ lệch | Sửa |
+| --- | --- |
+| Bảng mã lỗi của hợp đồng có 8 mã, `friendlyMessage` chỉ có câu cho 5 mã. Thiếu `UPSTREAM_ERROR` (502), `UPSTREAM_TIMEOUT` (504) và `INTERNAL` (500), nên 3 mã này hiện câu chung chung | Thêm `ERROR_CODES` và `describeError()`: mỗi mã có một câu riêng và cờ `retry`. Mã lạ thì dựa vào status (5xx thì cho thử lại) |
+| Response 200 mà không phải JSON (ví dụ `VITE_API_BASE_URL` sai nên nhận về trang HTML) bị trả về như dữ liệu `null` | Báo `HTTP_ERROR` |
+| `frames: []` kèm `FEW_FRAMES` (hợp đồng nói đây không phải lỗi) hiện ra một viewer rỗng "Frame 0 / 0" | Hiện câu "No frames are left for these settings…" |
+
+## 2. Trạng thái chờ và lỗi
+
+| Trạng thái | Hiển thị |
+| --- | --- |
+| Đang gọi `/api/frames` | Vòng xoay nhỏ và "Loading frames…". Sau 3 giây thêm bộ đếm giây "The NASA archive can take up to 2 minutes", vì IRSA có thể mất tới 120 giây |
+| Lỗi (`role="alert"`) | Câu theo mã lỗi kèm mã. Chỉ đọc `code`, không hiện `message` của server, đúng quy ước của hợp đồng |
+| Lỗi có thể thử lại (`FRAME_NOT_FOUND`, `UPSTREAM_*`, `INTERNAL`, `NETWORK`, `HTTP_ERROR`) | Có nút **Try again**, gửi lại đúng request đó |
+| Lỗi do đầu vào (`BAD_COORDS`, `BAD_PARAM`, `UNKNOWN_TARGET`) và `NO_FRAMES` | Không có nút thử lại, chỉ có câu hướng dẫn |
+| Ảnh không tải được (thường là `FRAME_NOT_FOUND` sau khi backend khởi động lại) | Lớp phủ trên viewer có nút **Reload frames** (prop mới `onReload` của BlinkViewer) |
+
+Trong bản build mock, nếu MSW không khởi động được (trình duyệt chặn service worker, cửa sổ ẩn danh…), trang vẫn hiện và báo lỗi bình thường thay vì trắng trang.
+
+## 3. Playwright: `e2e/errors.spec.ts`
+Backend fixture không bao giờ trả 502/504, nên test tự trả response bằng `page.route()`. Service worker của MSW sẽ trả lời trước `page.route()`, vì vậy test chặn service worker (`serviceWorkers: "block"`).
+
+1. **504 `UPSTREAM_TIMEOUT`:**
+   - Giữ request lại, thấy dòng "Loading frames…" và chưa có lỗi.
+   - Thả request ra, thấy alert có câu "took more than 2 minutes" và mã lỗi, không có `message` gốc của server.
+   - Bấm Try again thì blink chạy đủ 3 khung.
+2. **400 `BAD_COORDS` và ảnh hết hạn:**
+   - Lỗi 400 không có nút nào.
+   - Sau đó khung tải được nhưng PNG trả 404 `FRAME_NOT_FOUND`: hiện lớp phủ, bấm Reload frames thì blink chạy.
+
+**Test có bắt được lỗi thật không:** cố ý đặt `retry: false` cho `UPSTREAM_TIMEOUT` thì test 1 báo đỏ. Đã trả lại như cũ.
+
+## 4. Kiểm chứng (Windows 11, Node 24.19, Edge)
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `npm run lint`, `npm run typecheck` | Không lỗi |
+| `npm test` (Vitest) | 170 pass, 24 bỏ qua (test so mock với backend, chỉ chạy khi có `LIVE_API_URL`). Test client từ 11 lên 22 |
+| `LIVE_API_URL=http://127.0.0.1:8000 npx vitest run src/api/parity.test.ts` | 24/24 pass |
+| `npm run build` | Thành công, JS chính 240 kB (76 kB gzip) |
+| `PW_CHANNEL=msedge npm run e2e` | **8/8 pass** (6 test cũ + 2 test lỗi) |
+| `npm test` ở gốc repo | 197/197 pass |
+| Trình duyệt, backend thật | Blink đi đủ 3 khung. Tắt backend rồi bấm preset WISE 0855 thì hiện `NETWORK` kèm Try again. Bật lại backend, bấm Try again thì blink WISE 0855 chạy |
+| CORS | Mở từ một origin không có trong `CORS_ALLOW_ORIGINS` thì trình duyệt chặn và trang báo `NETWORK`. Thêm origin rồi khởi động lại backend thì chạy. Response 400/404 của backend có kèm header CORS |
+
+## 5. Phát hiện cần báo team
+
+| Cho | Vấn đề | Đề xuất |
+| --- | --- | --- |
+| **Đông** | Lỗi 500 bất ngờ (exception không bắt) trả `INTERNAL` nhưng **thiếu header `Access-Control-Allow-Origin`**. Đã thử bằng TestClient: route ném `RuntimeError` trả 500 với `ACAO=None`. Lý do là Starlette xử lý `Exception` ở middleware ngoài cùng, nằm ngoài `CORSMiddleware`. Trình duyệt vì vậy thấy `NETWORK` chứ không thấy `INTERNAL` | Thêm header CORS trong `unexpected_error`, hoặc bọc toàn bộ app trong CORS ở lớp ngoài cùng. Không sửa thay vì là code của Đông |
+| Đông | Backend fixture chưa có đường nào trả `NO_FRAMES`, `UPSTREAM_ERROR`, `UPSTREAM_TIMEOUT` (chỉ khai báo trong OpenAPI) | Frontend đã xử lý sẵn; khi có chế độ live thì chạy lại `parity.test.ts` |
+| Khôi / Nguyên | Tọa độ WISE 0855 không thống nhất. Frontend dùng `133.8189, -7.2470` (SIMBAD, epoch 2000), hướng dẫn của Đông dùng `133.7951, -7.2451`, pack FITS dùng `133.7372, -7.2403` (năm 2025). Sao chuyển động khoảng 8″/năm nên ba giá trị lệch nhau vài phút cung. Backend fixture chấp nhận mọi tọa độ nên hiện không gây lỗi | Thống nhất epoch trong `shared/targets.json`. Mình chưa đổi, để chờ bảng chung |
+| Cả team | Origin của frontend phải có trong `CORS_ALLOW_ORIGINS` trong `.env` | Đã ghi vào `frontend/README.md` |
+
+## 6. File thay đổi
+- `frontend/src/api/client.ts`: `ERROR_CODES`, `describeError`, báo lỗi khi 200 không phải JSON.
+- `frontend/src/App.tsx`: `LoadingFrames`, `FramesError` (Try again), trạng thái không có khung, truyền `onReload`.
+- `frontend/src/blink/BlinkViewer.tsx`: prop `onReload` và nút Reload frames.
+- `frontend/src/main.tsx`: vẫn render khi MSW không khởi động được.
+- `frontend/src/index.css`: khung lỗi, vòng xoay (chậm lại khi bật `prefers-reduced-motion`).
+- Test: `src/api/client.test.ts` (thêm 11), `src/api/parity.test.ts` (mới), `e2e/errors.spec.ts` (mới).
+- `frontend/README.md`: chạy với backend thật, CORS, test so mock với backend, bảng trạng thái lỗi.
+- Không đổi code backend, `requirements.txt` hay dependency nào.
+
+## 7. Môi trường trên máy (không commit)
+- `.venv` chỉ cài fastapi, uvicorn, pillow, httpx (bản ghim trong `requirements.txt`).
+- `.env`: `DATA_MODE=fixture`, `VITE_USE_MOCK=false`, `CORS_ALLOW_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:5180`.
+
+## 8. Cập nhật 12/11: rebase lên PR #47 của Đông
+`main` mới có PR #47 (`f8541d1`):
+- `/api/frames` dựng khung từ FITS thật nếu có fixture trong `DATA_DIR`; nếu không có thì vẫn dùng `api_samples/`.
+- Có thêm `shared/targets.json` và CI/CD mới (pytest, Playwright chạy trong image dựng sẵn, đóng gói bản build).
+
+Đã rebase nhánh này lên đó, không xung đột.
+
+| Việc | Kết quả |
+| --- | --- |
+| `.venv` | Cài thêm các thư viện ghim trong `requirements.txt` (trừ Jupyter). Backend mới cần numpy, astropy, reproject, matplotlib, requests. `pytest members`: 72 pass, 1 bỏ qua |
+| Test so mock với backend mới | Bắt được **3 chỗ lệch**, đã sửa mock: `/api/resolve` tra cả 5 mục tiêu từ `targets.json` (tọa độ J2000); photometry chỉ có điểm đo khi `target_key=rdra`; astrometry chỉ có điểm đo khi `target_key=barnard`, các mục tiêu khác lấy `catalog_pm` từ `targets.json`. Thêm 8 trường hợp, **32/32 khớp** |
+| Tọa độ WISE 0855 (mục 5) | **Đã rõ.** `targets.json` dùng SIMBAD J2000 `133.8189, -7.2470`, trùng với preset của frontend. Không cần đổi |
+| Lỗi CORS ở response 500 (mục 5) | **Vẫn còn** trên `main` mới (`ACAO=None`) |
+| Kiểm tra lại | lint, typecheck sạch; Vitest 170 pass; build thành công; Playwright 8/8; gốc repo 197/197; trình duyệt chạy blink đủ 3 khung với backend mới |
+
+Lưu ý: test so mock với backend chỉ đúng khi backend dùng `api_samples/`, tức không có FITS fixture trong `DATA_DIR`. Khung dựng từ FITS thật thì mock không mô phỏng được.
+
+## 9. Việc tiếp theo
+1. Mở PR `duy-hoang/frontend-real-api` vào `main`. Máy chưa có `gh`, nên mở trên web.
+2. Báo Đông lỗi CORS ở response 500.
+3. Deploy frontend và kiểm tra CORS với domain thật.
+4. Script smoke (`/api/health` và 5 mục tiêu) trước mỗi lần demo.
+
+---
+
 # Báo cáo 10/11/2026: Khung frontend, MSW, CI và Blink viewer
 
 **Người làm:** Duy Hoàng (Frontend A + DevOps + kiểm thử, người quản lý repo)

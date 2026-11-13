@@ -2,8 +2,11 @@
 // same error codes, same echo of the request. Paths start with "*" so they
 // match whatever origin VITE_API_BASE_URL points at.
 import { http, HttpResponse } from "msw";
+import targetTable from "../../../shared/targets.json";
+import type { Resolve } from "../api/client";
 import { samplePng, samples } from "./samples";
 
+/** Names the API echoes in `target` (members/dong/app/services/fixtures.py). */
 const TARGETS: Record<string, string> = {
   barnard: "Barnard's Star",
   wise0855: "WISE 0855-0714",
@@ -11,7 +14,41 @@ const TARGETS: Record<string, string> = {
   rwaur: "RW Aurigae",
   rdra: "R Draconis",
 };
-const RESOLVER_NAMES = new Set(["barnard", "barnards star", "barnard's star"]);
+
+// /api/resolve reads shared/targets.json like members/dong/app/services/catalog.py:
+// same id -> target_key mapping, same extra aliases, same epoch-tagged record.
+const TABLE_KEYS: Record<string, string> = {
+  "epsilon-indi-b": "epsindib",
+  "rw-aur": "rwaur",
+  "r-dra": "rdra",
+};
+const RESOLVER_ALIASES: Record<string, string[]> = {
+  barnard: ["Barnards Star", "GJ 699"],
+  wise0855: ["WISE 0855-0714", "WISE J085510.83-071442.5"],
+  epsindib: ["eps Ind B"],
+  rwaur: ["RW Aur"],
+  rdra: ["R Dra"],
+};
+const CATALOG = targetTable.targets.map((row) => {
+  const key = TABLE_KEYS[row.id] ?? row.id;
+  const a = row.astrometry;
+  const record = {
+    target_key: key,
+    name: row.name,
+    ra: a.ra_deg,
+    dec: a.dec_deg,
+    epoch: `J${a.reference_epoch_jyear.toFixed(1)}`,
+    pmra: a.pm_ra_cosdec_mas_per_yr,
+    pmdec: a.pm_dec_mas_per_yr,
+    parallax_mas: null,
+    kind: key === "rwaur" || key === "rdra" ? "variable" : "high_pm",
+    source: "targets_table",
+  } satisfies Omit<Resolve, "api_version" | "query">;
+  const names = [key, row.name, row.simbad_id, ...RESOLVER_ALIASES[key]];
+  return { record, names: new Set(names.map((n) => n.toLowerCase())) };
+});
+const catalogRecord = (key: string | null) =>
+  CATALOG.find((entry) => entry.record.target_key === key)?.record;
 
 /** frame id -> sample index, filled by /api/frames like the backend's image registry. */
 const published = new Map<string, number>();
@@ -143,12 +180,18 @@ export const handlers = [
       return fail(400, "BAD_PARAM", "Invalid request parameters.", {
         fields: ["name"],
       });
-    if (!RESOLVER_NAMES.has(name.trim().toLowerCase())) {
+    const wanted = name.trim().toLowerCase();
+    const match = CATALOG.find((entry) => entry.names.has(wanted));
+    if (!match) {
       return fail(404, "UNKNOWN_TARGET", "Name absent from fixture resolver.", {
         name,
       });
     }
-    return HttpResponse.json({ ...samples.resolve, query: name });
+    return HttpResponse.json({
+      api_version: "0.1",
+      query: name,
+      ...match.record,
+    });
   }),
 
   http.get(
@@ -214,11 +257,14 @@ export const handlers = [
       });
       const echoed = target(url, q.ra!, q.dec!);
       if (echoed instanceof Response) return echoed;
-      const points = samples.photometry.points.filter(
+      // The sample is R Draconis; any other target gets no measurements.
+      const own = echoed.target_key === samples.photometry.target.target_key;
+      const points = (own ? samples.photometry.points : []).filter(
         (p) => q.detector === undefined || p.detector === q.detector,
       );
       return HttpResponse.json({
         ...samples.photometry,
+        reference_star: own ? samples.photometry.reference_star : null,
         target: echoed,
         points,
         variability: null,
@@ -232,13 +278,27 @@ export const handlers = [
       const q = readQuery(url, SKY);
       const echoed = target(url, q.ra!, q.dec!);
       if (echoed instanceof Response) return echoed;
+      // The sample is Barnard's Star. Other targets get no measurements and the
+      // catalog proper motion from shared/targets.json (unknown without a key).
+      const own = echoed.target_key === samples.astrometry.target.target_key;
+      const record = catalogRecord(echoed.target_key);
+      const catalogPm = own
+        ? samples.astrometry.catalog_pm
+        : {
+            pmra: record?.pmra ?? null,
+            pmdec: record?.pmdec ?? null,
+            epoch: record?.epoch ?? "unknown",
+            source: record?.source ?? "unknown",
+          };
       // The astrometry sample only has detector 6 measurements, as in the backend.
       const onlyD6 = q.detector !== undefined && q.detector !== 6;
+      const measured = own && !onlyD6;
       return HttpResponse.json({
         ...samples.astrometry,
         target: echoed,
-        points: onlyD6 ? [] : samples.astrometry.points,
-        fit: onlyD6 ? null : samples.astrometry.fit,
+        catalog_pm: catalogPm,
+        points: measured ? samples.astrometry.points : [],
+        fit: measured ? samples.astrometry.fit : null,
       });
     }),
   ),

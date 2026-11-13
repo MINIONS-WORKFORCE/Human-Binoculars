@@ -2,6 +2,11 @@ import { defineConfig, devices } from "@playwright/test";
 
 const PORT = 4173;
 
+// Windows starts the .cmd shims; Linux (CI) has no npm.cmd.
+const windows = process.platform === "win32";
+const npm = windows ? "npm.cmd" : "npm";
+const npx = windows ? "npx.cmd" : "npx";
+
 // End-to-end tests run against the production build with MSW mocks baked in
 // (`vite build --mode mock`), so they need no backend and test what gets deployed.
 export default defineConfig({
@@ -26,7 +31,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `${process.platform === "win32" ? "npm.cmd" : "npm"} run build:mock && ${process.platform === "win32" ? "npx.cmd" : "npx"} vite preview --port ${PORT} --strictPort`,
+    command: `${npm} run build:mock && ${npx} vite preview --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

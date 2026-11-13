@@ -132,6 +132,7 @@
 
 .blink-sliders input[type="range"] {
   width: 100%;
+  height: var(--control-height);
   accent-color: var(--color-accent);
 }
 

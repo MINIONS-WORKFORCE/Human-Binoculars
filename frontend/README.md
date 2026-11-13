@@ -40,12 +40,42 @@ Vite reads `VITE_*` variables from the repo-root `.env`.
 
 To use the real fixture backend: set `DATA_MODE=fixture` and `VITE_USE_MOCK=false`
 in `.env`, run `npm run dev:be` from the repo root, then `npm run dev` here.
+`CORS_ALLOW_ORIGINS` in `.env` must list the exact page origin (for example
+`http://localhost:5173`); otherwise every call fails as `NETWORK`. Restart the
+backend after changing it.
+
+Check that the mocks still answer exactly like the backend (24 requests, all error
+codes included; skipped when `LIVE_API_URL` is unset):
+
+```bash
+LIVE_API_URL=http://127.0.0.1:8000 npx vitest run src/api/parity.test.ts
+```
+
+## Loading and error states
+
+The page reads only `error.code`, never the server's `message`
+(`describeError` in `src/api/client.ts`):
+
+| Code                                             | Shown                              | Try again |
+| ------------------------------------------------ | ---------------------------------- | --------- |
+| `BAD_COORDS`, `BAD_PARAM`, `UNKNOWN_TARGET`      | What to fix                        | No        |
+| `NO_FRAMES`                                      | No images here, try another target | No        |
+| `FRAME_NOT_FOUND`                                | Images expired, load again         | Yes       |
+| `UPSTREAM_ERROR`, `UPSTREAM_TIMEOUT`             | The NASA archive failed / was slow | Yes       |
+| `INTERNAL`, `HTTP_ERROR`, `NETWORK`, unknown 5xx | Server or connection trouble       | Yes       |
+
+While `/api/frames` is pending the page shows "Loading frames…" and, after 3 s, a
+seconds counter (a live IRSA query can take 2 minutes). An empty `frames` list
+(`FEW_FRAMES`) shows a message instead of an empty viewer. When an image fails to
+load (usually `FRAME_NOT_FOUND` after a backend restart) the viewer offers
+"Reload frames", which asks `/api/frames` again.
 
 ## Layout
 
 ```
 src/api/schema.d.ts     generated from openapi.yaml, do not edit
-src/api/client.ts       typed fetch client, ApiError, friendly messages
+src/api/client.ts       typed fetch client, ApiError, contract error table (describeError)
+src/api/parity.test.ts  MSW mock vs live backend, request by request (needs LIVE_API_URL)
 src/mocks/samples.ts    loads api_samples/ JSON and PNGs
 src/mocks/handlers.ts   MSW handlers mirroring members/dong/app/fixture_api.py
 src/mocks/browser.ts    service worker setup for dev
@@ -59,9 +89,17 @@ src/coords/parse.ts             decimal degrees / hours-degrees -> degrees (Coor
 src/coords/format.ts            degrees -> "269.4521°", "17h57m48.50s", "+04°41′36.2″"
 src/coords/locate.ts            input -> position: coordinates, the 5 targets, then /api/resolve
 src/coords/CoordinatePreview.tsx shows the position in every notation while typing
-src/App.tsx                     demo page: type a target, load /api/frames, blink
+src/science/PhotometryPanel.tsx loads /api/photometry, shows shared/charts PhotometryChart
+src/science/SkyPanel.tsx        shared/skymap SkyMap (Aladin Lite) with a Gaia DR3 layer switch
+src/shared-modules.d.ts         types for the plain-JS components imported from ../shared
+src/App.tsx                     page: type a target, then blink, sky map and photometry
 e2e/blink.spec.ts               Playwright: play, step, difference, crosshair pixels
 e2e/target-input.spec.ts        Playwright: the three ways to type a target, errors
+e2e/science.spec.ts             Playwright: photometry chart and table, Gaia layer, 390px width
+e2e/view-url.spec.ts            Playwright: FOV and detector in the request and URL, reload, links
+e2e/warnings.spec.ts            Playwright: warning codes shown as sentences
+e2e/accessibility.spec.ts       Playwright: controls at least 44px, Tab reaches every control
+e2e/errors.spec.ts              Playwright: loading, 504 + Try again, 400, image failure
 ```
 
 ## Target input
@@ -75,8 +113,9 @@ One text field accepts a name or coordinates (RA and Dec together):
 | A name          | `Barnard's Star`, `R Dra`, `GJ 699` | the name, decimal degrees and hours / degrees |
 
 The five challenge targets (and their aliases) are found offline. Other names are
-sent to `/api/resolve` when the form is submitted; the fixture backend only knows
-Barnard's Star for now. Typed coordinates send no `target_key`, so the API returns
+sent to `/api/resolve` when the form is submitted; the fixture backend (and the
+mock) resolves the five targets from `shared/targets.json` and nothing else yet.
+Typed coordinates send no `target_key`, so the API returns
 no `predicted_px` and the viewer shows no crosshair.
 
 ## Using BlinkViewer
@@ -90,6 +129,7 @@ const data = await api.frames({ ra, dec, targetKey, detector });
   grid={data.grid}
   detector={data.detector}
   imageUrl={api.imageUrl} // stable function: png path -> URL on the API origin
+  onReload={reload} // optional: offered as "Reload frames" when an image fails
 />;
 ```
 
@@ -99,6 +139,36 @@ loops with requestAnimationFrame. Controls: Play/Pause (Space), previous/next
 Each frame shows its UTC date, wavelength and detector. Pixels stay square
 (whole device pixels per SPHEREx pixel, no smoothing) and the crosshair sits at
 `predicted_px` using the PNG top-left origin.
+
+## View in the URL, FOV and warnings
+
+The page keeps its view in the URL, so a reload or a shared link reopens it:
+`/?q=R+Draconis&fov=5&det=D3`. `q` is the text of the target field (a name or
+coordinates), `fov` the cutout width in arcminutes (2, 5 or 10; missing means the API
+default of 0.1°, shown as "Default (6′)"), `det` the detector. The FOV becomes the API's
+`size` in degrees (2′ → 0.0333, 5′ → 0.0833, 10′ → 0.1667). Changing the detector or FOV
+sends the request again. `src/urlState.ts` has the parsing and its tests; a link whose
+`q` cannot be read shows why and opens Barnard's Star.
+
+Each code in `warnings` becomes a sentence under the frame summary (`src/warnings.ts`).
+
+## Photometry chart and sky map
+
+Owner: Thạch. The page imports two components that live in `../shared/` because
+other modules use them too: `PhotometryChart` (`shared/charts/`, Plotly) and
+`SkyMap` (`shared/skymap/`, Aladin Lite). Both panels are loaded lazily, so the
+blink viewer does not wait for the two large libraries.
+
+- `/api/photometry` is called without `detector`; the chart filters D1 to D6 itself.
+  Points with `detected: false` are drawn as 3σ upper limits, `flagged` points
+  hollow. Each target without photometry gets an empty-state message. In the
+  fixture (and in the mock) only R Draconis has measurements.
+- The map centres on the requested RA/Dec and is twice as wide as the frames' footprint
+  (at least 6′). "Gaia layer" chooses real Gaia DR3 from VizieR, synthetic stars that work
+  offline, or no layer. Aladin and VizieR are at CDS; where CDS is blocked the map stays
+  grey and says so.
+- `vite.config.ts` lists React, Plotly and Aladin under `resolve.dedupe`, so files in
+  `../shared` use this folder's copies (one React, and CI installs only `frontend/`).
 
 ## When the API contract changes
 

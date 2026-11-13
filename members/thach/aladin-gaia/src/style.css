@@ -22,15 +22,6 @@ body {
   min-width: 0;
 }
 
-.map {
-  width: 100%;
-  aspect-ratio: 1;
-  background: #000;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
 .panel {
   flex: 1 1 320px;
   min-width: 0;
@@ -55,8 +46,46 @@ body {
 
 .heading {
   margin: var(--space-3) 0 0;
+  padding: 0;
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.input {
+  flex: 1 1 180px;
+  min-width: 0;
+  min-height: var(--control-height);
+  box-sizing: border-box;
+  padding: 0 var(--space-3);
+  background: var(--color-raised);
+  color: var(--color-text);
+  border: 1px solid var(--color-control);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.input[aria-invalid="true"] {
+  border: 2px solid var(--color-danger);
+}
+
+.position {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
 }
 
 .targets {
@@ -65,7 +94,8 @@ body {
   gap: var(--space-1);
 }
 
-.button {
+.button,
+.field select {
   min-height: var(--control-height);
   padding: 0 var(--space-3);
   background: var(--color-raised);
@@ -74,6 +104,9 @@ body {
   border-radius: var(--radius-sm);
   font: inherit;
   font-size: var(--text-sm);
+}
+
+.button {
   cursor: pointer;
 }
 
@@ -94,9 +127,25 @@ body {
 }
 
 .button:focus-visible,
+.input:focus-visible,
+.field select:focus-visible,
 .check input:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.choices {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
 }
 
 .check {
@@ -120,16 +169,12 @@ body {
   font-size: var(--text-sm);
 }
 
-.message-warning {
-  color: var(--color-warning);
-}
-
 .message-danger {
   color: var(--color-danger);
 }
 
 .note {
-  margin: var(--space-3) 0 0;
+  margin: 0;
   font-size: var(--text-sm);
   color: var(--color-muted);
 }
