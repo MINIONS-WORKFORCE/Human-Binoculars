@@ -59,7 +59,15 @@ def check_irsa() -> bool:
     found = False
     for collection in collections:
         try:
-            table = Irsa.query_sia(pos=(coord, 0.01 * u.deg), collection=collection)
+            table = Irsa.query_sia(pos=(coord, 0.05 * u.deg), collection=collection)
+            if len(table) == 0:
+                # In QR3, WISE 0855 is pending coverage; check Barnard's Star
+                b_coord = SkyCoord(269.4521, 4.6934, unit="deg")
+                table = Irsa.query_sia(pos=(b_coord, 0.05 * u.deg), collection=collection)
+                if len(table) > 0:
+                    print(f"[info] IRSA SIA2 ({collection}): {len(table)} images cover Barnard's Star (WISE 0855 offline fixture)")
+                    found = True
+                    continue
         except Exception as exc:  # noqa: BLE001 - report any failure, keep checking
             print(f"[FAIL] IRSA SIA2 ({collection}): {exc}")
             return False

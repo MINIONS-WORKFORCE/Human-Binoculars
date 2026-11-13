@@ -19,6 +19,11 @@ Theo vòng dự phòng hiện tại, Đông hỗ trợ Duy Hoàng và Khôi. Tha
 vai trò trên wiki cho vòng đầy đủ. Người hỗ trợ cần được cung cấp ví dụ tái hiện
 và đầu vào nhỏ để có thể tiếp nhận phần việc.
 
+> **Cập nhật bàn giao 13/11/2026 (Khôi):**  
+> - [Thông báo chốt collection IRSA QR3 & lưu ý WISE 0855](collection_notice_20261113.md)  
+> - [Runbook dữ liệu và danh mục ObsID](../../members/khoi/RUNBOOK_DATA.md)  
+> - [Bảng Benchmark số ảnh và thời gian tải](../../members/khoi/BENCHMARKS.md)
+
 ## Giao hàm Python
 
 Ghi tên module import được, chữ ký hàm theo hợp đồng, đơn vị từng tham số,

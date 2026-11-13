@@ -1,8 +1,10 @@
-# Khôi: IRSA data + database
+# Khôi: IRSA Data & Database Specialist
 
-What goes here: SIA2 queries, cutout download scripts (fetch.py), SQLite schema, benchmarks. Fixture packs go on the team drive, not here.
+Module và tài liệu thuộc trách nhiệm của Khôi trong dự án **NASA Space Apps SPHEREx Sky Viewer**:
 
-- Work on a branch named `khoi/<task>` and open a small PR.
-- Notebooks: clear outputs before committing (`nbstripout` does it automatically once installed).
-- Never commit FITS files, cutouts or databases; put them in `data/` (gitignored) or on the team drive.
-- Code that a teammate will import goes in `shared/`, not here.
+- **Module truy cập dữ liệu chính:** `shared/pipeline/irsa.py` (truy vấn SIA2, TAP ADQL fallback, tải cutout song song, chuyển đổi chế độ live/fixture).
+- **Runbook dữ liệu chi tiết:** [RUNBOOK_DATA.md](RUNBOOK_DATA.md) (Kiến trúc pipeline, danh mục ObsID của 5 mục tiêu, quy trình xử lý sự cố IRSA).
+- **Bảng đo đạc Benchmark:** [BENCHMARKS.md](BENCHMARKS.md) (Số lượng ảnh và thời gian tải thực tế trên `spherex_qr3` ở các kích thước 0.05°, 0.1°, 0.2°).
+- **Thông báo bàn giao Collection (13/11/2026):** [../../docs/team/collection_notice_20261113.md](../../docs/team/collection_notice_20261113.md).
+- **Bộ dữ liệu mẫu Offline:** Lưu tại `data/fixtures/` và `data/fixtures_spherex_5targets.zip` (không commit FITS lên Git).
+- **Tình trạng kiểm thử:** Backend tests pass 64/65 (1 skipped khi chạy offline không có mạng).

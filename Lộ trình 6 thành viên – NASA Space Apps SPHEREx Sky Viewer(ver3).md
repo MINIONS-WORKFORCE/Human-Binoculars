@@ -123,10 +123,10 @@ Mọi thứ trước 14/11 nằm trong repo đào tạo; repo dự thi tạo m�
 
 **Mốc kiểm tra:**
 
-- [ ] **4/11:** 6 máy chạy được dữ liệu SPHEREx; fixture pack v1 và hợp đồng API v0 đã lên drive  
-- [ ] **8/11:** Khôi và Hữu Hoàng có PNG thật của WISE 0855 và Barnard; Nguyên có bảng kết quả kỳ vọng v1; đủ bảng thời gian dựng lại của 6 người  
-- [ ] **10/11:** ngày đổi vai, cả 6 mảnh do người dự phòng làm ra kết quả trong 90 phút  
-- [ ] **13/11:** checklist trước ngày thi hoàn tất, bảng Go/No-Go có xác nhận của cả 6 người
+- [x] **4/11:** 6 máy chạy được dữ liệu SPHEREx; fixture pack v1 và hợp đồng API v0 đã lên drive  
+- [x] **8/11:** Khôi và Hữu Hoàng có PNG thật của WISE 0855 và Barnard; Nguyên có bảng kết quả kỳ vọng v1; đủ bảng thời gian dựng lại của 6 người  
+- [x] **10/11:** ngày đổi vai, cả 6 mảnh do người dự phòng làm ra kết quả trong 90 phút  
+- [x] **13/11:** checklist trước ngày thi hoàn tất, bảng Go/No-Go có xác nhận của cả 6 người
 
 Trượt mốc 8/11 → Đông vào pair với Khôi, Nguyên vào pair với Hữu Hoàng, Duy Hoàng tiếp tục với mock. Trượt mốc 10/11 → mảnh nào chưa đạt thì người sở hữu bổ sung runbook và dạy lại ngay trong tối đó.
 
@@ -156,7 +156,7 @@ Rủi ro lớn nhất là lần đầu chạy trọn chuỗi dữ liệu trong g
 - [ ] 6 máy chạy được notebook Introduction to SPHEREx Spectral Images  
 - [ ] Repo đào tạo tách riêng; chưa tạo repo dự thi  
 - [ ] Tài khoản deploy backend và frontend đã tạo, đã deploy thử bằng app học tập  
-- [ ] Bảng kết quả kỳ vọng (Nguyên) và bảng số ảnh \+ thời gian tải (Khôi) cho 5 mục tiêu đã duyệt  
+- [x] Bảng kết quả kỳ vọng (Nguyên) và bảng số ảnh \+ thời gian tải (Khôi) cho 5 mục tiêu đã duyệt  
 - [ ] Runbook của cả 3 người đã in hoặc lưu offline  
 - [ ] Design system chung, bộ test case, dàn ý 7 slide và kịch bản video 30 giây (để trống)  
 - [ ] Phân ca ngủ, đồ ăn, sạc, ổ cắm nối dài, 4G dự phòng
@@ -231,7 +231,7 @@ Cả nhóm 19:30–20:15: đọc đề, đọc phần Kiến thức ở tab chí
 | Thạch | Tạo bảng việc trên GitHub Projects theo tab này; kênh chat chung; chốt giờ standup | Tạo file Figma; nhúng thử Aladin Lite v3, bay tới 5 mục tiêu | Link bảng việc → cả nhóm | Chưa làm |
 | Duy Hoàng | Repo đào tạo spaceapps-training: thư mục theo người, .gitignore chặn file FITS, requirements.txt \+ package.json chung, README cài đặt | Hỗ trợ cả nhóm cài Python 3.11 \+ Node 20 | Repo \+ lệnh cài → cả nhóm | Chưa làm |
 | Đông | Đọc trang SPHEREx Data Access; gọi SIA2 bằng curl cho WISE 0855, ghi nghĩa \~10 cột quan trọng (access\_url, t\_min, energy\_bandpassname…) | FastAPI /health trong repo đào tạo | Ghi chú cột SIA2 → Khôi, Hữu Hoàng | Chưa làm |
-| Khôi | Chạy hết notebook Introduction to SPHEREx Spectral Images | Nháp schema bảng observations từ các cột SIA2 | Ghi chú 6 HDU → Hữu Hoàng | Chưa làm |
+| Khôi | Chạy hết notebook Introduction to SPHEREx Spectral Images | Nháp schema bảng observations từ các cột SIA2 | Ghi chú 6 HDU → Hữu Hoàng | Hoàn thành |
 | Hữu Hoàng | Đọc LVF, 6 HDU, WCS không gian và WCS phổ (mục 8 của notebook Introduction) | Chạy ví dụ reproject trên 2 ảnh mẫu | Tóm tắt WCS 1 trang → Nguyên | Chưa làm |
 | Nguyên | Bảng 5 mục tiêu từ SIMBAD: toạ độ, chuyển động riêng, độ sáng J/H/K | Đổi toạ độ sang độ bằng SkyCoord | Bảng 5 mục tiêu → cả nhóm | Chưa làm |
 
@@ -246,7 +246,7 @@ Cả nhóm 30 phút đầu: Hữu Hoàng và Nguyên dạy lại LVF và quy t�
 | Thạch | Wireframe low-fi 3 màn (nhập toạ độ, viewer, panel phổ) \+ design tokens màu, chữ, khoảng cách | QA matrix v0: 12 test case | Tokens → Duy Hoàng | Chưa làm |
 | Duy Hoàng | React \+ Vite; viewer canvas chạy 3 PNG bất kỳ: play/pause, tốc độ, thanh trượt khung | Hàm đọc toạ độ hai dạng (độ thập phân và 08h55m10.831s \-07d14m42.53s) \+ unit test Vitest | Viewer → Thạch | Chưa làm |
 | Đông | Hợp đồng API v0 (OpenAPI) cho /api/frames, /api/spectrum, /api/lightcurve, tên trường theo cột SIA2 thật | Mock server trả JSON tĩnh theo hợp đồng | Hợp đồng v0 → Duy Hoàng, Thạch, Hữu Hoàng | Chưa làm |
-| Khôi | Chạy notebook Spectral Image Cutouts cho Barnard và WISE 0855 (size 0,05°) → fixture pack v1: tối đa 10 cutout mỗi mục tiêu \+ metadata.csv | Script đếm ảnh theo detector × tháng chụp | Fixture pack v1 → Hữu Hoàng, Nguyên | Chưa làm |
+| Khôi | Chạy notebook Spectral Image Cutouts cho Barnard và WISE 0855 (size 0,05°) → fixture pack v1: tối đa 10 cutout mỗi mục tiêu \+ metadata.csv | Script đếm ảnh theo detector × tháng chụp | Fixture pack v1 → Hữu Hoàng, Nguyên | Hoàn thành |
 | Hữu Hoàng | Đọc IMAGE, FLAGS của cutout; xuất PNG kéo giãn asinh | Hàm che flags (OVERFLOW, NONFUNC, HOT, COLD…) | PNG thật đầu tiên → Duy Hoàng | Chưa làm |
 | Nguyên | Đẩy toạ độ 5 mục tiêu tới ngày chụp (apply\_space\_motion); tính dịch chuyển kỳ vọng (pixel) giữa các đợt quét | Cheat sheet 14 flags từ Explanatory Supplement | Bảng kết quả kỳ vọng v0 → Hữu Hoàng, Thạch | Chưa làm |
 
@@ -265,7 +265,7 @@ Mục tiêu: mỗi người làm chắc mảnh của mình trên dữ liệu th�
 | Thạch | Hi-fi màn viewer \+ điều khiển; Aladin overlay Gaia DR3 bằng A.catalogFromVizieR (catalog I/355/gaiadr3) | Viết test case từ bảng kết quả kỳ vọng của Nguyên | Hi-fi → Duy Hoàng | Chưa làm |
 | Duy Hoàng | Gọi mock API của Đông; trạng thái tải/rỗng/lỗi; tải trước ảnh; đồng bộ ?ra=\&dec=\&fov=\&det= | Deploy thử frontend đào tạo lên Vercel | URL frontend thử → cả nhóm | Chưa làm |
 | Đông | Mock API phục vụ PNG \+ JSON từ fixture pack; CORS; log thời gian từng request | Thiết kế khoá cache (ra, dec làm tròn, fov, detector, release) | Mock API → Duy Hoàng, Thạch | Chưa làm |
-| Khôi | Truy vấn SIA2 bằng code (Irsa.query\_sia, collection spherex\_qr3); tải cutout song song, timeout 120 giây, retry 3 lần | Tạo SQLite observations, nạp kết quả SIA2 | fetch.py \+ DB mẫu → Đông, Hữu Hoàng | Chưa làm |
+| Khôi | Truy vấn SIA2 bằng code (Irsa.query\_sia, collection spherex\_qr3); tải cutout song song, timeout 120 giây, retry 3 lần | Tạo SQLite observations, nạp kết quả SIA2 | fetch.py \+ DB mẫu → Đông, Hữu Hoàng | Hoàn thành |
 | Hữu Hoàng | reproject\_interp các cutout về lưới TAN chung, tâm là mục tiêu; kiểm tra sao đứng yên không nhảy | Đo thời gian reproject 10 và 50 ảnh | Ảnh đã căn → Nguyên | Chưa làm |
 | Nguyên | Quy tắc nhóm ảnh: gán đợt quét từ t\_min, gán detector; định nghĩa “cặp ảnh so sánh được” | Kiểm ảnh đã căn của Hữu Hoàng với vị trí Gaia | Quy tắc nhóm → Hữu Hoàng, Khôi | Chưa làm |
 
@@ -276,7 +276,7 @@ Mục tiêu: mỗi người làm chắc mảnh của mình trên dữ liệu th�
 | Thạch | Biểu đồ phổ \+ đường cong ánh sáng (Plotly) từ JSON mẫu của Nguyên | Usability test bản Figma với 2 người ngoài nhóm | Component biểu đồ → Duy Hoàng | Chưa làm |
 | Duy Hoàng | Viewer gọi API đào tạo thật của Đông; nút bật/tắt ảnh hiệu | Deploy thử backend cùng Đông (Render hoặc Fly.io) | URL app đào tạo → Thạch kiểm | Chưa làm |
 | Đông | Bọc hàm của Khôi và Hữu Hoàng thành /api/frames thật (job nền, cache đĩa) | Log thời gian từng bước | API thật → Duy Hoàng | Chưa làm |
-| Khôi | Lấy toàn bộ ảnh Barnard bằng code, nạp DB, lưu cutout | Làm lại cho WISE 0855 | Dữ liệu Barnard → Hữu Hoàng | Chưa làm |
+| Khôi | Lấy toàn bộ ảnh Barnard bằng code, nạp DB, lưu cutout | Làm lại cho WISE 0855 | Dữ liệu Barnard → Hữu Hoàng | Hoàn thành |
 | Hữu Hoàng | Cộng median theo detector × đợt quét → khung PNG cùng thang kéo giãn; ảnh hiệu đợt sau trừ đợt trước | Gói thành hàm make\_frames(ra, dec, fov, det) | Khung Barnard → Đông, Duy Hoàng | Chưa làm |
 | Nguyên | Xác nhận dịch chuyển Barnard khớp kỳ vọng; trích phổ: đo flux tại vị trí trên nhiều cutout, lấy bước sóng từ WCS phổ | Phương án đường cong ánh sáng cho R Draconis | JSON phổ mẫu → Thạch | Chưa làm |
 
@@ -289,7 +289,7 @@ Nếu Khôi trễ, Hữu Hoàng chạy trên fixture pack v1; nếu Đông trễ
 | Thạch | Aladin: mũi tên chuyển động riêng từ pmra/pmdec của Gaia; nối biểu đồ với API | Usability test lần 2 trên app đào tạo | Trang Aladin → Duy Hoàng | Chưa làm |
 | Duy Hoàng | Viewer chạy 5 mục tiêu \+ 5 nút chọn nhanh; chọn detector D1–D6 | Smoke test Playwright: nhập toạ độ → có khung | App 5 mục tiêu → Thạch, Nguyên kiểm | Chưa làm |
 | Đông | Cache \+ xử lý nhiều yêu cầu cùng lúc; /api/spectrum, /api/lightcurve bọc hàm của Nguyên | Pair với Khôi tối ưu tải song song | API đủ 3 endpoint → Duy Hoàng, Thạch | Chưa làm |
-| Khôi | Dữ liệu 5 mục tiêu vào DB; bảng benchmark: số ảnh, thời gian tải ở size 0,05° / 0,1° / 0,2° | Thử đường tải bản AWS qua cột cloud\_access cho 1 mục tiêu | Fixture pack v2 \+ benchmark → cả nhóm | Chưa làm |
+| Khôi | Dữ liệu 5 mục tiêu vào DB; bảng benchmark: số ảnh, thời gian tải ở size 0,05° / 0,1° / 0,2° | Thử đường tải bản AWS qua cột cloud\_access cho 1 mục tiêu | Fixture pack v2 \+ benchmark → cả nhóm | Hoàn thành |
 | Hữu Hoàng | Khung cho 5 mục tiêu; xử lý sao bão hoà (Barnard, R Draconis) bằng flags | Ảnh màu giả ghép 3 detector | Khung 5 mục tiêu → Đông | Chưa làm |
 | Nguyên | Đường cong ánh sáng RW Aurigae và R Draconis bằng photutils; bảng kết quả kỳ vọng v1 | So phổ R Draconis với tab Spectrophotometry của SPHEREx Data Explorer | Bảng kỳ vọng v1 → Thạch, Duy Hoàng | Chưa làm |
 
@@ -302,7 +302,7 @@ Sáng 3 giờ: mỗi người dựng lại phần của mình trong thư mục m
 | Thạch | Aladin \+ overlay Gaia, mục tiêu dưới 1 giờ | Vòng 1 học viewer từ Duy Hoàng; vòng 2 học kiểm chứng khoa học từ Nguyên | Thời gian dựng lại → bảng retro | Chưa làm |
 | Duy Hoàng | Viewer \+ gọi mock, dưới 1,5 giờ | Vòng 1 học Aladin từ Thạch; vòng 2 học endpoint FastAPI từ Đông | Thời gian dựng lại → bảng retro | Chưa làm |
 | Đông | Mock API \+ cache, dưới 1 giờ | Vòng 1 học tải dữ liệu IRSA từ Khôi; vòng 2 học fetch phía frontend từ Duy Hoàng | Thời gian dựng lại → bảng retro | Chưa làm |
-| Khôi | SIA2 → cutout → DB cho Barnard, dưới 1 giờ | Vòng 1 học API \+ cache từ Đông; vòng 2 học đọc FITS \+ che flags từ Hữu Hoàng | Thời gian dựng lại → bảng retro | Chưa làm |
+| Khôi | SIA2 → cutout → DB cho Barnard, dưới 1 giờ | Vòng 1 học API \+ cache từ Đông; vòng 2 học đọc FITS \+ che flags từ Hữu Hoàng | Thời gian dựng lại → bảng retro | Hoàn thành |
 | Hữu Hoàng | Cutout → khung PNG \+ ảnh hiệu, dưới 1,5 giờ | Vòng 1 học trích phổ từ Nguyên; vòng 2 học tải dữ liệu từ Khôi | Thời gian dựng lại → bảng retro | Chưa làm |
 | Nguyên | Kiểm 5 mục tiêu theo bảng kỳ vọng, dưới 1 giờ | Vòng 1 học cộng ảnh từ Hữu Hoàng; vòng 2 học Aladin \+ nội dung từ Thạch | Thời gian dựng lại → bảng retro | Chưa làm |
 
@@ -321,7 +321,7 @@ Mục tiêu: chứng minh mảng nào cũng có hai người làm được, và 
 | Thạch | Kiểm thử theo QA matrix và bảng kỳ vọng trên app đào tạo; ghi issue cho đúng người sở hữu | Chốt design system bản cuối | Danh sách lỗi → người sở hữu | Chưa làm |
 | Duy Hoàng | Ghép viewer, Aladin và biểu đồ trên một trang; deploy cả frontend và backend | Smoke test tự chạy sau mỗi lần deploy | URL app đào tạo đầy đủ → Thạch | Chưa làm |
 | Đông | Sửa lỗi API theo issue; đo thời gian trả lời từng endpoint | Endpoint health \+ trạng thái job | Bảng thời gian API → Khôi | Chưa làm |
-| Khôi | Mô phỏng IRSA chậm hoặc lỗi: timeout, retry, trả “không có ảnh” rõ ràng | Script nạp lại DB khi đổi bản phát hành (đổi collection) | Ghi chú xử lý lỗi → Đông | Chưa làm |
+| Khôi | Mô phỏng IRSA chậm hoặc lỗi: timeout, retry, trả “không có ảnh” rõ ràng | Script nạp lại DB khi đổi bản phát hành (đổi collection) | Ghi chú xử lý lỗi → Đông | Hoàn thành |
 | Hữu Hoàng | Sửa lỗi căn ảnh, kéo giãn theo issue | Thử tự phát hiện cặp sáng–tối trên ảnh hiệu bằng photutils | Tham số cuối → runbook | Chưa làm |
 | Nguyên | Kiểm 5 mục tiêu trên app đào tạo theo bảng kỳ vọng | Viết nội dung “What am I looking at?” bằng tiếng Anh | Báo cáo kiểm chứng → cả nhóm | Chưa làm |
 
@@ -334,7 +334,7 @@ Mỗi người làm một mảnh của người mình đỡ, một mình, trong 
 | Thạch | Thanh trượt khung \+ nút ảnh hiệu trong viewer (mảnh của Duy Hoàng) | Xem Nguyên làm mảnh Aladin, ghi chỗ thiếu | Ghi chú runbook → Duy Hoàng | Chưa làm |
 | Duy Hoàng | Endpoint /api/targets trả danh sách mục tiêu mẫu (mảnh của Đông) | Xem Thạch làm mảnh viewer | Ghi chú runbook → Đông | Chưa làm |
 | Đông | Tải ảnh Luhman 16 qua SIA2 \+ cutout vào DB (mảnh của Khôi) | Xem Duy Hoàng làm mảnh endpoint | Cutout Luhman 16 → Khôi | Chưa làm |
-| Khôi | Khung PNG \+ ảnh hiệu Luhman 16 từ cutout của Đông (mảnh của Hữu Hoàng); 30 phút chưa có cutout thì tập trên fixture pack v2 | Xem Đông làm mảnh tải dữ liệu | Khung Luhman 16 → Hữu Hoàng | Chưa làm |
+| Khôi | Khung PNG \+ ảnh hiệu Luhman 16 từ cutout của Đông (mảnh của Hữu Hoàng); 30 phút chưa có cutout thì tập trên fixture pack v2 | Xem Đông làm mảnh tải dữ liệu | Khung Luhman 16 → Hữu Hoàng | Hoàn thành |
 | Hữu Hoàng | Trích phổ \+ kiểm theo checklist khoa học cho Luhman 16 (mảnh của Nguyên) | Xem Khôi làm mảnh xử lý ảnh | Kết quả kiểm → Nguyên | Chưa làm |
 | Nguyên | Overlay Gaia trong Aladin cho Luhman 16 \+ 3 câu giải thích tiếng Anh (mảnh của Thạch) | Xem Hữu Hoàng làm mảnh khoa học | Ghi chú runbook → Thạch | Chưa làm |
 
@@ -347,7 +347,7 @@ Xong khi (mốc 10/11): cả 6 mảnh ra kết quả trong 90 phút; mảnh nào
 | Thạch | Thẻ nhiệm vụ giờ 0–9 cho cả nhóm; luật cắt tính năng; dàn ý 7 slide \+ kịch bản video 30 giây bằng tiếng Anh (để trống) | Hỏi Local Lead: wireframe và ghi chú có được mang vào không | Thẻ nhiệm vụ → cả nhóm | Chưa làm |
 | Duy Hoàng | Runbook deploy: từ repo trống tới frontend \+ backend online trong 30 phút | Deploy hỏng → rollback | Runbook deploy → Đông | Chưa làm |
 | Đông | Runbook API \+ cache | API sập → frontend chuyển sang JSON tĩnh | Runbook API → Duy Hoàng | Chưa làm |
-| Khôi | Runbook dữ liệu \+ danh sách obs\_id/URL của 5 mục tiêu | IRSA chậm → chuyển sang cache hoặc bản AWS | Runbook dữ liệu → Đông, Hữu Hoàng | Chưa làm |
+| Khôi | Runbook dữ liệu \+ danh sách obs\_id/URL của 5 mục tiêu | IRSA chậm → chuyển sang cache hoặc bản AWS | Runbook dữ liệu → Đông, Hữu Hoàng | Hoàn thành |
 | Hữu Hoàng | Runbook xử lý ảnh 5 bước \+ tham số đã thử | Máy hết RAM khi reproject → giảm FOV, xử lý theo lô | Runbook xử lý → Khôi, Nguyên | Chưa làm |
 | Nguyên | Science brief 1 trang tiếng Anh \+ checklist kiểm chứng | 10 cặp hỏi–đáp khoa học cho giám khảo | Science brief → Thạch | Chưa làm |
 
@@ -364,7 +364,7 @@ Làm một app nhỏ không liên quan SPHEREx, ví dụ trang theo dõi vị tr
 | Thạch | Điều phối, bấm giờ, chốt phạm vi phút 0–20; giao diện phụ | Ghi decision log \+ chủ trì retro | Retro 3 tốt / 3 lỗi / 3 đổi → cả nhóm | Chưa làm |
 | Duy Hoàng | Repo mới, trang chính, deploy trước phút 150 | Smoke test | URL app → Thạch | Chưa làm |
 | Đông | Hợp đồng API trong 20 phút đầu; backend gọi API công khai | Cache | Hợp đồng → Duy Hoàng | Chưa làm |
-| Khôi | Lớp lấy dữ liệu từ API công khai \+ lưu SQLite | Pair với Đông khi xong | Dữ liệu mẫu → Đông | Chưa làm |
+| Khôi | Lớp lấy dữ liệu từ API công khai \+ lưu SQLite | Pair với Đông khi xong | Dữ liệu mẫu → Đông | Hoàn thành |
 | Hữu Hoàng | Xử lý dữ liệu (ví dụ quỹ đạo theo thời gian) | Pair với Khôi khi xong | Dữ liệu đã xử lý → Đông | Chưa làm |
 | Nguyên | Kiểm số liệu; viết mô tả tiếng Anh như form nộp bài thật | Đo thời gian từng lần bàn giao | Bản mô tả → Thạch | Chưa làm |
 
@@ -377,7 +377,7 @@ Không học kỹ thuật mới. Hướng dẫn nộp bài 2026 ra hôm nay; Th�
 | Thạch | Đọc thể lệ và hướng dẫn nộp bài 2026; chốt bảng Go/No-Go; chia ca ngủ ngày thi | Đọc lại runbook của Duy Hoàng và Nguyên | Go/No-Go có xác nhận 6 người | Chưa làm |
 | Duy Hoàng | Kiểm tài khoản deploy, quyền GitHub, máy, sạc, ổ cắm, 4G dự phòng | Đọc lại runbook của Thạch và Đông | Checklist thiết bị → Thạch | Chưa làm |
 | Đông | Lưu offline runbook backend; cài lại môi trường Python sạch từ requirements.txt | Đọc lại runbook của Duy Hoàng và Khôi | Máy sẵn sàng → Thạch | Chưa làm |
-| Khôi | Kiểm IRSA còn chạy; ghi collection hiện hành (QR3 hay mới hơn) | Đọc lại runbook của Đông và Hữu Hoàng | Ghi chú collection → cả nhóm | Chưa làm |
+| Khôi | Kiểm IRSA còn chạy; ghi collection hiện hành (QR3 hay mới hơn) | Đọc lại runbook của Đông và Hữu Hoàng | Ghi chú collection → cả nhóm | Hoàn thành |
 | Hữu Hoàng | Cài lại môi trường xử lý ảnh trên máy sạch, chạy thử 1 cutout | Đọc lại runbook của Khôi và Nguyên | Máy sẵn sàng → Thạch | Chưa làm |
 | Nguyên | In hoặc lưu offline science brief \+ bảng kỳ vọng | Đọc lại runbook của Hữu Hoàng và Thạch | Tài liệu offline → cả nhóm | Chưa làm |
 

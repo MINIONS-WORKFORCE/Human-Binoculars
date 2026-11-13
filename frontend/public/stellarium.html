@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stellarium Web + SPHEREx Sky Viewer (Motion & Epochs)</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    canvas { touch-action: none; user-select: none; }
+    .pixelated { image-rendering: pixelated; image-rendering: crisp-edges; }
+    .night-mode { filter: grayscale(100%) sepia(100%) hue-rotate(-50deg) saturate(600%) brightness(0.85); }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+    ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.5); border-radius: 9999px; }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.5), inset 0 0 10px rgba(245, 158, 11, 0.3); }
+      50% { box-shadow: 0 0 28px rgba(245, 158, 11, 0.9), inset 0 0 15px rgba(245, 158, 11, 0.5); }
+    }
+    .motion-active-glow { animation: pulse-glow 1.8s infinite ease-in-out; }
+  </style>
+</head>
+<body id="appBody" class="bg-[#050811] text-slate-100 antialiased h-screen w-screen overflow-hidden select-none font-sans relative">
+
+  <!-- 1. FULL VIEWPORT CELESTIAL CANVAS -->
+  <canvas id="skyCanvas" class="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing z-0"></canvas>
+
+  <!-- 2. STELLARIUM TOP BAR: Search, Mode Switch & Location -->
+  <header class="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none z-30">
+    <!-- Left: Search Box & SPHEREx Badge -->
+    <div class="flex items-center gap-2 pointer-events-auto">
+      <div class="relative flex items-center">
+        <div class="absolute left-3 text-slate-400 pointer-events-none text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+        <input 
+          id="searchInput" 
+          type="text" 
+          placeholder="Tìm thiên thể (Barnard, WISE, Orion, Vega...)" 
+          class="w-60 sm:w-72 pl-9 pr-3 py-1.5 rounded-full bg-slate-900/85 hover:bg-slate-900 focus:bg-slate-900 text-xs text-white border border-slate-700/80 shadow-lg backdrop-blur-md outline-none focus:border-cyan-400 transition"
+          autocomplete="off"
+        />
+        <!-- Autocomplete Suggestions -->
+        <div id="searchSuggestions" class="hidden absolute top-10 left-0 w-80 bg-slate-900/95 border border-slate-700 rounded-xl shadow-2xl backdrop-blur-md overflow-hidden text-xs z-50">
+          <div class="p-2 border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+            5 Mục tiêu Thách thức SPHEREx
+          </div>
+          <div id="suggestionsList" class="max-h-60 overflow-y-auto divide-y divide-slate-800/60"></div>
+        </div>
+      </div>
+
+      <!-- SPHEREx Mode Pill Indicator -->
+      <div class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 text-xs shadow-lg backdrop-blur-md">
+        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+        <span class="font-semibold tracking-wide">SPHEREx Sky</span>
+      </div>
+    </div>
+
+    <!-- Center: Prominent Toggle Button for Motion & Variability -->
+    <div class="pointer-events-auto flex items-center gap-2">
+      <button 
+        id="toggleMotionBtn" 
+        class="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500 text-amber-300 shadow-xl backdrop-blur-md text-xs font-bold transition cursor-pointer group scale-105"
+        title="Bật/Tắt chế độ quan sát sự thay đổi và chuyển động của các ngôi sao có dữ liệu"
+      >
+        <span id="motionBtnDot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+        <svg class="w-4 h-4 text-amber-400 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        <span id="motionBtnLabel">⚡ Xem Biến thiên & Chuyển động sao</span>
+      </button>
+    </div>
+
+    <!-- Right: Location & View Info -->
+    <div class="pointer-events-auto flex items-center gap-2">
+      <div id="locationPill" class="px-3 py-1.5 rounded-full bg-slate-900/85 border border-slate-700/80 text-xs text-slate-300 shadow-lg backdrop-blur-md flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5 text-rose-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
+        <span>Trái Đất · <strong class="text-white font-mono" id="fovDisplay">FOV 75°</strong></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 3. STELLARIUM TARGET INFO DRAWER (SLIDE-IN ON TARGET SELECT) -->
+  <aside 
+    id="targetDrawer" 
+    class="absolute top-16 left-3 w-84 sm:w-96 max-h-[calc(100vh-6.5rem)] bg-slate-900/90 border border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col overflow-hidden transition-all duration-300 z-40 text-xs"
+  >
+    <!-- Drawer Header -->
+    <div class="flex items-start justify-between p-3.5 border-b border-slate-800 bg-slate-950/40">
+      <div>
+        <div class="flex items-center gap-1.5">
+          <span id="drawerBadge" class="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
+            High Proper Motion Star
+          </span>
+          <span id="drawerConstellation" class="text-[11px] text-slate-400 font-mono">Oph</span>
+        </div>
+        <h2 id="drawerTitle" class="text-base font-bold text-white mt-1">Barnard's Star</h2>
+        <p id="drawerAltName" class="text-[11px] text-slate-400 font-mono">GJ 699 · HIP 87937 · V2500 Oph</p>
+      </div>
+      <button id="closeDrawerBtn" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+
+    <!-- Drawer Body (Tabs: Stellarium Astro Data & SPHEREx Blink Viewer) -->
+    <div class="flex-1 overflow-y-auto p-3.5 space-y-3">
+      
+      <!-- Nav Tabs inside Drawer -->
+      <div class="grid grid-cols-2 rounded-lg bg-slate-950 p-1 border border-slate-800 text-[11px] font-semibold">
+        <button id="tabBlinkBtn" class="py-1 rounded bg-cyan-600 text-white font-semibold transition cursor-pointer flex items-center justify-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-cyan-300 animate-ping"></span>
+          SPHEREx Blink
+        </button>
+        <button id="tabAstroBtn" class="py-1 rounded text-slate-400 hover:text-white transition cursor-pointer">
+          Hồ sơ Thiên văn
+        </button>
+      </div>
+
+      <!-- Tab 2: SPHEREx Multi-Epoch Blink Viewer (Team Signature Feature) -->
+      <div id="tabBlinkContent" class="space-y-3">
+        <div class="relative w-full aspect-square max-w-[260px] mx-auto bg-black rounded-xl overflow-hidden border border-slate-700 shadow-2xl flex items-center justify-center">
+          <canvas id="drawerBlinkCanvas" width="220" height="220" class="w-full h-full pixelated"></canvas>
+          
+          <!-- Mode Tag -->
+          <div id="blinkModeTag" class="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-black/80 border border-slate-700 text-cyan-400">
+            Ảnh gốc (Original)
+          </div>
+
+          <!-- Bottom Frame HUD -->
+          <div class="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] bg-black/80 px-2.5 py-1 rounded-lg border border-slate-800 text-slate-300">
+            <span id="blinkCounter">Khung 1 / 3</span>
+            <span id="blinkDate" class="font-mono text-amber-300">2025-05-05</span>
+            <span class="text-cyan-400 font-mono">D6 (4.96 µm)</span>
+          </div>
+        </div>
+
+        <!-- Blink Controls -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between gap-1.5">
+            <div class="flex items-center gap-1">
+              <button id="blinkPrevBtn" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 cursor-pointer">◀</button>
+              <button id="blinkPlayBtn" class="px-3 py-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-semibold border border-cyan-500 cursor-pointer">❚❚ Dừng</button>
+              <button id="blinkNextBtn" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 cursor-pointer">▶</button>
+            </div>
+            <div class="flex rounded-md border border-slate-700 bg-slate-950 p-0.5 text-[11px]">
+              <button id="toggleOrigBtn" class="px-2 py-0.5 rounded bg-cyan-600 text-white font-medium cursor-pointer">Gốc</button>
+              <button id="toggleDiffBtn" class="px-2 py-0.5 rounded text-slate-400 hover:text-white font-medium cursor-pointer">Hiệu</button>
+            </div>
+          </div>
+
+          <!-- Crosshair and Speed Slider -->
+          <div class="flex items-center justify-between text-[11px] text-slate-300 pt-1">
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input id="blinkCrosshairCheck" type="checkbox" checked class="accent-cyan-400" />
+              <span>Dấu cộng tâm sao</span>
+            </label>
+            <div class="flex items-center gap-1 font-mono">
+              <span class="text-slate-400">Tốc độ:</span>
+              <span id="blinkFpsVal" class="text-amber-400">3 fps</span>
+            </div>
+          </div>
+
+          <!-- Scientific conclusion note -->
+          <div class="bg-slate-950/80 p-2.5 rounded-lg border border-slate-800 text-[11px] text-slate-300">
+            <span class="text-amber-400 font-semibold block mb-0.5">Chứng minh chuyển động:</span>
+            <p id="blinkConclusionText" class="text-slate-400 leading-relaxed text-[10.5px]">
+              Khi chuyển sang <b>Ảnh hiệu</b>, nền trời đứng yên biến mất, làm nổi bật <b>cặp đốm sáng-tối (dipole)</b> chứng minh sao đang dịch chuyển!
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 1: Astronomical Profile (Stellarium style) -->
+      <div id="tabAstroContent" class="hidden space-y-2.5">
+        <div class="bg-slate-950/60 rounded-xl p-3 border border-slate-800/80 space-y-1.5 font-mono text-[11px]">
+          <div class="flex justify-between"><span class="text-slate-400 font-sans">Cấp sao biểu kiến:</span><span id="astroMag" class="text-amber-300">9.51 V / 4.52 K</span></div>
+          <div class="flex justify-between"><span class="text-slate-400 font-sans">Khoảng cách:</span><span id="astroDist" class="text-slate-200">5.96 ly (1.828 pc)</span></div>
+          <div class="flex justify-between"><span class="text-slate-400 font-sans">Toạ độ RA / Dec:</span><span id="astroRaDec" class="text-cyan-300">17h 57m 48.5s / +04° 41′ 36″</span></div>
+          <div class="flex justify-between"><span class="text-slate-400 font-sans">Chuyển động riêng:</span><span id="astroPm" class="text-rose-400">+10.36″/năm (hướng Bắc)</span></div>
+          <div class="flex justify-between"><span class="text-slate-400 font-sans">Thị sai (Gaia DR3):</span><span id="astroParallax" class="text-slate-200">546.98 ± 0.04 mas</span></div>
+          <div class="flex justify-between"><span class="text-slate-400 font-sans">Cảm biến SPHEREx:</span><span id="astroDet" class="text-emerald-400">Detector 6 (4.4–5.0 µm)</span></div>
+        </div>
+        <p id="astroSummary" class="text-[11.5px] text-slate-300 leading-relaxed bg-slate-800/40 p-2.5 rounded-lg border border-slate-800">
+          Ngôi sao có chuyển động biểu kiến nhanh nhất trên bầu trời đêm. Sau 100 năm nó dịch chuyển khoảng cách bằng nửa vầng Trăng tròn.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Drawer Footer Actions -->
+    <div class="p-3 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between gap-2">
+      <button id="centerOnTargetBtn" class="flex-1 py-1.5 rounded-lg bg-cyan-600/90 hover:bg-cyan-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        Đưa vào giữa màn hình
+      </button>
+    </div>
+  </aside>
+
+  <!-- 4. FLOATING EPOCH & MOTION TIMELAPSE PANEL -->
+  <div 
+    id="motionControlPanel" 
+    class="hidden absolute bottom-20 left-1/2 transform -translate-x-1/2 w-11/12 max-w-xl bg-slate-900/95 border-2 border-amber-500 rounded-2xl shadow-2xl backdrop-blur-xl p-3.5 z-30 text-xs transition-all duration-300"
+  >
+    <!-- Header of Panel -->
+    <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+      <div class="flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full bg-amber-400 animate-ping"></span>
+        <span class="font-bold text-amber-300 uppercase tracking-wider text-[11px]">
+          Mô phỏng Đa Kỷ nguyên & Chuyển động riêng (SPHEREx Motion Engine)
+        </span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button id="btnResetToOrigin" class="px-2.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[11px] transition cursor-pointer flex items-center gap-1">
+          <svg class="w-3 h-3 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          <span>Về gốc 2025</span>
+        </button>
+        <button id="closeMotionPanelBtn" class="text-slate-400 hover:text-white p-0.5 rounded cursor-pointer" title="Ẩn bảng">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Target Switcher inside Motion Panel -->
+    <div class="py-2 border-b border-slate-800/80">
+      <div class="text-[10px] uppercase font-bold text-slate-400 mb-1.5 flex items-center justify-between">
+        <span>Chọn mục tiêu quan sát trên bầu trời:</span>
+        <span class="text-amber-400 font-normal">Click để camera lia ngay tới sao!</span>
+      </div>
+      <div class="grid grid-cols-3 sm:grid-cols-5 gap-1">
+        <button onclick="selectAndCenterTarget('barnard')" class="target-quick-btn py-1 px-1.5 rounded-lg bg-amber-500/30 border border-amber-500 text-amber-200 text-[11px] font-semibold hover:bg-amber-500/50 transition cursor-pointer text-center truncate">
+          ⭐ Barnard
+        </button>
+        <button onclick="selectAndCenterTarget('wise0855')" class="target-quick-btn py-1 px-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-[11px] hover:bg-slate-700 transition cursor-pointer text-center truncate">
+          🪐 WISE 0855
+        </button>
+        <button onclick="selectAndCenterTarget('rdra')" class="target-quick-btn py-1 px-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-[11px] hover:bg-slate-700 transition cursor-pointer text-center truncate">
+          🔴 R Dra
+        </button>
+        <button onclick="selectAndCenterTarget('epsindib')" class="target-quick-btn py-1 px-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-[11px] hover:bg-slate-700 transition cursor-pointer text-center truncate">
+          ✨ eps Ind B
+        </button>
+        <button onclick="selectAndCenterTarget('rwaur')" class="target-quick-btn py-1 px-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-[11px] hover:bg-slate-700 transition cursor-pointer text-center truncate">
+          ⭐ RW Aur
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Epoch Status & Information -->
+    <div class="flex flex-wrap items-center justify-between gap-2 py-2">
+      <div class="flex items-center gap-2">
+        <span class="text-slate-400">Thời điểm mô phỏng:</span>
+        <span id="motionCurrentEpochBadge" class="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono font-semibold">
+          Kỷ nguyên 1 (Gốc: 05/2025) · Δt = 0 năm
+        </span>
+      </div>
+      <div class="flex items-center gap-1 text-[11px] text-slate-400 font-mono">
+        <span>Chế độ hiển thị:</span>
+        <button id="btnToggleScale" class="px-2 py-0.5 rounded bg-amber-600/40 text-amber-300 border border-amber-500/60 font-semibold cursor-pointer">
+          Phóng đại 200× (Rõ nét)
+        </button>
+      </div>
+    </div>
+
+    <!-- Preset Epoch Jump Buttons -->
+    <div class="grid grid-cols-4 gap-1.5 py-1">
+      <button id="btnEpoch1" class="epoch-btn py-1 px-2 rounded-lg bg-amber-600 text-white font-semibold text-[11px] border border-amber-500 transition cursor-pointer text-center">
+        1. Gốc (05/2025)
+      </button>
+      <button id="btnEpoch2" class="epoch-btn py-1 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] border border-slate-700 transition cursor-pointer text-center">
+        2. Quét 2 (08/2025)
+      </button>
+      <button id="btnEpoch3" class="epoch-btn py-1 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] border border-slate-700 transition cursor-pointer text-center">
+        3. Quét 3 (03/2026)
+      </button>
+      <button id="btnEpochFuture" class="epoch-btn py-1 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white text-[11px] border border-cyan-700/50 transition cursor-pointer text-center">
+        +25 năm (2050)
+      </button>
+    </div>
+
+    <!-- Time Scrubber & Auto Play Controls -->
+    <div class="flex items-center gap-3 pt-2">
+      <button id="btnPlayMotion" class="px-3.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs flex items-center gap-1.5 transition cursor-pointer flex-shrink-0 shadow-lg">
+        <span id="playMotionIcon">▶</span>
+        <span id="playMotionLabel">Tua chuyển động</span>
+      </button>
+      
+      <!-- Slider -->
+      <div class="flex-1 flex flex-col gap-1">
+        <div class="flex justify-between text-[10px] text-slate-400 font-mono">
+          <span>2025 (Gốc)</span>
+          <span id="sliderYearLabel" class="text-amber-300 font-semibold">+0.0 năm</span>
+          <span>+50 năm (2075)</span>
+        </div>
+        <input 
+          id="motionYearSlider" 
+          type="range" 
+          min="0" 
+          max="50" 
+          step="0.1" 
+          value="0" 
+          class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-400"
+        />
+      </div>
+    </div>
+
+    <!-- Toggles (Trails, Variability, HUD Metrics) -->
+    <div class="flex items-center justify-between text-[11px] text-slate-300 pt-2.5 border-t border-slate-800 mt-2">
+      <label class="flex items-center gap-1.5 cursor-pointer">
+        <input id="checkShowTrails" type="checkbox" checked class="accent-amber-400" />
+        <span>Vệt quỹ đạo & Vector vận tốc</span>
+      </label>
+      <label class="flex items-center gap-1.5 cursor-pointer">
+        <input id="checkShowVariability" type="checkbox" checked class="accent-amber-400" />
+        <span>Biến thiên quang độ đập nhịp</span>
+      </label>
+      <label class="flex items-center gap-1.5 cursor-pointer">
+        <input id="checkShowDeltaMetrics" type="checkbox" checked class="accent-amber-400" />
+        <span>Chỉ số dịch chuyển góc (Δθ)</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- 5. STELLARIUM BOTTOM FLOATING DOCK (ICON CONTROLS) -->
+  <nav class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-1 bg-slate-900/90 border border-slate-700/80 px-2 py-1.5 rounded-2xl shadow-2xl backdrop-blur-xl z-30">
+    
+    <!-- Constellation Lines -->
+    <button id="toolLinesBtn" class="tool-btn active p-2 rounded-xl text-cyan-400 bg-slate-800/90 hover:bg-slate-800 transition" title="Đường chòm sao">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path></svg>
+    </button>
+
+    <!-- Constellation Labels -->
+    <button id="toolLabelsBtn" class="tool-btn active p-2 rounded-xl text-cyan-400 bg-slate-800/90 hover:bg-slate-800 transition" title="Tên chòm sao">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>
+    </button>
+
+    <!-- Celestial Equatorial Grid -->
+    <button id="toolGridBtn" class="tool-btn active p-2 rounded-xl text-cyan-400 bg-slate-800/90 hover:bg-slate-800 transition" title="Lưới toạ độ xích đạo trời (RA / Dec)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="1.8"></circle><path stroke-linecap="round" stroke-width="1.5" d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"></path></svg>
+    </button>
+
+    <!-- Atmosphere & Horizon Ground -->
+    <button id="toolGroundBtn" class="tool-btn active p-2 rounded-xl text-cyan-400 bg-slate-800/90 hover:bg-slate-800 transition" title="Mặt đất / Đường chân trời">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+    </button>
+
+    <!-- SPHEREx Targets Glow Pins -->
+    <button id="toolSpherexPinsBtn" class="tool-btn active p-2 rounded-xl text-amber-400 bg-amber-950/50 hover:bg-amber-900/50 border border-amber-500/30 transition" title="Bật/Tắt 5 Ngọn hải đăng SPHEREx">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+    </button>
+
+    <!-- Dock Motion Mode Shortcut -->
+    <button id="toolMotionShortcutBtn" class="tool-btn p-2 rounded-xl text-amber-400 hover:text-white hover:bg-slate-800 transition" title="Bật/Tắt Xem Chuyển động & Biến thiên">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+    </button>
+
+    <!-- Night Mode (Deep Red Monochromatic) -->
+    <button id="toolNightModeBtn" class="tool-btn p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Chế độ đêm (Đèn đỏ quan sát)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+    </button>
+
+  </nav>
+
+  <!-- 6. STELLARIUM BOTTOM-RIGHT CLOCK & SPEED CONTROLS -->
+  <div class="absolute bottom-4 right-3 hidden sm:flex items-center gap-2 bg-slate-900/85 border border-slate-700/80 px-3 py-1.5 rounded-2xl shadow-lg backdrop-blur-md text-xs z-30 pointer-events-auto">
+    <div class="flex items-center gap-1.5 font-mono text-cyan-300">
+      <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      <span id="clockDisplay">2026-11-13 00:45:00 UTC</span>
+    </div>
+    <span class="text-slate-600">|</span>
+    <span id="simSpeedDisplay" class="text-[11px] text-slate-400">Thời gian thực 1×</span>
+  </div>
+
+  <!-- SCRIPT ENGINE -->
+  <script>
+    // --- 1. SPHEREx 5 CHALLENGE TARGETS DATA ---
+    const TARGETS = {
+  "barnard": {
+    "name": "Barnard's Star",
+    "alt": "GJ 699 · V2500 Oph · Sao chạy nhanh nhất",
+    "constellation": "Ophiuchus (Xà Phu)",
+    "badge": "High Proper Motion Star",
+    "color": "#f59e0b",
+    "ra": 269.4521,
+    "dec": 4.6934,
+    "pmRaMas": -801.551,
+    "pmDecMas": 10362.394,
+    "mag": "9.51 V / 4.52 K",
+    "dist": "5.96 năm ánh sáng (1.828 pc)",
+    "raDecStr": "17h 57m 48.5s / +04° 41′ 36″",
+    "pmStr": "+10.362″/năm (hướng Bắc)",
+    "parallaxStr": "546.98 ± 0.04 mas",
+    "detectorStr": "SPHEREx Detector 6 (4.4–5.0 µm)",
+    "summary": "Sao Barnard có tốc độ chuyển động ngang nhanh nhất trên bầu trời đêm. Sau 100 năm nó dịch chuyển khoảng cách bằng nửa vầng Trăng tròn.",
+    "conclusion": "Khi chuyển sang <b>Ảnh hiệu</b>, các ngôi sao nền đứng yên triệt tiêu biến mất, làm nổi bật <b>cặp đốm sáng-tối (dipole)</b> chứng minh rõ ràng sao đang nhảy vị trí!",
+    "frames": [
+      {
+        "orig": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcAAAAnCAAAAACpyA7pAAAAuUlEQVR4nGPkYSAKMBGnjGFUHXYwGi7YAUa4MDIxYlPHgs7n4/766Q9B8xj57DLs+BgJq+M2DTflZiRo7/+vpxlOf/2PqY6Rhzj3MaLnN0bG//+J8C8DVlUMo+mK8vx2Z82aNWkM1xns5zAwqG1lxq6OhYHhdwiEeTDJ/GRD7V/C9jZVez09h8Ne5Pi9e77BHZf7WBgYWNcwMJTfBXF4/nC/x60O5j4GU76KpiQc6pDcx9LQfOgvLosBGhcsiqKBaocAAAAASUVORK5CYII=",
+        "diff": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcAAAAnCAAAAACpyA7pAAAAeklEQVR4nGNsYCAKMBGnjGFUHXYwGi7YwWi4YAej4YId0CBcckJCQowYMhnkfRgYhCMZsatjYWD4uwbCfGgg/dT+wH/C9h6yUfn0nAj3vX9hfwSX+1gYGJhDGBj2vgdx2P6z/cCtDuY+Bin2PQ6bCNvLZH/40T9lHOoA7xIZwXjUktwAAAAASUVORK5CYII=",
+        "date": "2025-05-05",
+        "px": [
+          17,
+          19
+        ]
+      },
+      {
+        "orig": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcAAAAnCAAAAACpyA7pAAAAuElEQVR4nGPkYSAKMBGnjGFUHXYwGi7YAZZwYWRixBRkwRTh4/766Q9B8xj57DLs+BgJq+M2DTflZiRo7/+vpxlOf/2PoZ2HOPcxYuY3Rsb//4nwLwMWVaPpigr57c6aNWvSGK4z2M9hYFDbyoxdHQsDw+8QCPNgkvnJhtq/hO1tqvZ6eg6Hvcjxe/d8gzsu97EwMLCuYWAovwvi8Pzhfo9bHcx9DKZ8FU1JONQhuY+lofnQX1wWAwD3UiyK45dz0AAAAABJRU5ErkJggg==",
+        "diff": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcAAAAnCAAAAACpyA7pAAAAxElEQVR4nGNsYCAKMBGnjGFUHXYwGi7YAWa4/GdgJELdv+9fGbg5MXWji/x8dJlBV46dkLr/v5/dYlCTYsWwmgWVy8gqxcFw693v/wTUMbDLSTNc/vuTgZA6Js7/DF//ExMujAxYlI2mK8rzW05ISIgRQyaDvA8Dg3AktsTHAI63v2sgzIcG0k/tD2CLDDR7D9mofHpOhPvev7A/gst9LAwMzCEMDHvfgzhs/9l+4FYHcx+DFPseh02E7WWyP/zonzIOdQBBBS+49xBZaQAAAABJRU5ErkJggg==",
+        "date": "2025-08-15",
+        "px": [
+          19,
+          19
+        ]
+      },
+      {
+        "orig": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcAAAAnCAAAAACpyA7pAAAAuUlEQVR4nGPkYSAKMBGnjGFUHXYwGi7YAdZwYWRiRBdiwaKMhY/766c/BM1j5LPLsONjJKyO2zTclJuRoL3/v55mOP31P5pmHuLcx4gtvzEy/v9PhH8ZMFSNpisq5Lc7a9asSWO4zmA/h4FBbSszdnUsDAy/QyDMg0nmJxtq/xK2t6na6+k5HPYix+/d8w3uuNzHwsDAuoaBofwuiMPzh/s9bnUw9zGY8lU0JeFQh+Q+lobmQ39xWQwA1Jwsiu9OW1MAAAAASUVORK5CYII=",
+        "diff": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcAAAAnCAAAAACpyA7pAAAA1UlEQVR4nGNsYCAKMBGnjGFUHXYwGi7YAWa4/GdgYGDEEGVB4//7+ZuVk5P1989/+M37+fDMIwY5E3l2/Pb+//3syjMGKR0pVka89jKySjFIMTxjfPb7P373sctLsTI8ev77JwF/MHFyMDJ8//GfcLiAHIahbDRdUZ7fckJCQowYMhnkfRgYhCMxkx4DCLAwMPxdA2E+NJB+an8AMyow7D1ko/LpORHue//C/ggu97EwMDCHMDDsfQ/isP1n+4FbHcx9DFLsexw2EbaXyf7wo3/KONQBAHEeNc4YEdoSAAAAAElFTkSuQmCC",
+        "date": "2026-03-20",
+        "px": [
+          21,
+          19
+        ]
+      }
+    ]
+  },
+  "wise0855": {
+    "name": "WISE 0855-0714",
+    "alt": "WISEA J085510.74-071442.5",
+    "constellation": "Hydra (Trường Xà)",
+    "badge": "Ultracool Brown Dwarf",
+    "color": "#f43f5e",
+    "ra": 133.8189,
+    "dec": -7.247,
+    "pmRaMas": -8123.7,
+    "pmDecMas": 673.2,
+    "mag": "> 25.0 V / 14.1 W2",
+    "dist": "7.43 năm ánh sáng (2.28 pc)",
+    "raDecStr": "08h 55m 10.8s / -07° 14′ 43″",
+    "pmStr": "-8.12″/năm RA, +0.68″/năm Dec",
+    "parallaxStr": "438.4 ± 3.7 mas",
+    "detectorStr": "SPHEREx Detector 6 (4.96 µm)",
+    "summary": "Sao lùn nâu lạnh nhất từng được con người phát hiện (nhiệt độ chỉ khoảng -23°C). Nó mờ tịt trong ánh sáng mắt nhìn nhưng phát sáng rực rỡ ở dải hồng ngoại của SPHEREx.",
+    "conclusion": "Tàng hình hoàn toàn ở cảm biến dải sóng ngắn (D1), nhưng bức xạ nhiệt đỉnh ở cảm biến D6 (4.96 µm).",
+    "frames": [
+      {
+        "orig": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAADpklEQVR4nFWTa0xbdRiH//9zeji9UNpCWUtpESgrlnZAoCBDBmVsEGDGiQsxqKgx0RldTJZpYjSyT2Ze5gdvMbAYo2EssouLzgFBZsDWgaxmlvVC6Y1eKL2tnJ7eaWtaNG7vx/fJ79vzQPDQTYiWhsxqJc1WgJI9tQAA5AH4vGnnoGGtRH5Ssc9h9Deocj/Kf/CSGDIDSQ18GT874o61LzsgNfeGefiZHTumbmxIAV+QJbiFCEy2I4R1MLs/v18yssWwsuTtfslLgB/9ZRTYsDqWNcZN1OX2G8lxZRFhm38nPXuuayiCdz1qIQKuV8FMOZnqBAAuk0UKs4/jK4/wkeUXv5BucblWzDlzLgLvdHMgQBI2T9NPiSs4oyr0jWROQaMZl4qSxX0Hp5yU6DQAcAXhaMjjQa2+PSn8s9KZMR+R6umhJaK0y1P87hJA3HwGWsmJKZ9IS13ZUKco5A4EvKuMNw7T5zaHAECkt23vYdqw7g/8dFRAThJn6mpIdkYrFCQOfGK4CSgQu0yxQznaw3iLuyKs+HDM60IsLUbfWrxxwq4CyL39gnGsTSBI2whCjEatsJ7K8McHIpImMer5CMDW74I36g9sUabwaqyorKTUHHRRRymz6/f7ChzI9VPwU2sfjE68zgpucMPSlZpuZDvmao46ibuaF0z3+ycop29AhhJWCQ3Ni4dYggXUlyIrvnf2sOItT3/5VASlgGhp2Y+ixUEi3pCNOyUeO5dvLekl0RMFdiWy3ogAncbbiLSuUkwpnGQU3qzN3tU1yL1CkH4muG6vQcCYaFNP3a0S0C7FtIcWj6ZVOBt4fHSmjfO7uqMQAoCdr8R5IfkskhJ+fs0snJTN7+60c6cVImaw3IAA8Fh3ch/d4SMS39KO9Xt/5bkLefY7VBnEFyYjf0MAUov+wxndV8+yV081vzJiQkKycBj4PaHqMFWoy/m1gLGjqlrgfvxqmeQR3059PO200jpWGberA2jOXw40WDrp4wJL3+7acaPpg4sjwpZkBFoJvrYo76eanrFc7mpjhlRiNPazaQxlpVF+0O7YmT6R53VX//pNcf4H9N62nEZub7KRWAcr7NPImd7hfB+6i6mp9TYM0c9XkFMy6Wu03nHTtSy11D+85//Am1bv+x/Hnwv03jo5uZXBAfp168Zg5/99qNvB9Vi6iXZhgOfGFmU12ULhv1nt8fozo3MF+PyTBQygMpx9MNg9rvd6ankpvbVnphgbfijofwC96I/wOnLclwAAAABJRU5ErkJggg==",
+        "diff": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAAAJElEQVR4nGNsYMALmPBLM4zK4wdMo/J4ARN+aYZRefyAUPgAAGueAL7WjNDAAAAAAElFTkSuQmCC",
+        "date": "2025-05-05",
+        "px": [
+          15,
+          15
+        ]
+      },
+      {
+        "orig": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAADpklEQVR4nFWTa0xbdRiH//9zeji9UNpCWUtpESgrlnZAoCBDBmVsEGDGiQsxqKgx0RldTJZpYjSyT2Ze5gdvMbAYo2EssouLzgFBZsDWgaxmlvVC6Y1eKL2tnJ7eaWtaNG7vx/fJ79vzQPDQTYiWhsxqJc1WgJI9tQAA5AH4vGnnoGGtRH5Ssc9h9Deocj/Kf/CSGDIDSQ18GT874o61LzsgNfeGefiZHTumbmxIAV+QJbiFCEy2I4R1MLs/v18yssWwsuTtfslLgB/9ZRTYsDqWNcZN1OX2G8lxZRFhm38nPXuuayiCdz1qIQKuV8FMOZnqBAAuk0UKs4/jK4/wkeUXv5BucblWzDlzLgLvdHMgQBI2T9NPiSs4oyr0jWROQaMZl4qSxX0Hp5yU6DQAcAXhaMjjQa2+PSn8s9KZMR+R6umhJaK0y1P87hJA3HwGWsmJKZ9IS13ZUKco5A4EvKuMNw7T5zaHAECkt23vYdqw7g/8dFRAThJn6mpIdkYrFCQOfGK4CSgQu0yxQznaw3iLuyKs+HDM60IsLUbfWrxxwq4CyL39gnGsTSBI2whCjEatsJ7K8McHIpImMer5CMDW74I36g9sUabwaqyorKTUHHRRRymz6/f7ChzI9VPwU2sfjE68zgpucMPSlZpuZDvmao46ibuaF0z3+ycop29AhhJWCQ3Ni4dYggXUlyIrvnf2sOItT3/5VASlgGhp2Y+ixUEi3pCNOyUeO5dvLekl0RMFdiWy3ogAncbbiLSuUkwpnGQU3qzN3tU1yL1CkH4muG6vQcCYaFNP3a0S0C7FtIcWj6ZVOBt4fHSmjfO7uqMQAoCdr8R5IfkskhJ+fs0snJTN7+60c6cVImaw3IAA8Fh3ch/d4SMS39KO9Xt/5bkLefY7VBnEFyYjf0MAUov+wxndV8+yV081vzJiQkKycBj4PaHqMFWoy/m1gLGjqlrgfvxqmeQR3059PO200jpWGberA2jOXw40WDrp4wJL3+7acaPpg4sjwpZkBFoJvrYo76eanrFc7mpjhlRiNPazaQxlpVF+0O7YmT6R53VX//pNcf4H9N62nEZub7KRWAcr7NPImd7hfB+6i6mp9TYM0c9XkFMy6Wu03nHTtSy11D+85//Am1bv+x/Hnwv03jo5uZXBAfp168Zg5/99qNvB9Vi6iXZhgOfGFmU12ULhv1nt8fozo3MF+PyTBQygMpx9MNg9rvd6ankpvbVnphgbfijofwC96I/wOnLclwAAAABJRU5ErkJggg==",
+        "diff": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAAAJElEQVR4nGNsYMALmPBLM4zK4wdMo/J4ARN+aYZRefyAUPgAAGueAL7WjNDAAAAAAElFTkSuQmCC",
+        "date": "2025-08-15",
+        "px": [
+          14,
+          15
+        ]
+      },
+      {
+        "orig": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAADpklEQVR4nFWTa0xbdRiH//9zeji9UNpCWUtpESgrlnZAoCBDBmVsEGDGiQsxqKgx0RldTJZpYjSyT2Ze5gdvMbAYo2EssouLzgFBZsDWgaxmlvVC6Y1eKL2tnJ7eaWtaNG7vx/fJ79vzQPDQTYiWhsxqJc1WgJI9tQAA5AH4vGnnoGGtRH5Ssc9h9Deocj/Kf/CSGDIDSQ18GT874o61LzsgNfeGefiZHTumbmxIAV+QJbiFCEy2I4R1MLs/v18yssWwsuTtfslLgB/9ZRTYsDqWNcZN1OX2G8lxZRFhm38nPXuuayiCdz1qIQKuV8FMOZnqBAAuk0UKs4/jK4/wkeUXv5BucblWzDlzLgLvdHMgQBI2T9NPiSs4oyr0jWROQaMZl4qSxX0Hp5yU6DQAcAXhaMjjQa2+PSn8s9KZMR+R6umhJaK0y1P87hJA3HwGWsmJKZ9IS13ZUKco5A4EvKuMNw7T5zaHAECkt23vYdqw7g/8dFRAThJn6mpIdkYrFCQOfGK4CSgQu0yxQznaw3iLuyKs+HDM60IsLUbfWrxxwq4CyL39gnGsTSBI2whCjEatsJ7K8McHIpImMer5CMDW74I36g9sUabwaqyorKTUHHRRRymz6/f7ChzI9VPwU2sfjE68zgpucMPSlZpuZDvmao46ibuaF0z3+ycop29AhhJWCQ3Ni4dYggXUlyIrvnf2sOItT3/5VASlgGhp2Y+ixUEi3pCNOyUeO5dvLekl0RMFdiWy3ogAncbbiLSuUkwpnGQU3qzN3tU1yL1CkH4muG6vQcCYaFNP3a0S0C7FtIcWj6ZVOBt4fHSmjfO7uqMQAoCdr8R5IfkskhJ+fs0snJTN7+60c6cVImaw3IAA8Fh3ch/d4SMS39KO9Xt/5bkLefY7VBnEFyYjf0MAUov+wxndV8+yV081vzJiQkKycBj4PaHqMFWoy/m1gLGjqlrgfvxqmeQR3059PO200jpWGberA2jOXw40WDrp4wJL3+7acaPpg4sjwpZkBFoJvrYo76eanrFc7mpjhlRiNPazaQxlpVF+0O7YmT6R53VX//pNcf4H9N62nEZub7KRWAcr7NPImd7hfB+6i6mp9TYM0c9XkFMy6Wu03nHTtSy11D+85//Am1bv+x/Hnwv03jo5uZXBAfp168Zg5/99qNvB9Vi6iXZhgOfGFmU12ULhv1nt8fozo3MF+PyTBQygMpx9MNg9rvd6ankpvbVnphgbfijofwC96I/wOnLclwAAAABJRU5ErkJggg==",
+        "diff": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAAAJElEQVR4nGNsYMALmPBLM4zK4wdMo/J4ARN+aYZRefyAUPgAAGueAL7WjNDAAAAAAElFTkSuQmCC",
+        "date": "2026-03-20",
+        "px": [
+          13,
+          15
+        ]
+      }
+    ]
+  },
+  "epsindib": {
+    "name": "Epsilon Indi B",
+    "alt": "eps Ind B · GJ 845 B · T-Dwarf Binary",
+    "constellation": "Indus (Ấn Đệ An)",
+    "badge": "T-Dwarf Binary Companion",
+    "color": "#06b6d4",
+    "ra": 331.0441,
+    "dec": -56.7828,
+    "pmRaMas": 3981.98,
+    "pmDecMas": -2466.83,
+    "mag": "12.3 J / 11.2 H",
+    "dist": "11.87 năm ánh sáng (3.64 pc)",
+    "raDecStr": "22h 04m 10.5s / -56° 46′ 58″",
+    "pmStr": "+3.98″/năm RA, -2.47″/năm Dec",
+    "parallaxStr": "270.66 ± 0.60 mas",
+    "detectorStr": "SPHEREx Detector 6 (4.42 µm)",
+    "summary": "Cặp sao lùn nâu đôi quay quanh nhau, đồng hành cùng sao chủ Epsilon Indi A. Bầu khí quyển chứa hàm lượng khí metan (CH4) rất cao.",
+    "conclusion": "Hấp thụ cực mạnh dải khí metan trong các kênh phổ hồng ngoại SPHEREx.",
+    "frames": [
+      {
+        "orig": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAAClklEQVR4nF2TSY5bRwyGSRarXr1JiiR0O4MDA17bu6xzg9wmq5wruUlyAaPhxG3Zml69oQYyUAudOOGCP8APP8jFT4RbfZPa5ai+mtMEXxbd5MWCJNS5yRmz/pLzTY41fLSJKi1cbxYv5vAf/ys3RiXX6DxHOO/YqX974/jUd9KMSRdHNLQKbdSSmmL3z/z1o6k+3QOdKyka2NdzmbPWbeofbn72MnbIM9flZJpIl60dZyN1nZ7u62AlHL21KU356zhxA2haLiWPV26qZaHJT6eOxVIfyhALQDNqxesr38XME2nNzsolHRSbr46Ms3A0V397Vh6Nm505ekdIya5kvCReoyaDAJ1L2FKABvPgKLS4Sgfx5uScGmG4n0OGBptwVqR7Tb6EsZ91jE4yZoTeqI1WvUqw/Q/r39+fsCk5l26SLhn8fgATzxsAdex+/PnNr798dPkAaO7qz/WfazqUkKUucTiXUL96iz+9sMvYbrXafrsbv2vYUBTT0sFWycV3Dy9/e9jz7BDk8S+UweNmqUao149xIz5uX/d/fDjf7Qm4XdiaPOJGZH3AYqTr9b2+HIPY0FiA1VQgc8UDO2SVsl5OiibMU9rBJG18bGVW+cC29nOlbimjk3YapGPug+dJCpMFwLulSFXWZyDACCvkkUVwFnQ42ROwK8lV8XLdwcJl8pgIo2JdCikApdy6nCfVsiwRt/04EU6Rh2NF5gzAlJVIRV1pXCqXJbh2oRTrPFC8Jivykhq/Go1NJ2O0hXTp/DsAC64857Oq7bD9jJy6uNl+2rd0UcpkT//kG6DNzkIqq0rx2KR9xV7m66c9c6iAnAuuCerIhLT0cLX/ywFMY0i9aNAaoogs/+PXoOdeBA2aA5rhafI3jbB83OAOPoIAAAAASUVORK5CYII=",
+        "diff": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAAAJElEQVR4nGNsYMALmPBLM4zK4wdMo/J4ARN+aYZRefyAUPgAAGueAL7WjNDAAAAAAElFTkSuQmCC",
+        "date": "2025-05-05",
+        "px": [
+          15,
+          15
+        ]
+      }
+    ]
+  },
+  "rwaur": {
+    "name": "RW Aurigae",
+    "alt": "RW Aur · T Tauri Variable System",
+    "constellation": "Auriga (Ngự Phu)",
+    "badge": "Young T Tauri Variable",
+    "color": "#c084fc",
+    "ra": 76.9565,
+    "dec": 30.4014,
+    "pmRaMas": 7.23,
+    "pmDecMas": -20.33,
+    "isVariable": true,
+    "varType": "T Tauri Dust Occultation",
+    "mag": "10.1–13.6 V (biến đổi)",
+    "dist": "532 năm ánh sáng (163 pc)",
+    "raDecStr": "05h 07m 49.6s / +30° 24′ 05″",
+    "pmStr": "+0.007″/năm RA, -0.02″/năm Dec",
+    "parallaxStr": "15.42 ± 3.69 mas",
+    "detectorStr": "SPHEREx Detector 6 (4.43 µm)",
+    "summary": "Hệ sao đôi rất trẻ đang trong quá trình hình thành, có đĩa bụi khí bao quanh và liên tục sụt giảm độ sáng đột ngột khi bụi che chắn ánh sáng.",
+    "conclusion": "Đo đạc sự dư thừa bức xạ hồng ngoại do bụi ấm quanh phôi sao phát ra.",
+    "frames": [
+      {
+        "orig": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAAClklEQVR4nF2TSY5bRwyGSRarXr1JiiR0O4MDA17bu6xzg9wmq5wruUlyAaPhxG3Zml69oQYyUAudOOGCP8APP8jFT4RbfZPa5ai+mtMEXxbd5MWCJNS5yRmz/pLzTY41fLSJKi1cbxYv5vAf/ys3RiXX6DxHOO/YqX974/jUd9KMSRdHNLQKbdSSmmL3z/z1o6k+3QOdKyka2NdzmbPWbeofbn72MnbIM9flZJpIl60dZyN1nZ7u62AlHL21KU356zhxA2haLiWPV26qZaHJT6eOxVIfyhALQDNqxesr38XME2nNzsolHRSbr46Ms3A0V397Vh6Nm505ekdIya5kvCReoyaDAJ1L2FKABvPgKLS4Sgfx5uScGmG4n0OGBptwVqR7Tb6EsZ91jE4yZoTeqI1WvUqw/Q/r39+fsCk5l26SLhn8fgATzxsAdex+/PnNr798dPkAaO7qz/WfazqUkKUucTiXUL96iz+9sMvYbrXafrsbv2vYUBTT0sFWycV3Dy9/e9jz7BDk8S+UweNmqUao149xIz5uX/d/fDjf7Qm4XdiaPOJGZH3AYqTr9b2+HIPY0FiA1VQgc8UDO2SVsl5OiibMU9rBJG18bGVW+cC29nOlbimjk3YapGPug+dJCMFwLulSFXWZyDACCvkkUVwFnQ42ROwK8lV8XLdwcJl8pgIo2JdCikApdy6nCfVsiwRt/04EU6Rh2NF5gzAlJVIRV1pXCqXJbh2oRTrPFC8Jivykhq/Go1NJ2O0hXTp/DsAC64857Oq7bD9jJy6uNl+2rd0UcpkT//kG6DNzkIqq0rx2KR9xV7m66c9c6iAnAuuCerIhLT0cLX/ywFMY0i9aNAaoogs/+PXoOdeBA2aA5rhafI3jbB83OAOPoIAAAAASUVORK5CYII=",
+        "diff": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAAAJElEQVR4nGNsYMALmPBLM4zK4wdMo/J4ARN+aYZRefyAUPgAAGueAL7WjNDAAAAAAElFTkSuQmCC",
+        "date": "2025-09-12",
+        "px": [
+          15,
+          15
+        ]
+      }
+    ]
+  },
+  "rdra": {
+    "name": "R Draconis",
+    "alt": "R Dra · HIP 81285 · Mira Variable",
+    "constellation": "Draco (Thiên Long)",
+    "badge": "Mira Pulsating Variable",
+    "color": "#ef4444",
+    "ra": 248.1674,
+    "dec": 66.7551,
+    "pmRaMas": -20.64,
+    "pmDecMas": 6.15,
+    "isVariable": true,
+    "varType": "Mira Pulsating Variable",
+    "periodDays": 245,
+    "mag": "6.7–13.2 V (chu kỳ 245 ngày)",
+    "dist": "2,150 năm ánh sáng (660 pc)",
+    "raDecStr": "16h 32m 40.2s / +66° 45′ 18″",
+    "pmStr": "-0.02″/năm RA, +0.006″/năm Dec",
+    "parallaxStr": "1.25 ± 0.09 mas",
+    "detectorStr": "SPHEREx Detector 6 (4.49 µm)",
+    "summary": "Sao khổng lồ đỏ biến quang Mira nằm gần cực bắc bầu trời. Chu kỳ phồng xẹp làm độ sáng thay đổi hàng trăm lần qua từng mùa quan sát.",
+    "conclusion": "Sao biến quang có biên độ sáng cực lớn. Lõi sao đạt đỉnh sáng làm bão hòa cảm biến SPHEREx.",
+    "frames": [
+      {
+        "orig": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAABsklEQVR4nFVTy07cQBDsai9rAhKRcuGAuMApH5J/yS0fE/EBfAG3fEykXJD2kCDEacVmsbuiqhkvm7FlzfRjurq6DBDxvpBZRe26GX4XA7EcbCAiZbHRbjt6BgKMXKKdALny7PyQw5XdOrwDOZWBlAWtIHyQWZ9k6aBFpIMjIEv2PMMLrazuVm8N1BFgYNUh25yKoR4XDBSMz+FM5Sao6vKG8ZsSBaRihwFzvaE6XaH7hSCAIdbIcYzdHhNsY1L9m5SIOsGHi+tLbDYvr9MyA6p+24LDxy/fbuLhbvu3lUcUWn3Dx3j19TaCP345OgIVzEYEkDnw/LPvGlIp6tOMtQBynjY/I+LxD7V6RHpDvfPu9/cNn+8ft5OODbgJc3/I1frT9dnr89P2bWYFPaNGDmhq1+NYUfv9XGR11vvQM6SlIQVk4kyU9SAFRPl+bRPirIRPtopYRcnVmtBgytRQqaWZL+Nh+B61Irubk9eqanJwpIff2M9xvdOkD3+Cv766ieYE06KkpgZPtU9GIjH/FnfnWzdrX2ZNWj3KX6Yq5gzZkjxIuRf1bHpH/+e38se/c/AfhSnrTZ+o1bcAAAAASUVORK5CYII=",
+        "diff": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAAAJElEQVR4nGNsYMALmPBLM4zK4wdMo/J4ARN+aYZRefyAUPgAAGueAL7WjNDAAAAAAElFTkSuQmCC",
+        "date": "2025-05-16",
+        "px": [
+          15,
+          15
+        ]
+      }
+    ]
+  }
+};
+
+    // --- 2. MOTION SIMULATOR STATE (DEFAULT: AT ORIGIN POSITION & TIME) ---
+    let motionMode = false;         // Default: stars at origin time & position
+    let simYears = 0;               // 0 = Origin baseline (2025-05-05)
+    let isPlayingMotion = false;
+    let motionExaggeration = 200;   // 200x for clear visual trajectory across screen
+    let showTrails = true;
+    let showVariability = true;
+    let showDeltaMetrics = true;
+
+    // --- 3. CELESTIAL CANVAS RENDERER & 3D PROJECTION ---
+    const canvas = document.getElementById("skyCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function raDecToVec(raDeg, decDeg) {
+      const ra = raDeg * Math.PI / 180;
+      const dec = decDeg * Math.PI / 180;
+      return {
+        x: Math.cos(dec) * Math.cos(ra),
+        y: Math.sin(dec),
+        z: Math.cos(dec) * Math.sin(ra)
+      };
+    }
+
+    // Exact Look-At Angles to Center Any Vector v in Screen Center (w/2, h/2)
+    function getLookAtAngles(v) {
+      const yaw = Math.atan2(v.x, -v.z);
+      const cy = Math.cos(yaw), sy = Math.sin(yaw);
+      const z1 = -v.x * sy + v.z * cy;
+      const pitch = Math.atan2(v.y, z1);
+      return { yaw, pitch };
+    }
+
+    // INITIAL CAMERA: Centered dead-on at Barnard's Star!
+    const initBarnardVec = raDecToVec(TARGETS.barnard.ra, TARGETS.barnard.dec);
+    const initLook = getLookAtAngles(initBarnardVec);
+    let yaw = initLook.yaw;
+    let pitch = initLook.pitch;
+    let targetYaw = yaw;
+    let targetPitch = pitch;
+    let fov = 70 * Math.PI / 180;
+    let isDragging = false;
+    let lastX = 0, lastY = 0;
+
+    // Toggles from Stellarium Toolbar
+    let showLines = true;
+    let showLabels = true;
+    let showGrid = true;
+    let showGround = true;
+    let showSpherexPins = true;
+    let nightMode = false;
+
+    // Generate ~850 stars
+    const stars = [];
+    for (let i = 0; i < 850; i++) {
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * 2 * Math.PI;
+      const phi = Math.acos(2 * v - 1) - Math.PI / 2;
+      const r = Math.random();
+      const size = r < 0.03 ? 2.8 : (r < 0.18 ? 1.8 : 1.0);
+      const alpha = 0.25 + Math.random() * 0.75;
+      stars.push({
+        x: Math.cos(phi) * Math.cos(theta),
+        y: Math.sin(phi),
+        z: Math.cos(phi) * Math.sin(theta),
+        size,
+        alpha
+      });
+    }
+
+    // Classic Constellations Stick Figures
+    const CONSTELLATIONS = [
+      {
+        name: "Orion (Thợ Săn)",
+        ra: 83.8, dec: 0.0,
+        lines: [
+          [[88.8, 7.4], [81.3, 6.3]], [[81.3, 6.3], [84.1, -1.2]], [[84.1, -1.2], [85.2, -1.9]],
+          [[85.2, -1.9], [86.1, -2.6]], [[86.1, -2.6], [78.6, -8.2]], [[84.1, -1.2], [78.6, -8.2]],
+          [[86.1, -2.6], [88.8, -9.7]], [[88.8, 7.4], [86.1, -2.6]]
+        ]
+      },
+      {
+        name: "Ursa Major (Đại Hùng / Bắc Đẩu)",
+        ra: 165.0, dec: 55.0,
+        lines: [
+          [[165.5, 61.8], [165.9, 56.4]], [[165.9, 56.4], [178.5, 54.9]], [[178.5, 54.9], [177.7, 58.0]],
+          [[177.7, 58.0], [165.5, 61.8]], [[178.5, 54.9], [193.5, 56.0]], [[193.5, 56.0], [200.7, 54.9]],
+          [[200.7, 54.9], [206.9, 49.3]]
+        ]
+      },
+      {
+        name: "Cassiopeia (Thiên Hậu)",
+        ra: 15.0, dec: 60.0,
+        lines: [
+          [[9.8, 59.2], [14.2, 56.5]], [[14.2, 56.5], [21.5, 60.7]], [[21.5, 60.7], [24.7, 60.2]],
+          [[24.7, 60.2], [28.6, 63.7]]
+        ]
+      },
+      {
+        name: "Ophiuchus (Xà Phu)",
+        ra: 262.0, dec: 0.0,
+        lines: [
+          [[263.7, 12.6], [257.2, 9.4]], [[257.2, 9.4], [253.0, -3.7]], [[253.0, -3.7], [266.0, -4.7]],
+          [[266.0, -4.7], [263.7, 12.6]], [[266.0, -4.7], [272.5, -9.8]]
+        ]
+      },
+      {
+        name: "Draco (Thiên Long)",
+        ra: 250.0, dec: 65.0,
+        lines: [
+          [[268.0, 52.3], [262.8, 51.5]], [[262.8, 51.5], [269.1, 56.9]], [[269.1, 56.9], [253.0, 56.0]],
+          [[253.0, 56.0], [248.0, 65.0]]
+        ]
+      }
+    ];
+
+    function project(v, w, h) {
+      const cy = Math.cos(yaw), sy = Math.sin(yaw);
+      const x1 = v.x * cy + v.z * sy;
+      const y1 = v.y;
+      const z1 = -v.x * sy + v.z * cy;
+
+      const cp = Math.cos(pitch), sp = Math.sin(pitch);
+      const x2 = x1;
+      const y2 = y1 * cp - z1 * sp;
+      const z2 = y1 * sp + z1 * cp;
+
+      if (z2 <= 0.05) return null;
+
+      const f = (h / 2) / Math.tan(fov / 2);
+      return {
+        x: w / 2 + (x2 / z2) * f,
+        y: h / 2 - (y2 / z2) * f,
+        z: z2
+      };
+    }
+
+    // Helper: Calculate Target Position at given Sim Years
+    function getTargetPos(t, years, useExaggeration = true) {
+      if (!motionMode || years === 0 || !t.pmRaMas) {
+        return { ra: t.ra, dec: t.dec };
+      }
+      const mult = useExaggeration ? motionExaggeration : 1;
+      const pmRaDegPerYr = (t.pmRaMas / 3600000) / Math.cos(t.dec * Math.PI / 180);
+      const pmDecDegPerYr = t.pmDecMas / 3600000;
+      return {
+        ra: t.ra + pmRaDegPerYr * years * mult,
+        dec: t.dec + pmDecDegPerYr * years * mult
+      };
+    }
+
+    let lastMotionFrameTs = 0;
+
+    function renderSky(ts) {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+
+      // Smooth camera interpolation
+      yaw += (targetYaw - yaw) * 0.12;
+      pitch += (targetPitch - pitch) * 0.12;
+
+      // Handle motion animation loop if playing
+      if (motionMode && isPlayingMotion) {
+        const dt = lastMotionFrameTs ? (ts - lastMotionFrameTs) / 1000 : 0.016;
+        simYears += dt * 2.5; // Smooth time advance ~2.5 years per second
+        if (simYears > 50) simYears = 0; // loop seamlessly
+        updateMotionUI();
+      }
+      lastMotionFrameTs = ts;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Deep space background
+      const skyGrad = ctx.createRadialGradient(w/2, h/2, 50, w/2, h/2, w*0.75);
+      skyGrad.addColorStop(0, "#080e22");
+      skyGrad.addColorStop(0.5, "#040714");
+      skyGrad.addColorStop(1, "#020308");
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // 1. Milky Way Ribbon (glowing gas clouds)
+      ctx.save();
+      for (let s = 0; s < 90; s++) {
+        const t = (s / 90) * Math.PI * 2;
+        const p = project({ x: Math.cos(t), y: Math.sin(t)*0.88, z: Math.sin(t)*0.47 }, w, h);
+        if (p) {
+          ctx.fillStyle = "rgba(147, 197, 253, 0.035)";
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, Math.max(15, 45 / p.z), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+
+      // 2. Equatorial Grid (RA / Dec)
+      if (showGrid) {
+        ctx.strokeStyle = "rgba(6, 182, 212, 0.35)";
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        let fEq = true;
+        for (let d = 0; d <= 360; d += 2) {
+          const r = d * Math.PI / 180;
+          const p = project({ x: Math.cos(r), y: 0, z: Math.sin(r) }, w, h);
+          if (p) {
+            if (fEq) { ctx.moveTo(p.x, p.y); fEq = false; }
+            else ctx.lineTo(p.x, p.y);
+          } else { fEq = true; }
+        }
+        ctx.stroke();
+
+        [30, 60, -30, -60].forEach(dDeg => {
+          ctx.strokeStyle = "rgba(148, 163, 184, 0.15)";
+          ctx.setLineDash([2, 5]);
+          ctx.beginPath();
+          let fDec = true;
+          const dRad = dDeg * Math.PI / 180;
+          for (let d = 0; d <= 360; d += 4) {
+            const r = d * Math.PI / 180;
+            const p = project({ x: Math.cos(dRad)*Math.cos(r), y: Math.sin(dRad), z: Math.cos(dRad)*Math.sin(r) }, w, h);
+            if (p) {
+              if (fDec) { ctx.moveTo(p.x, p.y); fDec = false; }
+              else ctx.lineTo(p.x, p.y);
+            } else { fDec = true; }
+          }
+          ctx.stroke();
+        });
+        ctx.setLineDash([]);
+      }
+
+      // 3. Constellations Lines & Labels
+      if (showLines) {
+        ctx.strokeStyle = "rgba(96, 165, 250, 0.4)";
+        ctx.lineWidth = 1.0;
+        CONSTELLATIONS.forEach(c => {
+          c.lines.forEach(seg => {
+            const v1 = raDecToVec(seg[0][0], seg[0][1]);
+            const v2 = raDecToVec(seg[1][0], seg[1][1]);
+            const p1 = project(v1, w, h);
+            const p2 = project(v2, w, h);
+            if (p1 && p2) {
+              ctx.beginPath();
+              ctx.moveTo(p1.x, p1.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.stroke();
+            }
+          });
+        });
+      }
+
+      if (showLabels) {
+        ctx.font = "600 11px sans-serif";
+        ctx.fillStyle = "rgba(191, 219, 254, 0.75)";
+        ctx.textAlign = "center";
+        CONSTELLATIONS.forEach(c => {
+          const v = raDecToVec(c.ra, c.dec);
+          const p = project(v, w, h);
+          if (p) ctx.fillText(c.name, p.x, p.y);
+        });
+      }
+
+      // 4. Background Stars
+      for (let i = 0; i < stars.length; i++) {
+        const s = stars[i];
+        const p = project(s, w, h);
+        if (p) {
+          ctx.fillStyle = `rgba(248, 250, 252, ${s.alpha})`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, s.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // 5. SPHEREx 5 CHALLENGE TARGETS (With Motion & Variability Engine)
+      if (showSpherexPins) {
+        const tSec = ts * 0.003;
+        Object.keys(TARGETS).forEach(key => {
+          const t = TARGETS[key];
+          const isSelected = (key === selectedKey);
+
+          // Base origin point
+          const baseVec = raDecToVec(t.ra, t.dec);
+          const pBase = project(baseVec, w, h);
+
+          // Current displaced position
+          const curPos = getTargetPos(t, simYears);
+          const curVec = raDecToVec(curPos.ra, curPos.dec);
+          const pCur = project(curVec, w, h);
+
+          if (!pCur) return;
+
+          // Variable Star Pulsation calculation
+          let varScale = 1.0;
+          let varAlpha = 1.0;
+          let varStatus = "";
+          if (motionMode && showVariability && t.isVariable) {
+            if (key === "rdra") {
+              // Mira pulsating variable: 245 day period (dramatically visible)
+              const phase = ((simYears * 365.25) / t.periodDays) * 2 * Math.PI + (ts * 0.003);
+              const sinVal = Math.sin(phase);
+              varScale = 1.0 + 1.8 * (sinVal * 0.5 + 0.5); // size scales from 1.0 to 2.8x
+              varAlpha = 0.4 + 0.6 * (sinVal * 0.5 + 0.5);
+              varStatus = sinVal > 0.2 ? "Cực đại (Sáng rực)" : (sinVal < -0.2 ? "Cực tiểu (Mờ)" : "Đang biến thiên");
+            } else if (key === "rwaur") {
+              // T Tauri dust occultation flicker
+              const dustDip = Math.sin(ts * 0.005) * Math.cos(ts * 0.008);
+              varScale = dustDip < -0.3 ? 0.6 : 1.2;
+              varAlpha = dustDip < -0.3 ? 0.4 : 0.95;
+              varStatus = dustDip < -0.3 ? "Bụi che khuất" : "Quang độ chuẩn";
+            }
+          }
+
+          // A. Draw Motion Trail & Ghost Marker if displaced
+          if (motionMode && simYears > 0.01 && showTrails && pBase && t.pmRaMas) {
+            // 1. Ghost ring at original 2025 base position
+            ctx.save();
+            ctx.strokeStyle = "rgba(148, 163, 184, 0.6)";
+            ctx.setLineDash([3, 3]);
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(pBase.x, pBase.y, 8, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = "rgba(226, 232, 240, 0.85)";
+            ctx.font = "bold 10px sans-serif";
+            ctx.fillText("Gốc 2025", pBase.x + 11, pBase.y - 4);
+            ctx.restore();
+
+            // 2. Glowing Motion Trail connecting Base to Displaced Position
+            ctx.save();
+            const grad = ctx.createLinearGradient(pBase.x, pBase.y, pCur.x, pCur.y);
+            grad.addColorStop(0, "rgba(245, 158, 11, 0.2)");
+            grad.addColorStop(0.8, t.color);
+            grad.addColorStop(1, "#38bdf8");
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = isSelected ? 3.5 : 2.5;
+            ctx.beginPath();
+            ctx.moveTo(pBase.x, pBase.y);
+            ctx.lineTo(pCur.x, pCur.y);
+            ctx.stroke();
+
+            // 3. Velocity Vector Arrowhead
+            const angle = Math.atan2(pCur.y - pBase.y, pCur.x - pBase.x);
+            const headLen = 10;
+            ctx.fillStyle = "#38bdf8";
+            ctx.beginPath();
+            ctx.moveTo(pCur.x, pCur.y);
+            ctx.lineTo(pCur.x - headLen * Math.cos(angle - Math.PI/6), pCur.y - headLen * Math.sin(angle - Math.PI/6));
+            ctx.lineTo(pCur.x - headLen * Math.cos(angle + Math.PI/6), pCur.y - headLen * Math.sin(angle + Math.PI/6));
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+          }
+
+          // B. Target Beacon Pin at Current Position
+          const pulse = Math.sin(tSec * 3 + (key.charCodeAt(0) % 5)) * 0.35 + 0.65;
+
+          // Pulsing target ring
+          ctx.strokeStyle = isSelected ? "#38bdf8" : t.color;
+          ctx.lineWidth = isSelected ? 2.5 : 1.5;
+          ctx.beginPath();
+          ctx.arc(pCur.x, pCur.y, (isSelected ? 18 : 12) * pulse * varScale, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Mira Variable extra radiant corona rays
+          if (t.isVariable && key === "rdra" && motionMode && showVariability) {
+            ctx.save();
+            ctx.strokeStyle = `rgba(239, 68, 68, ${0.6 * varAlpha})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(pCur.x, pCur.y, 26 * varScale, 0, Math.PI * 2);
+            ctx.stroke();
+            // Radiating spikes
+            for (let a = 0; a < 4; a++) {
+              const ang = a * Math.PI / 2 + ts * 0.001;
+              ctx.beginPath();
+              ctx.moveTo(pCur.x + Math.cos(ang) * 10 * varScale, pCur.y + Math.sin(ang) * 10 * varScale);
+              ctx.lineTo(pCur.x + Math.cos(ang) * 32 * varScale, pCur.y + Math.sin(ang) * 32 * varScale);
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+
+          // Core dot
+          ctx.fillStyle = isSelected ? "#ffffff" : t.color;
+          ctx.beginPath();
+          ctx.arc(pCur.x, pCur.y, (isSelected ? 5.5 : 4.0) * (t.isVariable ? varScale : 1), 0, Math.PI * 2);
+          ctx.fill();
+
+          // Target Name Badge
+          ctx.font = isSelected ? "bold 13px sans-serif" : "11px sans-serif";
+          ctx.fillStyle = isSelected ? "#ffffff" : "rgba(241, 245, 249, 0.9)";
+          ctx.textAlign = "left";
+          ctx.fillText(t.name, pCur.x + (isSelected ? 22 : 16), pCur.y + 4);
+
+          // C. Delta Angular Displacement & Status Metric Tag
+          if (motionMode && showDeltaMetrics) {
+            let metricText = "";
+            if (t.pmRaMas && simYears > 0.01) {
+              const deltaArcsec = Math.hypot((t.pmRaMas/1000) * Math.cos(t.dec * Math.PI/180), t.pmDecMas/1000) * simYears;
+              metricText = `Đã dịch chuyển: +${deltaArcsec.toFixed(1)}″ (${t.pmStr.split(' ')[0]})`;
+            } else if (t.isVariable && varStatus) {
+              metricText = `Biến thiên: ${varStatus}`;
+            }
+            if (metricText) {
+              ctx.font = "bold 11px monospace";
+              ctx.fillStyle = isSelected ? "#38bdf8" : "#fbbf24";
+              ctx.fillText(metricText, pCur.x + (isSelected ? 22 : 16), pCur.y + 19);
+            }
+          }
+
+          if (isSelected) {
+            // Reticle brackets around target
+            ctx.strokeStyle = "rgba(56, 189, 248, 0.95)";
+            ctx.lineWidth = 2;
+            const r = 26 * varScale;
+            ctx.beginPath();
+            ctx.moveTo(pCur.x - r, pCur.y); ctx.lineTo(pCur.x - r + 8, pCur.y);
+            ctx.moveTo(pCur.x + r, pCur.y); ctx.lineTo(pCur.x + r - 8, pCur.y);
+            ctx.moveTo(pCur.x, pCur.y - r); ctx.lineTo(pCur.x, pCur.y - r + 8);
+            ctx.moveTo(pCur.x, pCur.y + r); ctx.lineTo(pCur.x, pCur.y + r - 8);
+            ctx.stroke();
+          }
+        });
+      }
+
+      // 6. Atmosphere & Ground Horizon
+      if (showGround) {
+        const horizonY = h / 2 + Math.tan(pitch) * (h / (2 * Math.tan(fov / 2)));
+        if (horizonY < h + 200) {
+          const gGrad = ctx.createLinearGradient(0, horizonY, 0, h);
+          gGrad.addColorStop(0, "rgba(5, 46, 22, 0.7)");
+          gGrad.addColorStop(0.3, "rgba(2, 26, 12, 0.88)");
+          gGrad.addColorStop(1, "#010d06");
+          ctx.fillStyle = gGrad;
+          ctx.fillRect(0, Math.max(0, horizonY), w, h - horizonY);
+
+          ctx.strokeStyle = "rgba(74, 222, 128, 0.5)";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(0, horizonY);
+          ctx.lineTo(w, horizonY);
+          ctx.stroke();
+
+          // Cardinal Directions
+          const cardinals = [
+            { name: "N (Bắc)", az: 0 },
+            { name: "E (Đông)", az: Math.PI / 2 },
+            { name: "S (Nam)", az: Math.PI },
+            { name: "W (Tây)", az: 3 * Math.PI / 2 }
+          ];
+          ctx.font = "bold 13px sans-serif";
+          ctx.textAlign = "center";
+          cardinals.forEach(card => {
+            const v = { x: Math.sin(card.az), y: -0.01, z: Math.cos(card.az) };
+            const p = project(v, w, h);
+            if (p && p.y > 0 && p.y < h) {
+              ctx.fillStyle = "rgba(74, 222, 128, 0.9)";
+              ctx.fillText(card.name, p.x, horizonY - 8);
+            }
+          });
+        }
+      }
+
+      requestAnimationFrame(renderSky);
+    }
+
+    // --- 4. TARGET DRAWER LOGIC ---
+    let selectedKey = "barnard";
+    const targetDrawer = document.getElementById("targetDrawer");
+
+    function openTarget(key, centerCamera = true) {
+      selectedKey = key;
+      const t = TARGETS[key];
+      if (!t) return;
+
+      document.getElementById("drawerTitle").textContent = t.name;
+      document.getElementById("drawerAltName").textContent = t.alt;
+      document.getElementById("drawerConstellation").textContent = t.constellation;
+      document.getElementById("drawerBadge").textContent = t.badge;
+
+      document.getElementById("astroMag").textContent = t.mag;
+      document.getElementById("astroDist").textContent = t.dist;
+      document.getElementById("astroRaDec").textContent = t.raDecStr;
+      document.getElementById("astroPm").textContent = t.pmStr;
+      document.getElementById("astroParallax").textContent = t.parallaxStr;
+      document.getElementById("astroDet").textContent = t.detectorStr;
+      document.getElementById("astroSummary").textContent = t.summary;
+      document.getElementById("blinkConclusionText").innerHTML = t.conclusion;
+
+      targetDrawer.classList.remove("-translate-x-[115%]");
+
+      if (centerCamera) {
+        const curPos = getTargetPos(t, simYears);
+        const curVec = raDecToVec(curPos.ra, curPos.dec);
+        const look = getLookAtAngles(curVec);
+        targetYaw = look.yaw;
+        targetPitch = look.pitch;
+      }
+
+      bFrameIdx = 0;
+      renderDrawerBlink();
+    }
+
+    function selectAndCenterTarget(key) {
+      openTarget(key, true);
+      // update active button state in panel
+      document.querySelectorAll(".target-quick-btn").forEach(btn => {
+        btn.classList.remove("bg-amber-500/30", "border-amber-500", "text-amber-200");
+        btn.classList.add("bg-slate-800", "border-slate-700", "text-slate-300");
+      });
+      if (event && event.currentTarget) {
+        event.currentTarget.classList.remove("bg-slate-800", "border-slate-700", "text-slate-300");
+        event.currentTarget.classList.add("bg-amber-500/30", "border-amber-500", "text-amber-200");
+      }
+    }
+
+    // --- 5. SPHEREx BLINK VIEWER (SIGNATURE FEATURE) ---
+    const bCanvas = document.getElementById("drawerBlinkCanvas");
+    const bCtx = bCanvas.getContext("2d");
+    let bFrameIdx = 0;
+    let bPlaying = true;
+    let bFps = 3;
+    let bMode = "orig"; // "orig" or "diff"
+    let bCrosshair = true;
+    let bLastTick = 0;
+    const imgCache = {};
+
+    function getCachedImage(src, callback) {
+      if (imgCache[src]) {
+        callback(imgCache[src]);
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        imgCache[src] = img;
+        callback(img);
+      };
+      img.src = src;
+    }
+
+    function renderDrawerBlink() {
+      const t = TARGETS[selectedKey];
+      if (!t || !t.frames.length) return;
+      const f = t.frames[bFrameIdx % t.frames.length];
+      const src = (bMode === "orig") ? f.orig : f.diff;
+
+      getCachedImage(src, (img) => {
+        bCtx.clearRect(0, 0, bCanvas.width, bCanvas.height);
+        bCtx.drawImage(img, 0, 0, bCanvas.width, bCanvas.height);
+
+        if (bCrosshair && f.px) {
+          const scaleX = bCanvas.width / img.width;
+          const scaleY = bCanvas.height / img.height;
+          const cx = f.px[0] * scaleX;
+          const cy = f.px[1] * scaleY;
+
+          bCtx.strokeStyle = "rgba(6, 182, 212, 0.85)";
+          bCtx.lineWidth = 1.2;
+          bCtx.beginPath();
+          bCtx.moveTo(cx - 9, cy); bCtx.lineTo(cx + 9, cy);
+          bCtx.moveTo(cx, cy - 9); bCtx.lineTo(cx, cy + 9);
+          bCtx.stroke();
+
+          bCtx.beginPath();
+          bCtx.arc(cx, cy, 6, 0, Math.PI * 2);
+          bCtx.stroke();
+        }
+
+        document.getElementById("blinkCounter").textContent = `Khung ${ (bFrameIdx % t.frames.length) + 1 } / ${ t.frames.length }`;
+        document.getElementById("blinkDate").textContent = f.date;
+      });
+    }
+
+    function blinkLoop(now) {
+      const interval = 1000 / bFps;
+      if (bPlaying && (now - bLastTick >= interval)) {
+        const t = TARGETS[selectedKey];
+        if (t && t.frames.length > 1) {
+          bFrameIdx = (bFrameIdx + 1) % t.frames.length;
+          renderDrawerBlink();
+        }
+        bLastTick = now;
+      }
+      requestAnimationFrame(blinkLoop);
+    }
+
+    // --- 6. MOTION SIMULATOR EVENT HANDLERS ---
+    const toggleMotionBtn = document.getElementById("toggleMotionBtn");
+    const motionBtnDot = document.getElementById("motionBtnDot");
+    const motionBtnLabel = document.getElementById("motionBtnLabel");
+    const motionControlPanel = document.getElementById("motionControlPanel");
+    const motionCurrentEpochBadge = document.getElementById("motionCurrentEpochBadge");
+    const sliderYearLabel = document.getElementById("sliderYearLabel");
+    const motionYearSlider = document.getElementById("motionYearSlider");
+    const btnPlayMotion = document.getElementById("btnPlayMotion");
+    const playMotionIcon = document.getElementById("playMotionIcon");
+    const playMotionLabel = document.getElementById("playMotionLabel");
+    const toolMotionShortcutBtn = document.getElementById("toolMotionShortcutBtn");
+
+    function setMotionMode(active) {
+      motionMode = active;
+      toggleMotionBtn.classList.toggle("motion-active-glow", active);
+      toggleMotionBtn.classList.toggle("bg-amber-600", active);
+      toggleMotionBtn.classList.toggle("text-white", active);
+      toggleMotionBtn.classList.toggle("border-amber-400", active);
+      motionBtnDot.classList.toggle("animate-ping", active);
+      motionBtnDot.classList.toggle("bg-white", active);
+      motionBtnDot.classList.toggle("bg-amber-400", !active);
+      motionBtnLabel.textContent = active ? "⚡ Đang xem Chuyển động & Biến thiên" : "⚡ Xem Biến thiên & Chuyển động sao";
+      
+      toolMotionShortcutBtn.classList.toggle("text-amber-400", active);
+      toolMotionShortcutBtn.classList.toggle("bg-amber-950/50", active);
+
+      if (active) {
+        motionControlPanel.classList.remove("hidden");
+        // Center camera on current target so movement is dead-center in front of user
+        openTarget(selectedKey, true);
+        // Auto-start motion timelapse so user sees movement immediately
+        isPlayingMotion = true;
+        playMotionIcon.textContent = "❚❚";
+        playMotionLabel.textContent = "Dừng tua";
+        updateMotionUI();
+      } else {
+        motionControlPanel.classList.add("hidden");
+        simYears = 0;
+        isPlayingMotion = false;
+        playMotionIcon.textContent = "▶";
+        playMotionLabel.textContent = "Tua chuyển động";
+        updateMotionUI();
+      }
+    }
+
+    toggleMotionBtn.onclick = () => setMotionMode(!motionMode);
+    toolMotionShortcutBtn.onclick = () => setMotionMode(!motionMode);
+    document.getElementById("closeMotionPanelBtn").onclick = () => motionControlPanel.classList.add("hidden");
+
+    function updateMotionUI() {
+      motionYearSlider.value = simYears;
+      sliderYearLabel.textContent = `+${simYears.toFixed(1)} năm`;
+
+      // Update Badge
+      let epochStr = "";
+      if (simYears < 0.15) {
+        epochStr = "Kỷ nguyên 1 (Gốc: 05/2025) · Δt = 0";
+        syncDrawerFrame(0);
+      } else if (simYears < 0.6) {
+        epochStr = "Kỷ nguyên 2 (Quét 2: 08/2025) · Δt = +3 tháng";
+        syncDrawerFrame(1);
+      } else if (simYears < 1.5) {
+        epochStr = "Kỷ nguyên 3 (Quét 3: 03/2026) · Δt = +10 tháng";
+        syncDrawerFrame(2);
+      } else {
+        const targetYear = (2025.35 + simYears).toFixed(1);
+        epochStr = `Năm ${targetYear} (+${simYears.toFixed(1)}y) · Phóng đại ${motionExaggeration}×`;
+      }
+      motionCurrentEpochBadge.textContent = epochStr;
+
+      // Update preset buttons highlighting
+      document.querySelectorAll(".epoch-btn").forEach(b => {
+        b.classList.remove("bg-amber-600", "text-white", "font-semibold");
+        b.classList.add("bg-slate-800", "text-slate-300");
+      });
+      if (simYears === 0) highlightBtn("btnEpoch1");
+      else if (Math.abs(simYears - 0.28) < 0.05) highlightBtn("btnEpoch2");
+      else if (Math.abs(simYears - 0.87) < 0.05) highlightBtn("btnEpoch3");
+      else if (Math.abs(simYears - 25) < 1.0) highlightBtn("btnEpochFuture");
+    }
+
+    function highlightBtn(id) {
+      const b = document.getElementById(id);
+      if (b) {
+        b.classList.remove("bg-slate-800", "text-slate-300");
+        b.classList.add("bg-amber-600", "text-white", "font-semibold");
+      }
+    }
+
+    function syncDrawerFrame(idx) {
+      const t = TARGETS[selectedKey];
+      if (t && t.frames.length > idx) {
+        bFrameIdx = idx;
+        renderDrawerBlink();
+      }
+    }
+
+    // Epoch Preset Clicks
+    document.getElementById("btnEpoch1").onclick = () => { simYears = 0; isPlayingMotion = false; playMotionIcon.textContent = "▶"; updateMotionUI(); };
+    document.getElementById("btnEpoch2").onclick = () => { simYears = 0.28; isPlayingMotion = false; playMotionIcon.textContent = "▶"; updateMotionUI(); };
+    document.getElementById("btnEpoch3").onclick = () => { simYears = 0.87; isPlayingMotion = false; playMotionIcon.textContent = "▶"; updateMotionUI(); };
+    document.getElementById("btnEpochFuture").onclick = () => { simYears = 25; isPlayingMotion = false; playMotionIcon.textContent = "▶"; updateMotionUI(); };
+
+    // Reset to Origin
+    document.getElementById("btnResetToOrigin").onclick = () => {
+      simYears = 0;
+      isPlayingMotion = false;
+      playMotionIcon.textContent = "▶";
+      playMotionLabel.textContent = "Tua chuyển động";
+      updateMotionUI();
+    };
+
+    // Play / Pause Motion
+    btnPlayMotion.onclick = () => {
+      isPlayingMotion = !isPlayingMotion;
+      playMotionIcon.textContent = isPlayingMotion ? "❚❚" : "▶";
+      playMotionLabel.textContent = isPlayingMotion ? "Dừng tua" : "Tua chuyển động";
+    };
+
+    // Slider Drag
+    motionYearSlider.oninput = (e) => {
+      simYears = parseFloat(e.target.value);
+      isPlayingMotion = false;
+      playMotionIcon.textContent = "▶";
+      playMotionLabel.textContent = "Tua chuyển động";
+      updateMotionUI();
+    };
+
+    // Toggle Scale Exaggeration (1x physical vs 200x visible)
+    const btnToggleScale = document.getElementById("btnToggleScale");
+    btnToggleScale.onclick = () => {
+      motionExaggeration = (motionExaggeration === 200) ? 1 : 200;
+      btnToggleScale.textContent = (motionExaggeration === 200) ? "Phóng đại 200× (Rõ nét)" : "Tỉ lệ thực 1×";
+      updateMotionUI();
+    };
+
+    // Checkbox Toggles
+    document.getElementById("checkShowTrails").onchange = (e) => { showTrails = e.target.checked; };
+    document.getElementById("checkShowVariability").onchange = (e) => { showVariability = e.target.checked; };
+    document.getElementById("checkShowDeltaMetrics").onchange = (e) => { showDeltaMetrics = e.target.checked; };
+
+    // --- 7. SEARCH & AUTOCOMPLETE ---
+    const searchInput = document.getElementById("searchInput");
+    const searchSuggestions = document.getElementById("searchSuggestions");
+    const suggestionsList = document.getElementById("suggestionsList");
+
+    function populateSuggestions() {
+      suggestionsList.innerHTML = "";
+      Object.keys(TARGETS).forEach(key => {
+        const t = TARGETS[key];
+        const row = document.createElement("div");
+        row.className = "px-3 py-2 hover:bg-slate-800 transition cursor-pointer flex items-center justify-between";
+        row.innerHTML = `
+          <div>
+            <div class="font-bold text-white">${t.name}</div>
+            <div class="text-[10px] text-slate-400">${t.alt}</div>
+          </div>
+          <span class="text-[10px] text-cyan-400 font-mono">${t.raDecStr.split('/')[0]}</span>
+        `;
+        row.onclick = () => {
+          openTarget(key, true);
+          searchSuggestions.classList.add("hidden");
+          searchInput.value = t.name;
+        };
+        suggestionsList.appendChild(row);
+      });
+    }
+    populateSuggestions();
+
+    searchInput.addEventListener("focus", () => searchSuggestions.classList.remove("hidden"));
+    searchInput.addEventListener("input", (e) => {
+      const val = e.target.value.toLowerCase().trim();
+      const rows = suggestionsList.children;
+      for (let r of rows) {
+        r.style.display = r.innerText.toLowerCase().includes(val) ? "flex" : "none";
+      }
+      searchSuggestions.classList.remove("hidden");
+    });
+    document.addEventListener("click", (e) => {
+      if (!searchInput.contains(e.target) && !searchSuggestions.contains(e.target)) {
+        searchSuggestions.classList.add("hidden");
+      }
+    });
+
+    // --- 8. MOUSE & TOUCH GESTURES ---
+    canvas.addEventListener("pointerdown", (e) => {
+      isDragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      canvas.setPointerCapture(e.pointerId);
+    });
+
+    canvas.addEventListener("pointermove", (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+
+      targetYaw += dx * 0.0035;
+      targetPitch -= dy * 0.0035;
+      targetPitch = Math.max(-Math.PI/2 + 0.05, Math.min(Math.PI/2 - 0.05, targetPitch));
+    });
+
+    const stopDrag = () => { isDragging = false; };
+    canvas.addEventListener("pointerup", stopDrag);
+    canvas.addEventListener("pointercancel", stopDrag);
+
+    // Zoom
+    canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      fov += e.deltaY * 0.0012;
+      fov = Math.max(20 * Math.PI / 180, Math.min(95 * Math.PI / 180, fov));
+      document.getElementById("fovDisplay").textContent = `FOV ${Math.round(fov * 180 / Math.PI)}°`;
+    }, { passive: false });
+
+    // Click target beacon on sky (Supports displaced position hit-testing)
+    canvas.addEventListener("click", (e) => {
+      let closest = null, minD = 35;
+      Object.keys(TARGETS).forEach(k => {
+        const curPos = getTargetPos(TARGETS[k], simYears);
+        const p = project(raDecToVec(curPos.ra, curPos.dec), canvas.width, canvas.height);
+        if (p) {
+          const d = Math.hypot(p.x - e.clientX, p.y - e.clientY);
+          if (d < minD) { minD = d; closest = k; }
+        }
+      });
+      if (closest) openTarget(closest, true);
+    });
+
+    // Drawer Tabs Toggle
+    const tabAstroBtn = document.getElementById("tabAstroBtn");
+    const tabBlinkBtn = document.getElementById("tabBlinkBtn");
+    const tabAstroContent = document.getElementById("tabAstroContent");
+    const tabBlinkContent = document.getElementById("tabBlinkContent");
+
+    tabAstroBtn.onclick = () => {
+      tabAstroBtn.className = "py-1 rounded bg-cyan-600 text-white font-semibold transition cursor-pointer";
+      tabBlinkBtn.className = "py-1 rounded text-slate-400 hover:text-white transition cursor-pointer";
+      tabAstroContent.classList.remove("hidden");
+      tabBlinkContent.classList.add("hidden");
+    };
+
+    tabBlinkBtn.onclick = () => {
+      tabBlinkBtn.className = "py-1 rounded bg-cyan-600 text-white font-semibold transition cursor-pointer flex items-center justify-center gap-1";
+      tabAstroBtn.className = "py-1 rounded text-slate-400 hover:text-white transition cursor-pointer";
+      tabBlinkContent.classList.remove("hidden");
+      tabAstroContent.classList.add("hidden");
+      renderDrawerBlink();
+    };
+
+    document.getElementById("closeDrawerBtn").onclick = () => {
+      targetDrawer.classList.add("-translate-x-[115%]");
+    };
+
+    document.getElementById("centerOnTargetBtn").onclick = () => {
+      openTarget(selectedKey, true);
+    };
+
+    // Blink Controls
+    document.getElementById("blinkPlayBtn").onclick = (e) => {
+      bPlaying = !bPlaying;
+      e.target.textContent = bPlaying ? "❚❚ Dừng" : "▶ Tiếp tục";
+    };
+    document.getElementById("blinkPrevBtn").onclick = () => {
+      const t = TARGETS[selectedKey];
+      bFrameIdx = (bFrameIdx - 1 + t.frames.length) % t.frames.length;
+      renderDrawerBlink();
+    };
+    document.getElementById("blinkNextBtn").onclick = () => {
+      const t = TARGETS[selectedKey];
+      bFrameIdx = (bFrameIdx + 1) % t.frames.length;
+      renderDrawerBlink();
+    };
+
+    // Diff / Orig Toggle
+    const toggleOrigBtn = document.getElementById("toggleOrigBtn");
+    const toggleDiffBtn = document.getElementById("toggleDiffBtn");
+    const blinkModeTag = document.getElementById("blinkModeTag");
+
+    toggleOrigBtn.onclick = () => {
+      bMode = "orig";
+      toggleOrigBtn.className = "px-2 py-0.5 rounded bg-cyan-600 text-white font-medium cursor-pointer";
+      toggleDiffBtn.className = "px-2 py-0.5 rounded text-slate-400 hover:text-white font-medium cursor-pointer";
+      blinkModeTag.textContent = "Ảnh gốc (Original)";
+      blinkModeTag.className = "absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-black/80 border border-slate-700 text-cyan-400";
+      renderDrawerBlink();
+    };
+
+    toggleDiffBtn.onclick = () => {
+      bMode = "diff";
+      toggleDiffBtn.className = "px-2 py-0.5 rounded bg-cyan-600 text-white font-medium cursor-pointer";
+      toggleOrigBtn.className = "px-2 py-0.5 rounded text-slate-400 hover:text-white font-medium cursor-pointer";
+      blinkModeTag.textContent = "Ảnh hiệu (Difference Dipole)";
+      blinkModeTag.className = "absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-black/80 border border-amber-500/50 text-amber-300";
+      renderDrawerBlink();
+    };
+
+    document.getElementById("blinkCrosshairCheck").onchange = (e) => {
+      bCrosshair = e.target.checked;
+      renderDrawerBlink();
+    };
+
+    // Toolbar Bottom Dock Toggle Buttons
+    function bindTool(btnId, getState, setState) {
+      const btn = document.getElementById(btnId);
+      btn.onclick = () => {
+        const next = !getState();
+        setState(next);
+        btn.classList.toggle("text-cyan-400", next);
+        btn.classList.toggle("bg-slate-800/90", next);
+        btn.classList.toggle("text-slate-400", !next);
+        btn.classList.toggle("bg-transparent", !next);
+      };
+    }
+
+    bindTool("toolLinesBtn", () => showLines, v => { showLines = v; });
+    bindTool("toolLabelsBtn", () => showLabels, v => { showLabels = v; });
+    bindTool("toolGridBtn", () => showGrid, v => { showGrid = v; });
+    bindTool("toolGroundBtn", () => showGround, v => { showGround = v; });
+    bindTool("toolSpherexPinsBtn", () => showSpherexPins, v => { showSpherexPins = v; });
+
+    // Night Mode Toggle
+    const nightBtn = document.getElementById("toolNightModeBtn");
+    nightBtn.onclick = () => {
+      nightMode = !nightMode;
+      document.getElementById("appBody").classList.toggle("night-mode", nightMode);
+      nightBtn.classList.toggle("text-rose-500", nightMode);
+      nightBtn.classList.toggle("bg-rose-950/40", nightMode);
+    };
+
+    // Live clock update
+    setInterval(() => {
+      const now = new Date();
+      document.getElementById("clockDisplay").textContent = now.toISOString().replace("T", " ").slice(0, 19) + " UTC";
+    }, 1000);
+
+    // Initial Start:
+    // Focus camera directly on Barnard's Star in center of screen!
+    openTarget("barnard", true);
+    requestAnimationFrame(renderSky);
+    requestAnimationFrame(blinkLoop);
+  </script>
+</body>
+</html>
