@@ -111,7 +111,7 @@ def acquire_target(info):
         groups[-1].append(row)
     selected = []
     for group_id, group in enumerate(groups):
-        for det in (1, 3, 6):
+        for det in range(1, 7):
             candidates = [r for r in group if str(r["energy_bandpassname"]) == f"SPHEREx-D{det}"]
             # At most two distinct exposures per detector/visit; deterministic evenly spaced sample.
             if candidates:
@@ -178,11 +178,11 @@ def acquire_target(info):
 def render(info):
     folder = BASE / info["id"]
     # Remove only named products owned by this renderer, to avoid stale visit labels.
-    for pattern in ("D[136]_visit*.fits", "D[136]_visit*.png", "rgb_visit*.png"):
+    for pattern in ("D[1-6]_visit*.fits", "D[1-6]_visit*.png", "rgb_visit*.png"):
         for path in (folder / "frames").glob(pattern):
             path.unlink()
     reports = {}
-    for det in (1, 3, 6):
+    for det in range(1, 7):
         reports[det] = make_frames(
             info["ra_deg"],
             info["dec_deg"],
