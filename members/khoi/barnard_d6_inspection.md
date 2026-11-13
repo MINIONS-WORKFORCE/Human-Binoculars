@@ -1,0 +1,701 @@
+# BÁO CÁO KIỂM TRA HEADER FITS & TẢI CUTOUT BARNARD'S STAR (DETECTOR D6)
+- **Mục tiêu:** Barnard's Star (Sao Barnard)
+- **Tọa độ khảo sát (J2025.5):** RA = `269.4463°`, Dec = `4.7667°`
+- **Detector:** `SPHEREx-D6`
+- **Kích thước cutout:** `0.1°`
+- **Số cutout tải thành công:** `12` (Đạt yêu cầu >= 5)
+
+## 1. Danh sách các file FITS đã tải và Checksum SHA256
+| File | OBSID | Detector | MJD | Kích thước (Bytes) | SHA256 |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| `2025W33_2C_0321_1_D6_01.fits` | `2025W33_2C_0321_1` | `D6` | `60902.8647` | 5106240 | `bbe9663c8425d377...` |
+| `2025W33_2C_0321_2_D6_02.fits` | `2025W33_2C_0321_2` | `D6` | `60902.8662` | 5106240 | `2bf430619d950f1c...` |
+| `2025W33_2C_0321_3_D6_03.fits` | `2025W33_2C_0321_3` | `D6` | `60902.8677` | 5106240 | `ee58b0281a7ff7bb...` |
+| `2025W33_2C_0386_3_D6_04.fits` | `2025W33_2C_0386_3` | `D6` | `60903.1384` | 5106240 | `20b5c3a85059222d...` |
+| `2025W33_2C_0386_4_D6_05.fits` | `2025W33_2C_0386_4` | `D6` | `60903.1399` | 5106240 | `dc3edac35b2f2bc0...` |
+| `2025W34_1B_0164_1_D6_06.fits` | `2025W34_1B_0164_1` | `D6` | `60905.8533` | 5106240 | `46725a2da9eaaa76...` |
+| `2026W12_1A_0598_1_D6_07.fits` | `2026W12_1A_0598_1` | `D6` | `61118.3092` | 5109120 | `0877649eb04693a2...` |
+| `2026W12_1A_0598_2_D6_08.fits` | `2026W12_1A_0598_2` | `D6` | `61118.3107` | 5109120 | `4d538b72ad6514a0...` |
+| `2026W12_1A_0598_3_D6_09.fits` | `2026W12_1A_0598_3` | `D6` | `61118.3122` | 5109120 | `8ba095878b773103...` |
+| `2026W12_1A_0598_4_D6_10.fits` | `2026W12_1A_0598_4` | `D6` | `61118.3137` | 5109120 | `f35514b517ed4f83...` |
+| `2026W12_1A_0610_1_D6_11.fits` | `2026W12_1A_0610_1` | `D6` | `61118.3770` | 5109120 | `8cc414cad84c5922...` |
+| `2026W12_1A_0610_2_D6_12.fits` | `2026W12_1A_0610_2` | `D6` | `61118.3785` | 5109120 | `50069f2a2ce73ed0...` |
+
+## 2. Kết quả kiểm tra Header theo yêu cầu Issue #15
+1. **Định dạng OBSID**: Chuỗi định danh chuẩn theo cấu trúc `YYYYW<tuần>_<phân_đoạn>_<id>`. Ví dụ: `2025W43_1A_...`.
+2. **Từ khóa thời gian chụp**: Xác nhận có đầy đủ các trường `DATE`, `DATE-OBS`, `MJD-OBS`, `TMIN`, `TMAX` trong HDU Primary và IMAGE.
+3. **Độ phân giải & Ma trận dữ liệu**: Ảnh cutout 0.1° tương ứng ma trận ~`39 x 39` hoặc `60 x 60` pixels đã được căn chỉnh hệ WCS.
+
+## 3. Chi tiết các Extension
+### 2025W33_2C_0321_1_D6_01.fits
+- **HDU 0 (HDU_0)**: shape=None
+- **HDU 1 (IMAGE)**: shape=[59, 58]
+  - `OBSID`: `2025W33_2C_0321_1`
+  - `DATE`: `2025-09-24T11:00:15.360`
+  - `DATE-OBS`: `2025-08-15T20:45:11.337`
+  - `MJD-OBS`: `60902.864714549`
+  - `DETECTOR`: `6`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `59`
+  - `CRVAL1`: `268.339774898`
+  - `CRVAL2`: `3.58409920419`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 2 (FLAGS)**: shape=[59, 58]
+  - `DATE-OBS`: `2025-08-15T20:45:11.337`
+  - `MJD-OBS`: `60902.864714549`
+  - `BUNIT`: ``
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `59`
+  - `CRVAL1`: `268.339774898`
+  - `CRVAL2`: `3.58409920419`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 3 (VARIANCE)**: shape=[59, 58]
+  - `DATE-OBS`: `2025-08-15T20:45:11.337`
+  - `MJD-OBS`: `60902.864714549`
+  - `BUNIT`: `MJy2 / sr2`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `59`
+  - `CRVAL1`: `268.339774898`
+  - `CRVAL2`: `3.58409920419`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 4 (ZODI)**: shape=[59, 58]
+  - `DATE-OBS`: `2025-08-15T20:45:11.337`
+  - `MJD-OBS`: `60902.864714549`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `59`
+  - `CRVAL1`: `268.339774898`
+  - `CRVAL2`: `3.58409920419`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 5 (PSF)**: shape=[121, 101, 101]
+  - `BUNIT`: ``
+  - `NAXIS1`: `101`
+  - `NAXIS2`: `101`
+  - `CRVAL1`: `0.0`
+  - `CRVAL2`: `0.0`
+  - `CDELT1`: `0.615`
+  - `CDELT2`: `0.615`
+- **HDU 6 (WCS-WAVE)**: shape=[1]
+  - `NAXIS1`: `720`
+  - `NAXIS2`: `1`
+### 2025W33_2C_0321_2_D6_02.fits
+- **HDU 0 (HDU_0)**: shape=None
+- **HDU 1 (IMAGE)**: shape=[58, 58]
+  - `OBSID`: `2025W33_2C_0321_2`
+  - `DATE`: `2025-09-24T11:11:02.846`
+  - `DATE-OBS`: `2025-08-15T20:47:20.267`
+  - `MJD-OBS`: `60902.866206794`
+  - `DETECTOR`: `6`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.327909574`
+  - `CRVAL2`: `3.3876566718`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 2 (FLAGS)**: shape=[58, 58]
+  - `DATE-OBS`: `2025-08-15T20:47:20.267`
+  - `MJD-OBS`: `60902.866206794`
+  - `BUNIT`: ``
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.327909574`
+  - `CRVAL2`: `3.3876566718`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 3 (VARIANCE)**: shape=[58, 58]
+  - `DATE-OBS`: `2025-08-15T20:47:20.267`
+  - `MJD-OBS`: `60902.866206794`
+  - `BUNIT`: `MJy2 / sr2`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.327909574`
+  - `CRVAL2`: `3.3876566718`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 4 (ZODI)**: shape=[58, 58]
+  - `DATE-OBS`: `2025-08-15T20:47:20.267`
+  - `MJD-OBS`: `60902.866206794`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.327909574`
+  - `CRVAL2`: `3.3876566718`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 5 (PSF)**: shape=[121, 101, 101]
+  - `BUNIT`: ``
+  - `NAXIS1`: `101`
+  - `NAXIS2`: `101`
+  - `CRVAL1`: `0.0`
+  - `CRVAL2`: `0.0`
+  - `CDELT1`: `0.615`
+  - `CDELT2`: `0.615`
+- **HDU 6 (WCS-WAVE)**: shape=[1]
+  - `NAXIS1`: `720`
+  - `NAXIS2`: `1`
+### 2025W33_2C_0321_3_D6_03.fits
+- **HDU 0 (HDU_0)**: shape=None
+- **HDU 1 (IMAGE)**: shape=[58, 58]
+  - `OBSID`: `2025W33_2C_0321_3`
+  - `DATE`: `2025-09-24T10:34:35.347`
+  - `DATE-OBS`: `2025-08-15T20:49:29.198`
+  - `MJD-OBS`: `60902.867699051`
+  - `DETECTOR`: `6`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.317076695`
+  - `CRVAL2`: `3.19242135645`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 2 (FLAGS)**: shape=[58, 58]
+  - `DATE-OBS`: `2025-08-15T20:49:29.198`
+  - `MJD-OBS`: `60902.867699051`
+  - `BUNIT`: ``
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.317076695`
+  - `CRVAL2`: `3.19242135645`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 3 (VARIANCE)**: shape=[58, 58]
+  - `DATE-OBS`: `2025-08-15T20:49:29.198`
+  - `MJD-OBS`: `60902.867699051`
+  - `BUNIT`: `MJy2 / sr2`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.317076695`
+  - `CRVAL2`: `3.19242135645`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 4 (ZODI)**: shape=[58, 58]
+  - `DATE-OBS`: `2025-08-15T20:49:29.198`
+  - `MJD-OBS`: `60902.867699051`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.317076695`
+  - `CRVAL2`: `3.19242135645`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 5 (PSF)**: shape=[121, 101, 101]
+  - `BUNIT`: ``
+  - `NAXIS1`: `101`
+  - `NAXIS2`: `101`
+  - `CRVAL1`: `0.0`
+  - `CRVAL2`: `0.0`
+  - `CDELT1`: `0.615`
+  - `CDELT2`: `0.615`
+- **HDU 6 (WCS-WAVE)**: shape=[1]
+  - `NAXIS1`: `720`
+  - `NAXIS2`: `1`
+### 2025W33_2C_0386_3_D6_04.fits
+- **HDU 0 (HDU_0)**: shape=None
+- **HDU 1 (IMAGE)**: shape=[58, 58]
+  - `OBSID`: `2025W33_2C_0386_3`
+  - `DATE`: `2025-09-24T11:35:52.651`
+  - `DATE-OBS`: `2025-08-16T03:19:14.790`
+  - `MJD-OBS`: `60903.138365625`
+  - `DETECTOR`: `6`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `269.952278233`
+  - `CRVAL2`: `6.37992066776`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 2 (FLAGS)**: shape=[58, 58]
+  - `DATE-OBS`: `2025-08-16T03:19:14.790`
+  - `MJD-OBS`: `60903.138365625`
+  - `BUNIT`: ``
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `269.952278233`
+  - `CRVAL2`: `6.37992066776`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 3 (VARIANCE)**: shape=[58, 58]
+  - `DATE-OBS`: `2025-08-16T03:19:14.790`
+  - `MJD-OBS`: `60903.138365625`
+  - `BUNIT`: `MJy2 / sr2`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `269.952278233`
+  - `CRVAL2`: `6.37992066776`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 4 (ZODI)**: shape=[58, 58]
+  - `DATE-OBS`: `2025-08-16T03:19:14.790`
+  - `MJD-OBS`: `60903.138365625`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `269.952278233`
+  - `CRVAL2`: `6.37992066776`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 5 (PSF)**: shape=[121, 101, 101]
+  - `BUNIT`: ``
+  - `NAXIS1`: `101`
+  - `NAXIS2`: `101`
+  - `CRVAL1`: `0.0`
+  - `CRVAL2`: `0.0`
+  - `CDELT1`: `0.615`
+  - `CDELT2`: `0.615`
+- **HDU 6 (WCS-WAVE)**: shape=[1]
+  - `NAXIS1`: `720`
+  - `NAXIS2`: `1`
+### 2025W33_2C_0386_4_D6_05.fits
+- **HDU 0 (HDU_0)**: shape=None
+- **HDU 1 (IMAGE)**: shape=[58, 58]
+  - `OBSID`: `2025W33_2C_0386_4`
+  - `DATE`: `2025-09-24T11:40:33.120`
+  - `DATE-OBS`: `2025-08-16T03:21:23.722`
+  - `MJD-OBS`: `60903.139857894`
+  - `DETECTOR`: `6`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `269.943996033`
+  - `CRVAL2`: `6.18377967511`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 2 (FLAGS)**: shape=[58, 58]
+  - `DATE-OBS`: `2025-08-16T03:21:23.722`
+  - `MJD-OBS`: `60903.139857894`
+  - `BUNIT`: ``
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `269.943996033`
+  - `CRVAL2`: `6.18377967511`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 3 (VARIANCE)**: shape=[58, 58]
+  - `DATE-OBS`: `2025-08-16T03:21:23.722`
+  - `MJD-OBS`: `60903.139857894`
+  - `BUNIT`: `MJy2 / sr2`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `269.943996033`
+  - `CRVAL2`: `6.18377967511`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 4 (ZODI)**: shape=[58, 58]
+  - `DATE-OBS`: `2025-08-16T03:21:23.722`
+  - `MJD-OBS`: `60903.139857894`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `269.943996033`
+  - `CRVAL2`: `6.18377967511`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 5 (PSF)**: shape=[121, 101, 101]
+  - `BUNIT`: ``
+  - `NAXIS1`: `101`
+  - `NAXIS2`: `101`
+  - `CRVAL1`: `0.0`
+  - `CRVAL2`: `0.0`
+  - `CDELT1`: `0.615`
+  - `CDELT2`: `0.615`
+- **HDU 6 (WCS-WAVE)**: shape=[1]
+  - `NAXIS1`: `720`
+  - `NAXIS2`: `1`
+### 2025W34_1B_0164_1_D6_06.fits
+- **HDU 0 (HDU_0)**: shape=None
+- **HDU 1 (IMAGE)**: shape=[58, 58]
+  - `OBSID`: `2025W34_1B_0164_1`
+  - `DATE`: `2025-09-24T19:53:10.301`
+  - `DATE-OBS`: `2025-08-18T20:28:41.370`
+  - `MJD-OBS`: `60905.853256597`
+  - `DETECTOR`: `6`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `269.941210897`
+  - `CRVAL2`: `5.98823369695`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 2 (FLAGS)**: shape=[58, 58]
+  - `DATE-OBS`: `2025-08-18T20:28:41.370`
+  - `MJD-OBS`: `60905.853256597`
+  - `BUNIT`: ``
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `269.941210897`
+  - `CRVAL2`: `5.98823369695`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 3 (VARIANCE)**: shape=[58, 58]
+  - `DATE-OBS`: `2025-08-18T20:28:41.370`
+  - `MJD-OBS`: `60905.853256597`
+  - `BUNIT`: `MJy2 / sr2`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `269.941210897`
+  - `CRVAL2`: `5.98823369695`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 4 (ZODI)**: shape=[58, 58]
+  - `DATE-OBS`: `2025-08-18T20:28:41.370`
+  - `MJD-OBS`: `60905.853256597`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `269.941210897`
+  - `CRVAL2`: `5.98823369695`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 5 (PSF)**: shape=[121, 101, 101]
+  - `BUNIT`: ``
+  - `NAXIS1`: `101`
+  - `NAXIS2`: `101`
+  - `CRVAL1`: `0.0`
+  - `CRVAL2`: `0.0`
+  - `CDELT1`: `0.615`
+  - `CDELT2`: `0.615`
+- **HDU 6 (WCS-WAVE)**: shape=[1]
+  - `NAXIS1`: `720`
+  - `NAXIS2`: `1`
+### 2026W12_1A_0598_1_D6_07.fits
+- **HDU 0 (HDU_0)**: shape=None
+- **HDU 1 (IMAGE)**: shape=[58, 58]
+  - `OBSID`: `2026W12_1A_0598_1`
+  - `DATE`: `2026-03-24T15:36:40.761`
+  - `DATE-OBS`: `2026-03-19T07:25:17.581`
+  - `MJD-OBS`: `61118.309231262`
+  - `DETECTOR`: `6`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.51361913`
+  - `CRVAL2`: `3.9214680562`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 2 (FLAGS)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T07:25:17.581`
+  - `MJD-OBS`: `61118.309231262`
+  - `BUNIT`: ``
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.51361913`
+  - `CRVAL2`: `3.9214680562`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 3 (VARIANCE)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T07:25:17.581`
+  - `MJD-OBS`: `61118.309231262`
+  - `BUNIT`: `MJy2 / sr2`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.51361913`
+  - `CRVAL2`: `3.9214680562`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 4 (ZODI)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T07:25:17.581`
+  - `MJD-OBS`: `61118.309231262`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.51361913`
+  - `CRVAL2`: `3.9214680562`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 5 (PSF)**: shape=[121, 101, 101]
+  - `BUNIT`: ``
+  - `NAXIS1`: `101`
+  - `NAXIS2`: `101`
+  - `CRVAL1`: `0.0`
+  - `CRVAL2`: `0.0`
+  - `CDELT1`: `0.615`
+  - `CDELT2`: `0.615`
+- **HDU 6 (WCS-WAVE)**: shape=[1]
+  - `NAXIS1`: `720`
+  - `NAXIS2`: `1`
+### 2026W12_1A_0598_2_D6_08.fits
+- **HDU 0 (HDU_0)**: shape=None
+- **HDU 1 (IMAGE)**: shape=[58, 58]
+  - `OBSID`: `2026W12_1A_0598_2`
+  - `DATE`: `2026-03-24T06:42:43.122`
+  - `DATE-OBS`: `2026-03-19T07:27:26.513`
+  - `MJD-OBS`: `61118.31072353`
+  - `DETECTOR`: `6`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.509014068`
+  - `CRVAL2`: `4.11781331145`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 2 (FLAGS)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T07:27:26.513`
+  - `MJD-OBS`: `61118.31072353`
+  - `BUNIT`: ``
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.509014068`
+  - `CRVAL2`: `4.11781331145`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 3 (VARIANCE)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T07:27:26.513`
+  - `MJD-OBS`: `61118.31072353`
+  - `BUNIT`: `MJy2 / sr2`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.509014068`
+  - `CRVAL2`: `4.11781331145`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 4 (ZODI)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T07:27:26.513`
+  - `MJD-OBS`: `61118.31072353`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.509014068`
+  - `CRVAL2`: `4.11781331145`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 5 (PSF)**: shape=[121, 101, 101]
+  - `BUNIT`: ``
+  - `NAXIS1`: `101`
+  - `NAXIS2`: `101`
+  - `CRVAL1`: `0.0`
+  - `CRVAL2`: `0.0`
+  - `CDELT1`: `0.615`
+  - `CDELT2`: `0.615`
+- **HDU 6 (WCS-WAVE)**: shape=[1]
+  - `NAXIS1`: `720`
+  - `NAXIS2`: `1`
+### 2026W12_1A_0598_3_D6_09.fits
+- **HDU 0 (HDU_0)**: shape=None
+- **HDU 1 (IMAGE)**: shape=[58, 58]
+  - `OBSID`: `2026W12_1A_0598_3`
+  - `DATE`: `2026-03-24T08:14:05.287`
+  - `DATE-OBS`: `2026-03-19T07:29:35.444`
+  - `MJD-OBS`: `61118.312215787`
+  - `DETECTOR`: `6`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.503980548`
+  - `CRVAL2`: `4.3143203085`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 2 (FLAGS)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T07:29:35.444`
+  - `MJD-OBS`: `61118.312215787`
+  - `BUNIT`: ``
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.503980548`
+  - `CRVAL2`: `4.3143203085`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 3 (VARIANCE)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T07:29:35.444`
+  - `MJD-OBS`: `61118.312215787`
+  - `BUNIT`: `MJy2 / sr2`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.503980548`
+  - `CRVAL2`: `4.3143203085`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 4 (ZODI)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T07:29:35.444`
+  - `MJD-OBS`: `61118.312215787`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.503980548`
+  - `CRVAL2`: `4.3143203085`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 5 (PSF)**: shape=[121, 101, 101]
+  - `BUNIT`: ``
+  - `NAXIS1`: `101`
+  - `NAXIS2`: `101`
+  - `CRVAL1`: `0.0`
+  - `CRVAL2`: `0.0`
+  - `CDELT1`: `0.615`
+  - `CDELT2`: `0.615`
+- **HDU 6 (WCS-WAVE)**: shape=[1]
+  - `NAXIS1`: `720`
+  - `NAXIS2`: `1`
+### 2026W12_1A_0598_4_D6_10.fits
+- **HDU 0 (HDU_0)**: shape=None
+- **HDU 1 (IMAGE)**: shape=[58, 58]
+  - `OBSID`: `2026W12_1A_0598_4`
+  - `DATE`: `2026-03-25T00:29:12.497`
+  - `DATE-OBS`: `2026-03-19T07:31:44.375`
+  - `MJD-OBS`: `61118.313708044`
+  - `DETECTOR`: `6`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.498829926`
+  - `CRVAL2`: `4.51094801092`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 2 (FLAGS)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T07:31:44.375`
+  - `MJD-OBS`: `61118.313708044`
+  - `BUNIT`: ``
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.498829926`
+  - `CRVAL2`: `4.51094801092`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 3 (VARIANCE)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T07:31:44.375`
+  - `MJD-OBS`: `61118.313708044`
+  - `BUNIT`: `MJy2 / sr2`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.498829926`
+  - `CRVAL2`: `4.51094801092`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 4 (ZODI)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T07:31:44.375`
+  - `MJD-OBS`: `61118.313708044`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.498829926`
+  - `CRVAL2`: `4.51094801092`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 5 (PSF)**: shape=[121, 101, 101]
+  - `BUNIT`: ``
+  - `NAXIS1`: `101`
+  - `NAXIS2`: `101`
+  - `CRVAL1`: `0.0`
+  - `CRVAL2`: `0.0`
+  - `CDELT1`: `0.615`
+  - `CDELT2`: `0.615`
+- **HDU 6 (WCS-WAVE)**: shape=[1]
+  - `NAXIS1`: `720`
+  - `NAXIS2`: `1`
+### 2026W12_1A_0610_1_D6_11.fits
+- **HDU 0 (HDU_0)**: shape=None
+- **HDU 1 (IMAGE)**: shape=[58, 58]
+  - `OBSID`: `2026W12_1A_0610_1`
+  - `DATE`: `2026-03-24T15:04:29.843`
+  - `DATE-OBS`: `2026-03-19T09:02:56.259`
+  - `MJD-OBS`: `61118.377040035`
+  - `DETECTOR`: `6`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.494457092`
+  - `CRVAL2`: `4.70626777917`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 2 (FLAGS)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T09:02:56.259`
+  - `MJD-OBS`: `61118.377040035`
+  - `BUNIT`: ``
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.494457092`
+  - `CRVAL2`: `4.70626777917`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 3 (VARIANCE)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T09:02:56.259`
+  - `MJD-OBS`: `61118.377040035`
+  - `BUNIT`: `MJy2 / sr2`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.494457092`
+  - `CRVAL2`: `4.70626777917`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 4 (ZODI)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T09:02:56.259`
+  - `MJD-OBS`: `61118.377040035`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.494457092`
+  - `CRVAL2`: `4.70626777917`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 5 (PSF)**: shape=[121, 101, 101]
+  - `BUNIT`: ``
+  - `NAXIS1`: `101`
+  - `NAXIS2`: `101`
+  - `CRVAL1`: `0.0`
+  - `CRVAL2`: `0.0`
+  - `CDELT1`: `0.615`
+  - `CDELT2`: `0.615`
+- **HDU 6 (WCS-WAVE)**: shape=[1]
+  - `NAXIS1`: `720`
+  - `NAXIS2`: `1`
+### 2026W12_1A_0610_2_D6_12.fits
+- **HDU 0 (HDU_0)**: shape=None
+- **HDU 1 (IMAGE)**: shape=[58, 58]
+  - `OBSID`: `2026W12_1A_0610_2`
+  - `DATE`: `2026-03-24T17:01:15.176`
+  - `DATE-OBS`: `2026-03-19T09:05:05.189`
+  - `MJD-OBS`: `61118.37853228`
+  - `DETECTOR`: `6`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.489911869`
+  - `CRVAL2`: `4.90233759112`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 2 (FLAGS)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T09:05:05.189`
+  - `MJD-OBS`: `61118.37853228`
+  - `BUNIT`: ``
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.489911869`
+  - `CRVAL2`: `4.90233759112`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 3 (VARIANCE)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T09:05:05.189`
+  - `MJD-OBS`: `61118.37853228`
+  - `BUNIT`: `MJy2 / sr2`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.489911869`
+  - `CRVAL2`: `4.90233759112`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 4 (ZODI)**: shape=[58, 58]
+  - `DATE-OBS`: `2026-03-19T09:05:05.189`
+  - `MJD-OBS`: `61118.37853228`
+  - `BUNIT`: `MJy / sr`
+  - `NAXIS1`: `58`
+  - `NAXIS2`: `58`
+  - `CRVAL1`: `268.489911869`
+  - `CRVAL2`: `4.90233759112`
+  - `CDELT1`: `1.0`
+  - `CDELT2`: `1.0`
+- **HDU 5 (PSF)**: shape=[121, 101, 101]
+  - `BUNIT`: ``
+  - `NAXIS1`: `101`
+  - `NAXIS2`: `101`
+  - `CRVAL1`: `0.0`
+  - `CRVAL2`: `0.0`
+  - `CDELT1`: `0.615`
+  - `CDELT2`: `0.615`
+- **HDU 6 (WCS-WAVE)**: shape=[1]
+  - `NAXIS1`: `720`
+  - `NAXIS2`: `1`

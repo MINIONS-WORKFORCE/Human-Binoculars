@@ -1,13 +1,22 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Plotly from "plotly.js-basic-dist-min";
 import "./charts.css";
 import {
+  DETECTORS,
   lightcurveFigure,
   lightcurveRows,
   rejectedCount,
   spectrumFigure,
   spectrumRows,
 } from "./chartData.js";
+import {
+  PHOTOMETRY_COLUMNS,
+  UPPER_LIMIT_SIGMA,
+  X_AXES,
+  photometryFigure,
+  photometryRows,
+  photometrySummary,
+} from "./photometry.js";
 
 const PLOT_CONFIG = { displayModeBar: false, responsive: true };
 
@@ -46,6 +55,36 @@ function Plot({ figure, label }) {
   );
 }
 
+function DataTable({ columns, rows }) {
+  return (
+    <details className="flux-chart__details">
+      <summary>Show data table</summary>
+      <div className="flux-chart__table-box">
+        <table className="flux-chart__table">
+          <thead>
+            <tr>
+              {columns.map((column) => (
+                <th key={column} scope="col">
+                  {column}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {row.map((cell, index) => (
+                  <td key={columns[index]}>{cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  );
+}
+
 function ChartCard({ data, figure, label, caption, columns, rows }) {
   const rejected = rejectedCount(data.points);
 
@@ -69,31 +108,114 @@ function ChartCard({ data, figure, label, caption, columns, rows }) {
           Warning: {warning.message}
         </p>
       ))}
-      <details className="flux-chart__details">
-        <summary>Show data table</summary>
-        <div className="flux-chart__table-box">
-          <table className="flux-chart__table">
-            <thead>
-              <tr>
-                {columns.map((column) => (
-                  <th key={column} scope="col">
-                    {column}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row[0] + row[1]}>
-                  {row.map((cell, index) => (
-                    <td key={columns[index]}>{cell}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <DataTable columns={columns} rows={rows} />
+    </figure>
+  );
+}
+
+const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;
+
+function photometryCaption(data, summary) {
+  const parts = [
+    `${data.target?.name ?? "Target"} · ${plural(summary.plotted, "measurement", "measurements")}`,
+  ];
+  if (summary.upperLimits) {
+    parts.push(
+      `${plural(summary.upperLimits, "upper limit", "upper limits")} (${UPPER_LIMIT_SIGMA}σ, SNR below 3)`,
+    );
+  }
+  if (summary.flagged) {
+    parts.push(`${summary.flagged} flagged (hollow)`);
+  }
+  if (summary.skipped) {
+    parts.push(`${summary.skipped} without a value, not plotted`);
+  }
+  return `${parts.join(" · ")}.`;
+}
+
+function variabilityText(variability) {
+  if (!variability) return null;
+  const {
+    chi2_reduced: chi2,
+    dof,
+    is_variable: variable,
+    method,
+  } = variability;
+  return `Variability test (${method}): reduced χ² ${chi2} over ${dof} degrees of freedom, reported as ${variable ? "variable" : "not variable"}.`;
+}
+
+/**
+ * data: an E6 /api/photometry response. The viewer switches between a light curve
+ * (x = mjd) and a spectrum (x = wavelength_um) and can keep a single detector.
+ */
+export function PhotometryChart({ data, defaultXAxis = "time" }) {
+  const [xAxis, setXAxis] = useState(defaultXAxis);
+  const [detector, setDetector] = useState(null);
+  const figure = useMemo(
+    () => photometryFigure(data, { xAxis, detector, theme: readTheme() }),
+    [data, xAxis, detector],
+  );
+  const summary = photometrySummary(data, { detector });
+  const mixed = xAxis === "time" && summary.detectors > 1;
+  const variability = variabilityText(data.variability);
+
+  return (
+    <figure className="flux-chart">
+      <div className="flux-chart__controls">
+        <div role="group" aria-label="X axis" className="flux-chart__toggle">
+          {Object.entries(X_AXES).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={xAxis === value}
+              onClick={() => setXAxis(value)}
+            >
+              {label}
+            </button>
+          ))}
         </div>
-      </details>
+        <label className="flux-chart__select">
+          Detector
+          <select
+            value={detector ?? ""}
+            onChange={(event) =>
+              setDetector(
+                event.target.value ? Number(event.target.value) : null,
+              )
+            }
+          >
+            <option value="">All</option>
+            {DETECTORS.map(({ id }) => (
+              <option key={id} value={id.slice(1)}>
+                {id}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {summary.plotted ? (
+        <Plot
+          figure={figure}
+          label={`${xAxis === "time" ? "Light curve" : "Spectrum"} with ${summary.plotted} measurements. The data table below lists every value.`}
+        />
+      ) : (
+        <p className="flux-chart__empty">No measurements for this detector.</p>
+      )}
+      <figcaption className="flux-chart__caption">
+        {photometryCaption(data, summary)}
+      </figcaption>
+      {mixed && (
+        <p className="flux-chart__note">
+          These points come from {summary.detectors} detectors at different
+          wavelengths. Pick one detector to compare like with like over time.
+        </p>
+      )}
+      {variability && <p className="flux-chart__note">{variability}</p>}
+      <DataTable
+        columns={PHOTOMETRY_COLUMNS}
+        rows={photometryRows(data, { detector })}
+      />
     </figure>
   );
 }

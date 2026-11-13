@@ -101,7 +101,7 @@ function traces(points, options, theme) {
   return { series, showLegend: series.length > 1 };
 }
 
-function baseLayout(theme, { xTitle, yTitle, showLegend, top }) {
+export function baseLayout(theme, { xTitle, yTitle, showLegend, top }) {
   const axisFont = { color: theme.muted, size: 12, family: theme.fontMono };
   const titleFont = { color: theme.muted, size: 12 };
   return {
@@ -169,10 +169,16 @@ export function spectrumFigure(response, { selected = null, theme }) {
     showLegend,
     top: 28,
   });
+  addDetectorBands(layout, theme, selected);
+  return { data: series, layout };
+}
+
+/** Wavelength axis with the six detector bands drawn to scale; `selected` is outlined. */
+export function addDetectorBands(layout, theme, selected = null) {
   layout.xaxis.range = WAVELENGTH_RANGE;
   layout.xaxis.tickvals = [1, 2, 3, 4, 5];
 
-  // Detector bands to scale; every other one is shaded so the edges can be read.
+  // Every other band is shaded so the edges can be read.
   layout.shapes = DETECTORS.map((detector, index) => ({
     type: "rect",
     layer: "below",
@@ -201,8 +207,7 @@ export function spectrumFigure(response, { selected = null, theme }) {
       color: detector.id === selected ? theme.text : theme.muted,
     },
   }));
-
-  return { data: series, layout };
+  return layout;
 }
 
 export function lightcurveFigure(response, { theme }) {

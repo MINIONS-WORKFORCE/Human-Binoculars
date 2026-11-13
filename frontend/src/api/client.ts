@@ -90,6 +90,14 @@ export function createApiClient(
         `Request failed with status ${response.status}.`,
       );
     }
+    // A proxy or a wrong VITE_API_BASE_URL can answer 200 with an HTML page.
+    if (typeof body !== "object" || body === null) {
+      throw new ApiError(
+        response.status,
+        "HTTP_ERROR",
+        `Expected JSON from ${path} but got something else.`,
+      );
+    }
     return body as T;
   }
 
@@ -126,25 +134,108 @@ export function createApiClient(
 
 export type ApiClient = ReturnType<typeof createApiClient>;
 
-const FRIENDLY: Record<string, string> = {
-  NETWORK:
-    "The data server is not reachable. Check your connection or try again shortly.",
-  BAD_COORDS:
-    "Those coordinates are out of range. RA must be 0 to 360 degrees and Dec -90 to 90.",
-  BAD_PARAM:
-    "One of the settings is invalid. Check the detector and frame options.",
-  UNKNOWN_TARGET:
-    "That target is not in our list yet. Try one of the five preset targets.",
-  NO_FRAMES: "SPHEREx has no images of this spot yet.",
-  FRAME_NOT_FOUND: "The images expired on the server. Load the frames again.",
+/**
+ * The error table of the API contract (wiki "The API contract", section 4), plus the
+ * two codes this client adds: NETWORK (no answer at all, including a CORS refusal)
+ * and HTTP_ERROR (an answer that is not the contract's JSON).
+ */
+export const ERROR_CODES = [
+  "BAD_COORDS",
+  "BAD_PARAM",
+  "UNKNOWN_TARGET",
+  "NO_FRAMES",
+  "FRAME_NOT_FOUND",
+  "UPSTREAM_ERROR",
+  "UPSTREAM_TIMEOUT",
+  "INTERNAL",
+  "NETWORK",
+  "HTTP_ERROR",
+] as const;
+export type ErrorCode = (typeof ERROR_CODES)[number];
+
+export interface ErrorInfo {
+  /** The contract code, or UNKNOWN for something that is not an ApiError. */
+  code: string;
+  /** A sentence a visitor can act on, instead of a raw status code. */
+  message: string;
+  /** True when sending the same request again may work (server or network trouble). */
+  retry: boolean;
+}
+
+const ERRORS: Record<ErrorCode, Omit<ErrorInfo, "code">> = {
+  BAD_COORDS: {
+    message:
+      "Those coordinates are out of range. RA must be 0 to 360 degrees and Dec -90 to 90.",
+    retry: false,
+  },
+  BAD_PARAM: {
+    message:
+      "One of the settings is invalid. Check the detector and frame options.",
+    retry: false,
+  },
+  UNKNOWN_TARGET: {
+    message:
+      "That target is not in our list yet. Try one of the five preset targets.",
+    retry: false,
+  },
+  NO_FRAMES: {
+    message:
+      "SPHEREx has no images of this spot yet. Try another target or detector.",
+    retry: false,
+  },
+  FRAME_NOT_FOUND: {
+    message: "The images expired on the server. Load the frames again.",
+    retry: true,
+  },
+  UPSTREAM_ERROR: {
+    message:
+      "The NASA archive (IRSA) returned an error. Try again in a moment.",
+    retry: true,
+  },
+  UPSTREAM_TIMEOUT: {
+    message:
+      "The NASA archive took more than 2 minutes to answer. Try again in a moment.",
+    retry: true,
+  },
+  INTERNAL: {
+    message:
+      "Something went wrong on our server. Try again; if it keeps failing, tell the team.",
+    retry: true,
+  },
+  NETWORK: {
+    message:
+      "The data server is not reachable. Check your connection or try again shortly.",
+    retry: true,
+  },
+  HTTP_ERROR: {
+    message: "The data server sent an unexpected answer. Try again shortly.",
+    retry: true,
+  },
 };
+
+function isKnownCode(code: string): code is ErrorCode {
+  return code in ERRORS;
+}
+
+/** What to tell the visitor about a failed request, and whether to offer "Try again". */
+export function describeError(error: unknown): ErrorInfo {
+  if (!(error instanceof ApiError))
+    return {
+      code: "UNKNOWN",
+      message: "Something unexpected happened. Please reload the page.",
+      retry: false,
+    };
+  if (isKnownCode(error.code))
+    return { code: error.code, ...ERRORS[error.code] };
+  // A code newer than this table: fall back on the HTTP status class.
+  return {
+    code: error.code,
+    message: "Something went wrong on the server. Please try again.",
+    retry: error.status === 0 || error.status >= 500,
+  };
+}
 
 /** A sentence a visitor can act on, instead of a raw status code. */
 export function friendlyMessage(error: unknown): string {
-  if (error instanceof ApiError)
-    return (
-      FRIENDLY[error.code] ??
-      "Something went wrong on the server. Please try again."
-    );
-  return "Something unexpected happened. Please reload the page.";
+  return describeError(error).message;
 }
