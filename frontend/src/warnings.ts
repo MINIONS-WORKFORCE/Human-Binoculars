@@ -5,7 +5,7 @@ const MESSAGES: Record<string, string> = {
   SATURATION_POSSIBLE:
     "Some pixels may be saturated, so the brightest star can look flatter than it is.",
   FEW_FRAMES:
-    "Fewer than 3 frames, so there is little to blink. Try another detector or a larger field of view.",
+    "Fewer than 3 frames, so there is little to blink. Try another detector.",
   TRUNCATED:
     "Only the first frames are shown because the list was cut at the frame limit.",
   MIXED_WAVELENGTH:
