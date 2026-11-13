@@ -1,3 +1,35 @@
+# Báo cáo 13/11/2026: Zoom trên trình duyệt thay vì gọi lại API, phần giới thiệu trang
+
+**Người làm:** Duy Hoàng · **PR:** #62 (nhánh `duy-hoang/frontend-zoom-intro`, xếp chồng trên #54) · **CI:** xanh
+
+## Feedback và cách xử lý
+| Feedback | Trước | Sau |
+| --- | --- | --- |
+| Đổi FOV gọi lại API, chạy lâu | Mỗi lần đổi FOV gửi `/api/frames` với `size` mới; backend dựng lại toàn bộ ảnh từ FITS, trình duyệt tải và decode lại toàn bộ PNG. Đo trên máy (backend đã chạy sẵn): khoảng 0,9–1 s mỗi lần; Render còn chậm hơn | Gọi API **1 lần** cho mỗi mục tiêu và detector, luôn ở FOV 10′ (`size=0.1667`). FOV chỉ còn là zoom trên trình duyệt: **khoảng 0,1 s, không gửi request**. Đo trên bản build production với backend FITS thật |
+| Muốn nhìn gần thì zoom | Không có zoom | Nút + / − / Fit, lăn chuột (zoom quanh vị trí con trỏ, trang không bị cuộn), kéo để di chuyển, chụm hai ngón trên màn hình cảm ứng, phím + − 0. Pixel luôn vuông; dấu thập luôn bám đúng `predicted_px` |
+| Người dùng chưa hiểu web để làm gì | Trang mở thẳng vào ô nhập | Phần mở đầu: tiêu đề, hai câu giải thích, 3 bước, và mục "What am I looking at?" giải thích khung, dấu thập, ảnh hiệu, D1–D6, zoom, cảnh báo |
+
+## Sửa thêm
+- **Thẻ "Scientific Conclusion" tự mâu thuẫn:** dòng lưu ý nói khung ảnh chưa xác nhận, nhưng đoạn Barnard lại viết "directly confirms". Đổi thành:
+  - nhãn "About this target", ghi rõ đây là kiến thức nền từ các nghiên cứu đã công bố;
+  - đoạn Barnard nêu số thật: 10,4″/năm, khoảng 1,7 pixel SPHEREx mỗi năm.
+- Cảnh báo `FEW_FRAMES` không còn khuyên tăng FOV, vì FOV không còn ảnh hưởng tới số khung.
+- Ba lần gọi `/api/frames` lúc mở trang chỉ xảy ra ở chế độ dev (React StrictMode); bản build gọi đúng 1 lần.
+- #54: merge `main` mới vào và giải quyết xung đột `targets.ts`: giữ trường `conclusion` của Hữu Hoàng và `findPresetForTarget()`. Base của #54 đã đổi sang `main`.
+
+## Kiểm chứng
+- lint, typecheck sạch; Vitest 205 pass (gồm 16 test mới cho `blink/view.ts`); build thành công.
+- Playwright 24/24 (Edge, 2 worker). Test mới `e2e/zoom.spec.ts` kiểm tra:
+  - zoom không gửi request;
+  - dấu thập nằm trên sao khi đã zoom (đọc pixel trên canvas);
+  - nút, lăn chuột, kéo và phím tắt.
+- Bản preview Vercel (cần đăng nhập Vercel): https://human-binoculars-b45n1a5ks-duy-hoang2.vercel.app. Link production chưa cập nhật, vì lệnh deploy production bị chặn và cần bạn cho phép.
+
+## Ghi chú môi trường
+Sau khi pull `main` phải chạy `npm ci` ở cả gốc repo lẫn `frontend/`, vì `shared/` giờ dùng `plotly.js-basic-dist-min` và `aladin-lite`. Không chạy thì trang dev báo lỗi import.
+
+---
+
 # Báo cáo 12/11/2026: Sửa CORS 500, preset từ targets.json, smoke test, deploy Vercel, thử FITS thật
 
 **Người làm:** Duy Hoàng
