@@ -8,10 +8,10 @@ test("displays scientific conclusion for Barnard's Star and updates on target sw
   // Verify Barnard's Star conclusion card is rendered
   const card = page.getByTestId("target-conclusion");
   await expect(card).toBeVisible();
-  await expect(card).toContainText("Scientific Conclusion");
+  await expect(card).toContainText("About this target");
   await expect(card).toContainText("Barnard's Star");
   await expect(card).toContainText(
-    "Barnard's Star exhibits rapid proper motion across observation epochs, producing a pronounced bright–dark dipole signature",
+    "Barnard's Star has the largest proper motion of any star, about 10.4″ a year",
   );
 
   // Switch to Difference mode and check difference hint
@@ -27,4 +27,3 @@ test("displays scientific conclusion for Barnard's Star and updates on target sw
     "WISE 0855 is an ultra-cold sub-stellar brown dwarf",
   );
 });
-

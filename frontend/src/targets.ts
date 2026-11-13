@@ -58,7 +58,7 @@ export const TARGET_PRESETS: TargetPreset[] = [
     "Barnard's Star",
     ["Barnards Star", "Barnard Star", "Barnard", "GJ 699"],
     "Red dwarf, largest proper motion in the sky",
-    "Barnard's Star exhibits rapid proper motion across observation epochs, producing a pronounced bright–dark dipole signature in difference imaging that directly confirms its transverse motion relative to the background sky.",
+    "Barnard's Star has the largest proper motion of any star, about 10.4″ a year, close to two SPHEREx pixels. In frames taken a year apart it should shift against the background stars, leaving a bright–dark dipole pair in the difference image.",
   ),
   preset(
     "wise0855",
