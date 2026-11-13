@@ -112,14 +112,6 @@ def local_inputs(query, data_dir):
 
 def make_frames(query, source_mode, data_dir, work_dir, stage):
     """Return a FramesResponse-compatible dict and PNG bytes indexed by filename."""
-    from shared.image_processing import reproject_compatible as reproject_interp
-
-    notices = [
-        {
-            "code": "EXPERIMENTAL_GROUPING",
-            "message": "Training preview: groups split at gaps over 30 days. Wavelength/PSF/background matching and motion validation require science review.",
-        }
-    ]
     with stage("discovery"):
         if source_mode == "fixture":
             inputs = local_inputs(query, data_dir)
@@ -145,18 +137,48 @@ def make_frames(query, source_mode, data_dir, work_dir, stage):
                 path = work_dir / f"{index}.fits"
                 path.write_bytes(content)
                 inputs.append((source, path))
-    if not inputs:
-        return {
-            "data_kind": "mock" if source_mode == "fixture" else "observational",
-            "query": query,
-            "sources": [],
-            "frames": [],
-            "warnings": [
-                {"code": "NO_DATA", "message": "No observations match the selected data source."}
-            ],
-        }, {}
-    grid = WCS(naxis=2)
+    result, images, _, _ = render_cutouts(query, inputs, source_mode, stage)
+    return result, images
+
+
+def render_cutouts(query, inputs, source_mode, stage):
+    """Render supplied source/FITS pairs, including the shared grid and display scale."""
+    from shared.image_processing import reproject_compatible as reproject_interp
+
+    notices = [
+        {
+            "code": "EXPERIMENTAL_GROUPING",
+            "message": "Training preview: groups split at gaps over 30 days. Wavelength/PSF/background matching and motion validation require science review.",
+        }
+    ]
     size = max(1, math.ceil(query["cutout_size_deg"] * 3600 / 6.2))
+    grid_metadata = {
+        "projection": "TAN",
+        "center_ra_deg": query["s_ra"],
+        "center_dec_deg": query["s_dec"],
+        "pixel_scale_arcsec": 6.2,
+        "width_px": size,
+        "height_px": size,
+    }
+    if not inputs:
+        return (
+            {
+                "data_kind": "mock" if source_mode == "fixture" else "observational",
+                "query": query,
+                "sources": [],
+                "frames": [],
+                "warnings": [
+                    {
+                        "code": "NO_DATA",
+                        "message": "No observations match the selected data source.",
+                    }
+                ],
+            },
+            {},
+            grid_metadata,
+            None,
+        )
+    grid = WCS(naxis=2)
     grid.wcs.crpix = [(size + 1) / 2] * 2
     grid.wcs.crval = [query["s_ra"], query["s_dec"]]
     grid.wcs.cdelt = [-6.2 / 3600, 6.2 / 3600]
@@ -205,6 +227,7 @@ def make_frames(query, source_mode, data_dir, work_dir, stage):
         if not finite.size:
             raise ValueError("No usable pixels after masking and reprojection")
         low, high = np.percentile(finite, [2, 99.5])
+        high = max(high, low + 1e-12)
     images = {}
     frames = []
     with stage("render"):
@@ -213,7 +236,7 @@ def make_frames(query, source_mode, data_dir, work_dir, stage):
             gray = np.zeros(pixels.shape, dtype=np.uint8)
             gray[valid] = np.rint(
                 255
-                * np.arcsinh(10 * np.clip((pixels[valid] - low) / max(high - low, 1e-12), 0, 1))
+                * np.arcsinh(10 * np.clip((pixels[valid] - low) / (high - low), 0, 1))
                 / np.arcsinh(10)
             )
             image = Image.fromarray(
@@ -241,10 +264,20 @@ def make_frames(query, source_mode, data_dir, work_dir, stage):
                     "warnings": notices,
                 }
             )
-    return {
-        "data_kind": "mock" if source_mode == "fixture" else "observational",
-        "query": query,
-        "sources": [source for source, _ in inputs],
-        "frames": frames,
-        "warnings": notices,
-    }, images
+    return (
+        {
+            "data_kind": "mock" if source_mode == "fixture" else "observational",
+            "query": query,
+            "sources": [source for source, _ in inputs],
+            "frames": frames,
+            "warnings": notices,
+        },
+        images,
+        grid_metadata,
+        {
+            "stretch": "asinh",
+            "vmin": float(low),
+            "vmax": float(high),
+            "unit": unit,
+        },
+    )

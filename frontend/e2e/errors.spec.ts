@@ -65,7 +65,7 @@ test("504 UPSTREAM_TIMEOUT: loading, then the contract message, then Try again b
   // The visitor sees the sentence for the code, never the server's raw message.
   const alert = page.getByTestId("frames-error");
   await expect(alert).toHaveAttribute("role", "alert");
-  await expect(alert).toContainText("took more than 2 minutes");
+  await expect(alert).toContainText("The request to the NASA archive timed out.");
   await expect(alert).toContainText("UPSTREAM_TIMEOUT");
   await expect(alert).not.toContainText("Example UPSTREAM_TIMEOUT.");
   await expect(page.getByTestId("frames-loading")).toHaveCount(0);

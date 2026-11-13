@@ -142,10 +142,23 @@ def test_unexpected_error_is_contract_json_with_cors(client, monkeypatch):
 
 
 def test_unavailable_mode_uses_contract_error(client, monkeypatch):
-    monkeypatch.setenv("DATA_MODE", "live")
+    monkeypatch.setenv("DATA_MODE", "unsupported")
     response = client.get("/api/health")
     assert response.status_code == 500
     assert ErrorResponse.model_validate(response.json()).error.code == "INTERNAL"
+
+
+def test_live_mode_never_falls_back_to_fixture(client, monkeypatch):
+    monkeypatch.setenv("DATA_MODE", "live")
+    monkeypatch.setattr("app.services.fixtures.load_cutouts", lambda *args: ())
+    assert client.get("/api/health").json()["mode"] == "live"
+    response = client.get("/api/frames", params=QUERY)
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "NO_FRAMES"
+    for endpoint in ("photometry", "astrometry"):
+        response = client.get(f"/api/{endpoint}", params=QUERY)
+        assert response.status_code == 200
+        assert response.json()["points"] == []
 
 
 def test_astrometry_detector_filter(client):

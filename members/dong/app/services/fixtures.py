@@ -16,6 +16,11 @@ from ..api_models import (
     Target,
 )
 from .catalog import resolve_name, targets
+from .frame_rendering import NoCoverage
+from .live_cutouts import cached_result, load_cutouts, workspace
+from .observed_frames import matching_cutouts, render_cached
+from .observed_science import measure
+from shared.pipeline.irsa import UpstreamError, UpstreamTimeout
 
 ROOT = Path(__file__).resolve().parents[4]
 SAMPLES = ROOT / "api_samples"
@@ -45,7 +50,20 @@ def fail(status, code, message, details=None):
 
 def require_fixture_mode():
     if os.getenv("DATA_MODE", "fixture") != "fixture":
-        fail(500, "INTERNAL", "Live API 0.1 adapters await team integration.")
+        fail(500, "INTERNAL", "Unsupported data mode.")
+
+
+def live_mode():
+    return os.getenv("DATA_MODE", "live") == "live"
+
+
+def archive_cutouts(query, directory):
+    try:
+        return load_cutouts(query, directory)
+    except UpstreamTimeout:
+        fail(504, "UPSTREAM_TIMEOUT", "IRSA did not respond before the deadline.")
+    except UpstreamError:
+        fail(502, "UPSTREAM_ERROR", "Unable to retrieve SPHEREx data from IRSA.")
 
 
 def sample(filename):
@@ -65,40 +83,39 @@ def target(query):
 
 
 def health():
-    result = sample("health.json")
+    result = (
+        {"status": "ok", "mode": "live", "fixture_targets": [], "irsa_reachable": None}
+        if live_mode() else sample("health.json")
+    )
     result["git_sha"] = os.getenv("GIT_SHA", "unknown")
     return result
 
 
 def resolve(query: ResolveQuery):
-    require_fixture_mode()
     result = resolve_name(query.name)
     if result is None:
         fail(404, "UNKNOWN_TARGET", "Name absent from fixture resolver.", {"name": query.name})
     return result
 
 
-def frames(query: FramesQuery):
-    from .frame_rendering import NoCoverage
-    from .observed_frames import matching_cutouts, render_cached
-
-    require_fixture_mode()
+def frames(query: FramesQuery, response=None):
     requested_target = Target.model_validate(target(query))
-    cutouts = matching_cutouts(query)
-    if cutouts is None:
-        result, published = sample_frames(query, requested_target)
+    if live_mode():
+        def build():
+            with workspace() as directory:
+                result, pngs = render(query, requested_target, archive_cutouts(query, directory))
+                return result.model_dump(mode="json"), pngs
+
+        (result, published), status = cached_result("frames", query, build)
+        if response is not None:
+            response.headers["X-Cache"] = status
     else:
-        try:
-            result, published = render_cached(
-                query.model_dump_json(), requested_target.model_dump_json(), cutouts
-            )
-        except NoCoverage:
-            fail(
-                404,
-                "NO_FRAMES",
-                "No fixture FITS cover this sky grid.",
-                {"ra": query.ra, "dec": query.dec},
-            )
+        require_fixture_mode()
+        cutouts = matching_cutouts(query)
+        if cutouts is None:
+            result, published = sample_frames(query, requested_target)
+        else:
+            result, published = render(query, requested_target, cutouts)
     with image_lock:
         for frame_id, content in published.items():
             images[frame_id] = content
@@ -106,6 +123,14 @@ def frames(query: FramesQuery):
         while len(images) > 1200:
             images.popitem(last=False)
     return result
+
+
+def render(query, requested_target, cutouts):
+    try:
+        return render_cached(query.model_dump_json(), requested_target.model_dump_json(), cutouts, individual=live_mode())
+    except NoCoverage:
+        fail(404, "NO_FRAMES", "No SPHEREx images cover this sky grid.",
+             {"ra": query.ra, "dec": query.dec})
 
 
 TARGET_PREDICTED_PX = {
@@ -159,7 +184,6 @@ def sample_frames(query, requested_target):
 
 
 def image(frame_id, difference):
-    require_fixture_mode()
     with image_lock:
         content = images.get(frame_id)
         if content is not None:
@@ -169,10 +193,40 @@ def image(frame_id, difference):
     return content[difference]
 
 
-def photometry(query: PhotometryQuery):
-    from .observed_frames import observed_photometry
+def measured_science(query, operation, aperture_arcsec=None):
+    if live_mode():
+        requested_target = target(query)
+        entry = targets().get(query.target_key)
+        catalog = entry[0] if entry else {
+            **requested_target, "epoch": "J2000", "pmra": 0.0, "pmdec": 0.0,
+            "source": "request",
+        }
+        def build():
+            with workspace() as directory:
+                cutouts = archive_cutouts(query, directory)
+                return measure(operation, cutouts, tuple(catalog.items()), query.detector, aperture_arcsec)
 
-    observed = observed_photometry(query, target(query))
+        result, _ = cached_result(operation, query, build)
+        if entry is None and operation == "astrometry":
+            result = {**result, "catalog_pm": {
+                "pmra": None, "pmdec": None, "epoch": "unknown", "source": "unknown",
+            }}
+        return {**result, "target": requested_target}
+    require_fixture_mode()
+    requested_target = target(query)
+    entry = targets().get(query.target_key)
+    if entry is None:
+        return None
+    catalog, _ = entry
+    cutouts = matching_cutouts(query)
+    if cutouts is None:
+        return None
+    result = measure(operation, cutouts, tuple(catalog.items()), query.detector, aperture_arcsec)
+    return {**result, "target": requested_target}
+
+
+def photometry(query: PhotometryQuery):
+    observed = measured_science(query, "photometry", query.aperture_arcsec)
     if observed is not None:
         return observed
     result = sample("photometry_rdra.json")
@@ -186,6 +240,9 @@ def photometry(query: PhotometryQuery):
 
 
 def astrometry(query: ScienceQuery):
+    observed = measured_science(query, "astrometry")
+    if observed is not None:
+        return observed
     result = sample("astrometry_barnard.json")
     if query.target_key != result["target"]["target_key"]:
         entry = targets().get(query.target_key)
