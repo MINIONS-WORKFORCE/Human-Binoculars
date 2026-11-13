@@ -18,7 +18,7 @@ class NoCoverage(Exception):
     """No indexed image overlaps the requested sky grid."""
 
 
-def build_frames(cutouts, query, identity):
+def build_frames(cutouts, query, identity, individual=False):
     """Render one median frame per visit on a common grid and display scale."""
     times = [cutout.mjd for cutout in cutouts if cutout.detector == query.detector]
     center = position_at(query.target_key, (min(times) + max(times)) / 2) if times else None
@@ -42,7 +42,10 @@ def build_frames(cutouts, query, identity):
     groups = group_images_into_visits(
         [{"t_min": cutout.mjd, "cutout": cutout} for cutout in cutouts]
     )
-    for visit, group in enumerate(groups, start=1):
+    numbered_groups = [(visit, group) for visit, group in enumerate(groups, start=1)]
+    if individual:
+        numbered_groups = [(visit, [entry]) for visit, group in numbered_groups for entry in group]
+    for visit, group in numbered_groups:
         aligned, metadata, missing, times, releases = [], [], [], [], set()
         for entry in group:
             cutout = entry["cutout"]
@@ -113,7 +116,7 @@ def build_frames(cutouts, query, identity):
         if predicted is not None:
             x, y = wcs.world_to_pixel(predicted)
             predicted_px = (float(x), float(shape[0] - 1 - y))
-        frame_id = f"observed-{identity}-{visit}"
+        frame_id = f"observed-{identity}-{len(frames) + 1}"
         frames.append(
             {
                 "id": frame_id,

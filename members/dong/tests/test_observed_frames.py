@@ -252,3 +252,16 @@ def test_observed_barnard_fixture_pack(client, monkeypatch):
         assert np.ptp(png) > 0
         assert frame.predicted_px is not None
     assert (read_png(client, result.frames[0].diff_png) == 128).all()
+
+
+def test_live_preserves_individual_observation_times(client, manifest, monkeypatch):
+    from app.services import fixtures
+    cutouts = observed_frames.matching_cutouts(FramesQuery(**QUERY))
+    monkeypatch.setenv("DATA_MODE", "live")
+    monkeypatch.setattr(fixtures, "load_cutouts", lambda *args: cutouts)
+    response = client.get("/api/frames", params=QUERY)
+    assert response.status_code == 200, response.text
+    frames = response.json()["frames"]
+    expected = sorted(c.mjd for c in cutouts if c.detector == QUERY["detector"])
+    assert [frame["mjd"] for frame in frames] == expected
+    assert len({frame["id"] for frame in frames}) == len(frames)

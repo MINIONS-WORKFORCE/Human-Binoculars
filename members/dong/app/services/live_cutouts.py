@@ -28,7 +28,7 @@ def collections_for_live():
 
 def cached_result(operation, query, build):
     root = Path(os.getenv("DATA_DIR", "data")) / "cache" / "api-0.1-live"
-    key = ("v1", operation, collections_for_live(), query.model_dump_json())
+    key = ("v2-exposures", operation, collections_for_live(), query.model_dump_json())
     with Cache(str(root), size_limit=256 * 1024 * 1024, timeout=2) as cache:
         value = cache.get(key, retry=True)
         if value is not None:
@@ -77,13 +77,20 @@ def load_cutouts(query, directory):
             raise discovery_errors[-1]
         return ()
 
-    # Sample each visit across detectors before spending the download budget.
+    # Frame previews sample individual observations across the full time span.
+    # Keep downloads bounded so a first request fits the upstream deadline.
     selected = []
-    for visit in irsa.group_images_into_visits(rows)[:6]:
-        by_detector = {}
-        for row in visit:
-            by_detector.setdefault(row["energy_bandpassname"], []).append(row)
-        selected.extend(by_detector.values())
+    if hasattr(query, "max_frames"):
+        count = min(query.max_frames, 12, len(rows))
+        indices = ([0] if count == 1 else
+                   [round(i * (len(rows) - 1) / (count - 1)) for i in range(count)])
+        selected = [[rows[index]] for index in indices]
+    else:
+        for visit in irsa.group_images_into_visits(rows)[:6]:
+            by_detector = {}
+            for row in visit:
+                by_detector.setdefault(row["energy_bandpassname"], []).append(row)
+            selected.extend(by_detector.values())
 
     def download(index, row):
         url = urlsplit(row["access_url"])
