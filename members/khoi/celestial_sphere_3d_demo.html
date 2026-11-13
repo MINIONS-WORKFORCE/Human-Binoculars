@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mô phỏng Thiên cầu 3D & SPHEREx Blink Viewer</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    /* Smooth canvas rendering */
+    canvas {
+      touch-action: none;
+      user-select: none;
+    }
+    .pixelated {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+  </style>
+</head>
+<body class="bg-[#070b14] text-slate-100 antialiased p-2 min-h-screen flex flex-col items-center justify-center font-sans">
+
+  <div class="w-full max-w-6xl bg-[#0c1222]/95 border border-slate-800 rounded-2xl p-4 shadow-2xl backdrop-blur-md">
+    
+    <!-- Top Bar: Title & Quick Target Selector -->
+    <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <h1 class="text-base font-bold text-white tracking-wide">
+            Thiên cầu 3D SPHEREx (Bạn ở trung tâm nhìn 360°)
+          </h1>
+        </div>
+        <p class="text-xs text-slate-400 mt-0.5">
+          Kéo chuột để quay 360° xung quanh bạn · Lăn chuột để phóng to/thu nhỏ · Bấm vào ngôi sao để mở <b>Blink Viewer</b>
+        </p>
+      </div>
+
+      <!-- Quick Target Buttons -->
+      <div class="flex flex-wrap items-center gap-1.5 text-xs">
+        <span class="text-slate-400 text-[11px] mr-1">5 Mục tiêu:</span>
+        <button onclick="selectTarget('barnard')" class="target-btn px-2.5 py-1 rounded-md font-medium border border-amber-500/50 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition cursor-pointer">
+          Sao Barnard
+        </button>
+        <button onclick="selectTarget('wise0855')" class="target-btn px-2.5 py-1 rounded-md font-medium border border-rose-500/50 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 transition cursor-pointer">
+          WISE 0855
+        </button>
+        <button onclick="selectTarget('epsindib')" class="target-btn px-2.5 py-1 rounded-md font-medium border border-cyan-500/50 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 transition cursor-pointer">
+          Eps Indi B
+        </button>
+        <button onclick="selectTarget('rwaur')" class="target-btn px-2.5 py-1 rounded-md font-medium border border-purple-500/50 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 transition cursor-pointer">
+          RW Aurigae
+        </button>
+        <button onclick="selectTarget('rdra')" class="target-btn px-2.5 py-1 rounded-md font-medium border border-red-500/50 bg-red-500/10 text-red-300 hover:bg-red-500/20 transition cursor-pointer">
+          R Draconis
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Workspace: 3D Celestial Sphere (Left) + Interactive Blink Player (Right) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 mt-3 items-start">
+      
+      <!-- 3D Celestial Sphere Canvas Container -->
+      <div class="lg:col-span-7 relative flex flex-col items-center">
+        <div class="relative w-full aspect-[4/3] max-h-[460px] rounded-xl overflow-hidden border border-slate-700/60 bg-gradient-to-b from-[#030712] via-[#050c1f] to-[#040817] shadow-inner">
+          <canvas id="sphereCanvas" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+          
+          <!-- HUD Compass & Coordinate overlay -->
+          <div class="absolute top-3 left-3 px-2.5 py-1.5 rounded-lg bg-slate-900/80 border border-slate-700/60 text-[11px] text-slate-300 backdrop-blur-sm pointer-events-none">
+            <div>Đang nhìn: <span id="hudCoords" class="font-mono text-cyan-300 font-semibold">RA 269.5° · Dec +4.7°</span></div>
+            <div>Góc nhìn (FOV): <span id="hudFov" class="font-mono text-slate-200 font-semibold">75°</span></div>
+          </div>
+
+          <!-- Celestial Grid Legend -->
+          <div class="absolute bottom-3 left-3 flex flex-wrap items-center gap-2 text-[10px] text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-800 backdrop-blur-sm pointer-events-none">
+            <span class="flex items-center gap-1"><span class="w-2 h-0.5 bg-cyan-400 inline-block"></span> Xích đạo trời</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-0.5 bg-amber-400 inline-block"></span> Mặt phẳng Hoàng Đạo</span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-indigo-300/40 inline-block"></span> Dải Ngân Hà</span>
+          </div>
+
+          <!-- Reset View Button -->
+          <button id="resetCamBtn" class="absolute top-3 right-3 px-2 py-1 rounded-md text-[11px] bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-200 transition cursor-pointer">
+            ↺ Góc nhìn mặc định
+          </button>
+        </div>
+        <span class="text-[11px] text-slate-400 mt-1.5">
+          Bạn đang đứng ở tâm vũ trụ: xoay chuột 360° ngắm trời sao hoặc bấm trực tiếp vào các điểm tròn nhấp nháy.
+        </span>
+      </div>
+
+      <!-- Integrated SPHEREx Time-Series Blink Viewer (Right Panel) -->
+      <div class="lg:col-span-5 flex flex-col bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 shadow-lg">
+        
+        <!-- Target Info Header -->
+        <div class="flex items-start justify-between gap-2 pb-2.5 border-b border-slate-800">
+          <div>
+            <div class="flex items-center gap-2">
+              <span id="targetBadge" class="px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                Sao di chuyển nhanh
+              </span>
+              <h2 id="targetTitle" class="text-base font-bold text-white">Barnard's Star</h2>
+            </div>
+            <p id="targetSub" class="text-xs text-slate-400 mt-0.5">RA: 269.4521° · Dec: +4.6934° · Kính SPHEREx D6 (4.96 µm)</p>
+          </div>
+        </div>
+
+        <!-- The Blink Screen -->
+        <div class="relative w-full aspect-square max-w-[280px] mx-auto mt-3 bg-black rounded-lg overflow-hidden border border-slate-700 flex items-center justify-center shadow-md">
+          <canvas id="blinkCanvas" width="180" height="180" class="w-full h-full pixelated"></canvas>
+          
+          <!-- Mode Overlay Tag -->
+          <div id="modeTag" class="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-semibold tracking-wider uppercase bg-black/70 border border-slate-700 text-cyan-300">
+            Ảnh gốc (Original)
+          </div>
+
+          <!-- Frame Date & Count -->
+          <div class="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[11px] bg-black/75 px-2 py-1 rounded border border-slate-800 text-slate-300">
+            <span id="frameCounter">Khung 1 / 3</span>
+            <span id="frameDate" class="font-mono text-amber-300">2025-05-05 UTC</span>
+          </div>
+        </div>
+
+        <!-- Player Controls -->
+        <div class="mt-3 flex flex-col gap-2">
+          
+          <!-- Play / Prev / Next / Toggle Buttons -->
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5">
+              <button id="prevBtn" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs border border-slate-700 cursor-pointer">
+                ◀
+              </button>
+              <button id="playBtn" class="px-3.5 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs border border-cyan-500 cursor-pointer">
+                ❚❚ Tạm dừng
+              </button>
+              <button id="nextBtn" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs border border-slate-700 cursor-pointer">
+                ▶
+              </button>
+            </div>
+
+            <!-- Original / Difference Toggle -->
+            <div class="flex rounded-lg border border-slate-700 p-0.5 bg-slate-950 text-xs">
+              <button id="modeOrigBtn" class="px-2.5 py-1 rounded font-medium bg-cyan-600 text-white cursor-pointer">
+                Ảnh gốc
+              </button>
+              <button id="modeDiffBtn" class="px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white cursor-pointer">
+                Ảnh hiệu
+              </button>
+            </div>
+          </div>
+
+          <!-- Sliders: Frame Scrubber & Speed -->
+          <div class="grid grid-cols-2 gap-3 mt-1 text-[11px] text-slate-300">
+            <label class="flex flex-col gap-1">
+              <div class="flex justify-between">
+                <span>Khung hình:</span>
+                <span id="sliderVal" class="text-cyan-400 font-mono">1</span>
+              </div>
+              <input id="frameSlider" type="range" min="0" max="2" value="0" step="1" class="accent-cyan-400 cursor-pointer w-full" />
+            </label>
+            <label class="flex flex-col gap-1">
+              <div class="flex justify-between">
+                <span>Tốc độ:</span>
+                <span id="speedVal" class="text-amber-400 font-mono">3 fps</span>
+              </div>
+              <input id="speedSlider" type="range" min="1" max="10" value="3" step="1" class="accent-amber-400 cursor-pointer w-full" />
+            </label>
+          </div>
+
+          <!-- Crosshair Toggle -->
+          <div class="flex items-center justify-between text-xs text-slate-300 pt-2 border-t border-slate-800/80">
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input id="crosshairCheck" type="checkbox" checked class="accent-cyan-400" />
+              <span>Dấu cộng định vị tâm sao (Crosshair)</span>
+            </label>
+            <span class="text-[10px] text-slate-500 font-mono">SPHEREx FITS</span>
+          </div>
+
+          <!-- Scientific Observation Note Card -->
+          <div class="mt-2 bg-slate-950/60 rounded-lg p-2.5 border border-slate-800/80 text-xs">
+            <span class="text-amber-400 font-semibold block text-[11px] mb-0.5">Hiện tượng khoa học quan sát được:</span>
+            <p id="targetConclusion" class="text-slate-400 text-[11.5px] leading-relaxed">
+              Sao Barnard chuyển động riêng rất nhanh qua các đợt chụp. Khi bật <b>Ảnh hiệu</b>, toàn bộ sao nền đứng yên biến mất, làm lộ rõ <b>cặp đốm sáng–tối (dipole)</b> chứng minh sao đang nhảy vị trí!
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    // --- 1. TARGETS & DATA DEF ---
+    const TARGETS = {
+      barnard: {
+        name: "Barnard's Star",
+        badge: "Sao chạy nhanh nhất bầu trời",
+        color: "#f59e0b",
+        ra: 269.4521,
+        dec: 4.6934,
+        desc: "RA 269.45° · Dec +4.69° · SPHEREx D6 (4.96 µm) · Chuyển động ~10.37″/năm",
+        conclusion: "Sao Barnard chuyển động riêng rất nhanh qua các đợt chụp. Khi bật <b>Ảnh hiệu</b>, toàn bộ sao nền đứng yên biến mất, làm lộ rõ <b>cặp đốm sáng–tối (dipole)</b> chứng minh sao đang nhảy vị trí!",
+        // 3-frame sequence demonstrating proper motion along row y=19, x=17->19->21
+        frames: [
+          {
+            orig: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcAAAAnCAAAAACpyA7pAAAAuUlEQVR4nGPkYSAKMBGnjGFUHXYwGi7YAUa4MDIxYlPHgs7n4/766Q9B8xj57DLs+BgJq+M2DTflZiRo7/+vpxlOf/2PqY6Rhzj3MaLnN0bG//+J8C8DVlUMo+mK8vx2Z82aNWkM1xns5zAwqG1lxq6OhYHhdwiEeTDJ/GRD7V/C9jZVez09h8Ne5Pi9e77BHZf7WBgYWNcwMJTfBXF4/nC/x60O5j4GU76KpiQc6pDcx9LQfOgvLosBGhcsiqKBaocAAAAASUVORK5CYII=",
+            diff: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcAAAAnCAAAAACpyA7pAAAAeklEQVR4nGNsYCAKMBGnjGFUHXYwGi7YwWi4YAej4YId0CBcckJCQowYMhnkfRgYhCMZsatjYWD4uwbCfGgg/dT+wH/C9h6yUfn0nAj3vX9hfwSX+1gYGJhDGBj2vgdx2P6z/cCtDuY+Bin2PQ6bCNvLZH/40T9lHOoA7xIZwXjUktwAAAAASUVORK5CYII=",
+            date: "2025-05-05 UTC",
+            px: [17, 19]
+          },
+          {
+            orig: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcAAAAnCAAAAACpyA7pAAAAuElEQVR4nGPkYSAKMBGnjGFUHXYwGi7YAZZwYWRixBRkwRTh4/766Q9B8xj57DLs+BgJq+M2DTflZiRo7/+vpxlOf/2PoZ2HOPcxYuY3Rsb//4nwLwMWVaPpigr57c6aNWvSGK4z2M9hYFDbyoxdHQsDw+8QCPNgkvnJhtq/hO1tqvZ6eg6Hvcjxe/d8gzsu97EwMLCuYWAovwvi8Pzhfo9bHcx9DKZ8FU1JONQhuY+lofnQX1wWAwD3UiyK45dz0AAAAABJRU5ErkJggg==",
+            diff: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcAAAAnCAAAAACpyA7pAAAAxElEQVR4nGNsYCAKMBGnjGFUHXYwGi7YAWa4/GdgJELdv+9fGbg5MXWji/x8dJlBV46dkLr/v5/dYlCTYsWwmgWVy8gqxcFw693v/wTUMbDLSTNc/vuTgZA6Js7/DF//ExMujAxYlI2mK8rzW05ISIgRQyaDvA8Dg3AktsTHAI63v2sgzIcG0k/tD2CLDDR7D9mofHpOhPvev7A/gst9LAwMzCEMDHvfgzhs/9l+4FYHcx+DFPseh02E7WWyP/zonzIOdQBBBS+49xBZaQAAAABJRU5ErkJggg==",
+            date: "2025-08-15 UTC",
+            px: [19, 19]
+          },
+          {
+            orig: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcAAAAnCAAAAACpyA7pAAAAuUlEQVR4nGPkYSAKMBGnjGFUHXYwGi7YAdZwYWRiRBdiwaKMhY/766c/BM1j5LPLsONjJKyO2zTclJuRoL3/v55mOP31P5pmHuLcx4gtvzEy/v9PhH8ZMFSNpisq5Lc7a9asSWO4zmA/h4FBbSszdnUsDAy/QyDMg0nmJxtq/xK2t6na6+k5HPYix+/d8w3uuNzHwsDAuoaBofwuiMPzh/s9bnUw9zGY8lU0JeFQh+Q+lobmQ39xWQwA1Jwsiu9OW1MAAAAASUVORK5CYII=",
+            diff: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACcAAAAnCAAAAACpyA7pAAAA1UlEQVR4nGNsYCAKMBGnjGFUHXYwGi7YAWa4/GdgYGDEEGVB4//7+ZuVk5P1989/+M37+fDMIwY5E3l2/Pb+//3syjMGKR0pVka89jKySjFIMTxjfPb7P373sctLsTI8ev77JwF/MHFyMDJ8//GfcLiAHIahbDRdUZ7fckJCQowYMhnkfRgYhCMxkx4DCLAwMPxdA2E+NJB+an8AMyow7D1ko/LpORHue//C/ggu97EwMDCHMDDsfQ/isP1n+4FbHcx9DFLsexw2EbaXyf7wo3/KONQBAHEeNc4YEdoSAAAAAElFTkSuQmCC",
+            date: "2026-03-20 UTC",
+            px: [21, 19]
+          }
+        ]
+      },
+      wise0855: {
+        name: "WISE 0855-0714",
+        badge: "Sao lùn nâu siêu lạnh",
+        color: "#f43f5e",
+        ra: 133.8189,
+        dec: -7.2470,
+        desc: "RA 133.82° · Dec -7.25° · Cảm biến SPHEREx D6 (4.96 µm) · Nhiệt độ ~250 K (-23°C)",
+        conclusion: "WISE 0855 là sao lùn nâu cực lạnh, gần như tàng hình ở dải sóng ngắn (D1) nhưng phát xạ nhiệt rõ rệt ở dải hồng ngoại trung D6 của SPHEREx.",
+        frames: [
+          {
+            orig: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAADpklEQVR4nFWTa0xbdRiH//9zeji9UNpCWUtpESgrlnZAoCBDBmVsEGDGiQsxqKgx0RldTJZpYjSyT2Ze5gdvMbAYo2EssouLzgFBZsDWgaxmlvVC6Y1eKL2tnJ7eaWtaNG7vx/fJ79vzQPDQTYiWhsxqJc1WgJI9tQAA5AH4vGnnoGGtRH5Ssc9h9Deocj/Kf/CSGDIDSQ18GT874o61LzsgNfeGefiZHTumbmxIAV+QJbiFCEy2I4R1MLs/v18yssWwsuTtfslLgB/9ZRTYsDqWNcZN1OX2G8lxZRFhm38nPXuuayiCdz1qIQKuV8FMOZnqBAAuk0UKs4/jK4/wkeUXv5BucblWzDlzLgLvdHMgQBI2T9NPiSs4oyr0jWROQaMZl4qSxX0Hp5yU6DQAcAXhaMjjQa2+PSn8s9KZMR+R6umhJaK0y1P87hJA3HwGWsmJKZ9IS13ZUKco5A4EvKuMNw7T5zaHAECkt23vYdqw7g/8dFRAThJn6mpIdkYrFCQOfGK4CSgQu0yxQznaw3iLuyKs+HDM60IsLUbfWrxxwq4CyL39gnGsTSBI2whCjEatsJ7K8McHIpImMer5CMDW74I36g9sUabwaqyorKTUHHRRRymz6/f7ChzI9VPwU2sfjE68zgpucMPSlZpuZDvmao46ibuaF0z3+ycop29AhhJWCQ3Ni4dYggXUlyIrvnf2sOItT3/5VASlgGhp2Y+ixUEi3pCNOyUeO5dvLekl0RMFdiWy3ogAncbbiLSuUkwpnGQU3qzN3tU1yL1CkH4muG6vQcCYaFNP3a0S0C7FtIcWj6ZVOBt4fHSmjfO7uqMQAoCdr8R5IfkskhJ+fs0snJTN7+60c6cVImaw3IAA8Fh3ch/d4SMS39KO9Xt/5bkLefY7VBnEFyYjf0MAUov+wxndV8+yV081vzJiQkKycBj4PaHqMFWoy/m1gLGjqlrgfvxqmeQR3059PO200jpWGberA2jOXw40WDrp4wJL3+7acaPpg4sjwpZkBFoJvrYo76eanrFc7mpjhlRiNPazaQxlpVF+0O7YmT6R53VX//pNcf4H9N62nEZub7KRWAcr7NPImd7hfB+6i6mp9TYM0c9XkFMy6Wu03nHTtSy11D+85//Am1bv+x/Hnwv03jo5uZXBAfp168Zg5/99qNvB9Vi6iXZhgOfGFmU12ULhv1nt8fozo3MF+PyTBQygMpx9MNg9rvd6ankpvbVnphgbfijofwC96I/wOnLclwAAAABJRU5ErkJggg==",
+            diff: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAAAJElEQVR4nGNsYMALmPBLM4zK4wdMo/J4ARN+aYZRefyAUPgAAGueAL7WjNDAAAAAAElFTkSuQmCC",
+            date: "2025-05-05 UTC",
+            px: [15, 15]
+          }
+        ]
+      },
+      epsindib: {
+        name: "Epsilon Indi B",
+        badge: "Hệ đôi sao lùn T",
+        color: "#06b6d4",
+        ra: 331.0441,
+        dec: -56.7828,
+        desc: "RA 331.04° · Dec -56.78° · Cảm biến SPHEREx D6 (4.42 µm)",
+        conclusion: "Epsilon Indi B là cặp sao lùn nâu đôi quay quanh nhau, có đặc trưng hấp thụ khí metan (CH4) rất mạnh trong các kênh phổ của SPHEREx.",
+        frames: [
+          {
+            orig: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAAClklEQVR4nF2TSY5bRwyGSRarXr1JiiR0O4MDA17bu6xzg9wmq5wruUlyAaPhxG3Zml69oQYyUAudOOGCP8APP8jFT4RbfZPa5ai+mtMEXxbd5MWCJNS5yRmz/pLzTY41fLSJKi1cbxYv5vAf/ys3RiXX6DxHOO/YqX974/jUd9KMSRdHNLQKbdSSmmL3z/z1o6k+3QOdKyka2NdzmbPWbeofbn72MnbIM9flZJpIl60dZyN1nZ7u62AlHL21KU356zhxA2haLiWPV26qZaHJT6eOxVIfyhALQDNqxesr38XME2nNzsolHRSbr46Ms3A0V397Vh6Nm505ekdIya5kvCReoyaDAJ1L2FKABvPgKLS4Sgfx5uScGmG4n0OGBptwVqR7Tb6EsZ91jE4yZoTeqI1WvUqw/Q/r39+fsCk5l26SLhn8fgATzxsAdex+/PnNr798dPkAaO7qz/WfazqUkKUucTiXUL96iz+9sMvYbrXafrsbv2vYUBTT0sFWycV3Dy9/e9jz7BDk8S+UweNmqUao149xIz5uX/d/fDjf7Qm4XdiaPOJGZH3AYqTr9b2+HIPY0FiA1VQgc8UDO2SVsl5OiibMU9rBJG18bGVW+cC29nOlbimjk3YapGPug+dJCpMFwLulSFXWZyDACCvkkUVwFnQ42ROwK8lV8XLdwcJl8pgIo2JdCikApdy6nCfVsiwRt/04EU6Rh2NF5gzAlJVIRV1pXCqXJbh2oRTrPFC8Jivykhq/Go1NJ2O0hXTp/DsAC64857Oq7bD9jJy6uNl+2rd0UcpkT//kG6DNzkIqq0rx2KR9xV7m66c9c6iAnAuuCerIhLT0cLX/ywFMY0i9aNAaoogs/+PXoOdeBA2aA5rhafI3jbB83OAOPoIAAAAASUVORK5CYII=",
+            diff: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAAAJElEQVR4nGNsYMALmPBLM4zK4wdMo/J4ARN+aYZRefyAUPgAAGueAL7WjNDAAAAAAElFTkSuQmCC",
+            date: "2025-04-29 UTC",
+            px: [15, 15]
+          }
+        ]
+      },
+      rwaur: {
+        name: "RW Aurigae",
+        badge: "Sao trẻ T Tauri biến quang",
+        color: "#c084fc",
+        ra: 76.9565,
+        dec: 30.4014,
+        desc: "RA 76.96° · Dec +30.40° · Cảm biến SPHEREx D6 (4.43 µm)",
+        conclusion: "RW Aurigae là một hệ sao trẻ đang hình thành có đĩa bụi khí bao quanh, gây ra các đợt sụt giảm độ sáng bất thường trong quang phổ hồng ngoại.",
+        frames: [
+          {
+            orig: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAAClklEQVR4nF2TSY5bRwyGSRarXr1JiiR0O4MDA17bu6xzg9wmq5wruUlyAaPhxG3Zml69oQYyUAudOOGCP8APP8jFT4RbfZPa5ai+mtMEXxbd5MWCJNS5yRmz/pLzTY41fLSJKi1cbxYv5vAf/ys3RiXX6DxHOO/YqX974/jUd9KMSRdHNLQKbdSSmmL3z/z1o6k+3QOdKyka2NdzmbPWbeofbn72MnbIM9flZJpIl60dZyN1nZ7u62AlHL21KU356zhxA2haLiWPV26qZaHJT6eOxVIfyhALQDNqxesr38XME2nNzsolHRSbr46Ms3A0V397Vh6Nm505ekdIya5kvCReoyaDAJ1L2FKABvPgKLS4Sgfx5uScGmG4n0OGBptwVqR7Tb6EsZ91jE4yZoTeqI1WvUqw/Q/r39+fsCk5l26SLhn8fgATzxsAdex+/PnNr798dPkAaO7qz/WfazqUkKUucTiXUL96iz+9sMvYbrXafrsbv2vYUBTT0sFWycV3Dy9/e9jz7BDk8S+UweNmqUao149xIz5uX/d/fDjf7Qm4XdiaPOJGZH3AYqTr9b2+HIPY0FiA1VQgc8UDO2SVsl5OiibMU9rBJG18bGVW+cC29nOlbimjk3YapGPug+dJCpMFwLulSFXWZyDACCvkkUVwFnQ42ROwK8lV8XLdwcJl8pgIo2JdCikApdy6nCfVsiwRt/04EU6Rh2NF5gzAlJVIRV1pXCqXJbh2oRTrPFC8Jivykhq/Go1NJ2O0hXTp/DsAC64857Oq7bD9jJy6uNl+2rd0UcpkT//kG6DNzkIqq0rx2KR9xV7m66c9c6iAnAuuCerIhLT0cLX/ywFMY0i9aNAaoogs/+PXoOdeBA2aA5rhafI3jbB83OAOPoIAAAAASUVORK5CYII=",
+            diff: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAAAJElEQVR4nGNsYMALmPBLM4zK4wdMo/J4ARN+aYZRefyAUPgAAGueAL7WjNDAAAAAAElFTkSuQmCC",
+            date: "2025-09-12 UTC",
+            px: [15, 15]
+          }
+        ]
+      },
+      rdra: {
+        name: "R Draconis",
+        badge: "Sao già biến quang Mira",
+        color: "#ef4444",
+        ra: 248.1674,
+        dec: 66.7551,
+        desc: "RA 248.17° · Dec +66.76° · Cảm biến SPHEREx D6 (4.49 µm)",
+        conclusion: "R Draconis là sao khổng lồ đỏ biến quang Mira nằm gần cực bắc bầu trời. Chu kỳ phồng xẹp làm độ sáng thay đổi hàng trăm lần qua từng mùa quan sát.",
+        frames: [
+          {
+            orig: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAABsklEQVR4nFVTy07cQBDsai9rAhKRcuGAuMApH5J/yS0fE/EBfAG3fEykXJD2kCDEacVmsbuiqhkvm7FlzfRjurq6DBDxvpBZRe26GX4XA7EcbCAiZbHRbjt6BgKMXKKdALny7PyQw5XdOrwDOZWBlAWtIHyQWZ9k6aBFpIMjIEv2PMMLrazuVm8N1BFgYNUh25yKoR4XDBSMz+FM5Sao6vKG8ZsSBaRihwFzvaE6XaH7hSCAIdbIcYzdHhNsY1L9m5SIOsGHi+tLbDYvr9MyA6p+24LDxy/fbuLhbvu3lUcUWn3Dx3j19TaCP345OgIVzEYEkDnw/LPvGlIp6tOMtQBynjY/I+LxD7V6RHpDvfPu9/cNn+8ft5OODbgJc3/I1frT9dnr89P2bWYFPaNGDmhq1+NYUfv9XGR11vvQM6SlIQVk4kyU9SAFRPl+bRPirIRPtopYRcnVmtBgytRQqaWZL+Nh+B61Irubk9eqanJwpIff2M9xvdOkD3+Cv766ieYE06KkpgZPtU9GIjH/FnfnWzdrX2ZNWj3KX6Yq5gzZkjxIuRf1bHpH/+e38se/c/AfhSnrTZ+o1bcAAAAASUVORK5CYII=",
+            diff: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB8AAAAfCAAAAAA6xUnlAAAAJElEQVR4nGNsYMALmPBLM4zK4wdMo/J4ARN+aYZRefyAUPgAAGueAL7WjNDAAAAAAElFTkSuQmCC",
+            date: "2025-05-16 UTC",
+            px: [15, 15]
+          }
+        ]
+      }
+    };
+
+    // --- 2. 3D CELESTIAL SPHERE RENDERER ---
+    const sphereCanvas = document.getElementById("sphereCanvas");
+    const sCtx = sphereCanvas.getContext("2d");
+
+    // Camera angles (User at center looking out)
+    // Start pointing roughly at Barnard's Star (yaw around -90 deg, pitch +5 deg)
+    let yaw = -1.55; 
+    let pitch = 0.08;
+    let targetYaw = yaw;
+    let targetPitch = pitch;
+    let fov = 75 * Math.PI / 180; // 75 deg FOV
+    let isDragging = false;
+    let lastX = 0, lastY = 0;
+
+    // Generate ~600 background stars on the celestial sphere
+    const bgStars = [];
+    for (let i = 0; i < 650; i++) {
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * 2.0 * Math.PI; // RA 0..2pi
+      const phi = Math.acos(2.0 * v - 1.0) - Math.PI / 2.0; // Dec -pi/2..pi/2
+      const r = Math.random();
+      const mag = r < 0.05 ? 2.5 : (r < 0.25 ? 1.8 : 1.0); // Brightness size
+      const alpha = 0.3 + Math.random() * 0.7;
+      bgStars.push({
+        x: Math.cos(phi) * Math.cos(theta),
+        y: Math.sin(phi),
+        z: Math.cos(phi) * Math.sin(theta),
+        mag,
+        alpha
+      });
+    }
+
+    // Convert celestial coordinates (RA/Dec in deg) to 3D unit vector
+    function raDecToVector(raDeg, decDeg) {
+      const ra = raDeg * Math.PI / 180;
+      const dec = decDeg * Math.PI / 180;
+      return {
+        x: Math.cos(dec) * Math.cos(ra),
+        y: Math.sin(dec),
+        z: Math.cos(dec) * Math.sin(ra)
+      };
+    }
+
+    // Project 3D vector from center onto the camera screen
+    function project3D(v, w, h) {
+      // 1. Rotate around Y (yaw)
+      const cy = Math.cos(yaw), sy = Math.sin(yaw);
+      const x1 = v.x * cy + v.z * sy;
+      const y1 = v.y;
+      const z1 = -v.x * sy + v.z * cy;
+
+      // 2. Rotate around X (pitch)
+      const cp = Math.cos(pitch), sp = Math.sin(pitch);
+      const x2 = x1;
+      const y2 = y1 * cp - z1 * sp;
+      const z2 = y1 * sp + z1 * cp;
+
+      // If behind camera (z2 <= 0.05), culled
+      if (z2 <= 0.08) return null;
+
+      // Perspective divide
+      const factor = (h / 2) / Math.tan(fov / 2);
+      const sx = w / 2 + (x2 / z2) * factor;
+      const sy = h / 2 - (y2 / z2) * factor;
+
+      return { x: sx, y: sy, z: z2 };
+    }
+
+    // Target positions in 3D
+    const targetKeys = Object.keys(TARGETS);
+    const targetVectors = {};
+    targetKeys.forEach(k => {
+      targetVectors[k] = raDecToVector(TARGETS[k].ra, TARGETS[k].dec);
+    });
+
+    let currentTargetKey = "barnard";
+
+    function drawSphere(ts) {
+      const w = sphereCanvas.clientWidth;
+      const h = sphereCanvas.clientHeight;
+      if (sphereCanvas.width !== w || sphereCanvas.height !== h) {
+        sphereCanvas.width = w;
+        sphereCanvas.height = h;
+      }
+
+      // Smooth camera interpolation
+      yaw += (targetYaw - yaw) * 0.12;
+      pitch += (targetPitch - pitch) * 0.12;
+
+      sCtx.clearRect(0, 0, w, h);
+
+      // Deep space subtle gradient background
+      const grad = sCtx.createRadialGradient(w/2, h/2, 20, w/2, h/2, w*0.7);
+      grad.addColorStop(0, "#081126");
+      grad.addColorStop(0.6, "#040817");
+      grad.addColorStop(1, "#02040b");
+      sCtx.fillStyle = grad;
+      sCtx.fillRect(0, 0, w, h);
+
+      // 1. Draw Milky Way diffuse glow band (approximate great circle tilted ~63 deg)
+      sCtx.save();
+      for (let step = 0; step < 72; step++) {
+        const t = (step / 72) * Math.PI * 2;
+        // Galactic equator unit vector
+        const gx = Math.cos(t);
+        const gy = Math.sin(t) * 0.88;
+        const gz = Math.sin(t) * 0.46;
+        const p = project3D({ x: gx, y: gy, z: gz }, w, h);
+        if (p) {
+          sCtx.fillStyle = "rgba(147, 197, 253, 0.04)";
+          sCtx.beginPath();
+          sCtx.arc(p.x, p.y, Math.max(12, 38 / p.z), 0, Math.PI * 2);
+          sCtx.fill();
+        }
+      }
+      sCtx.restore();
+
+      // 2. Draw Celestial Equator (Dec = 0)
+      sCtx.strokeStyle = "rgba(6, 182, 212, 0.28)";
+      sCtx.lineWidth = 1.2;
+      sCtx.setLineDash([4, 4]);
+      sCtx.beginPath();
+      let firstEq = true;
+      for (let deg = 0; deg <= 360; deg += 3) {
+        const rad = deg * Math.PI / 180;
+        const p = project3D({ x: Math.cos(rad), y: 0, z: Math.sin(rad) }, w, h);
+        if (p) {
+          if (firstEq) { sCtx.moveTo(p.x, p.y); firstEq = false; }
+          else sCtx.lineTo(p.x, p.y);
+        } else {
+          firstEq = true;
+        }
+      }
+      sCtx.stroke();
+      sCtx.setLineDash([]);
+
+      // 3. Draw Ecliptic (tilted 23.44 deg)
+      sCtx.strokeStyle = "rgba(251, 191, 36, 0.25)";
+      sCtx.lineWidth = 1.2;
+      sCtx.setLineDash([2, 4]);
+      sCtx.beginPath();
+      let firstEc = true;
+      const obl = 23.44 * Math.PI / 180;
+      for (let deg = 0; deg <= 360; deg += 3) {
+        const rad = deg * Math.PI / 180;
+        const ecX = Math.cos(rad);
+        const ecY = Math.sin(rad) * Math.sin(obl);
+        const ecZ = Math.sin(rad) * Math.cos(obl);
+        const p = project3D({ x: ecX, y: ecY, z: ecZ }, w, h);
+        if (p) {
+          if (firstEc) { sCtx.moveTo(p.x, p.y); firstEc = false; }
+          else sCtx.lineTo(p.x, p.y);
+        } else {
+          firstEc = true;
+        }
+      }
+      sCtx.stroke();
+      sCtx.setLineDash([]);
+
+      // 4. Draw Background Stars
+      for (let i = 0; i < bgStars.length; i++) {
+        const s = bgStars[i];
+        const p = project3D(s, w, h);
+        if (p) {
+          sCtx.fillStyle = `rgba(241, 245, 249, ${s.alpha})`;
+          sCtx.beginPath();
+          sCtx.arc(p.x, p.y, s.mag, 0, Math.PI * 2);
+          sCtx.fill();
+        }
+      }
+
+      // 5. Draw the 5 SPHEREx Targets with Glowing Beacons
+      const timeSec = ts * 0.003;
+      targetKeys.forEach(key => {
+        const target = TARGETS[key];
+        const vec = targetVectors[key];
+        const p = project3D(vec, w, h);
+        if (p) {
+          const isSelected = (key === currentTargetKey);
+          const baseColor = target.color;
+          const pulse = Math.sin(timeSec * 2.5 + (key.charCodeAt(0) % 5)) * 0.3 + 0.7;
+
+          // Outer glowing pulsing ring
+          sCtx.strokeStyle = baseColor;
+          sCtx.lineWidth = isSelected ? 2 : 1.2;
+          sCtx.beginPath();
+          const ringRadius = (isSelected ? 14 : 9) * pulse;
+          sCtx.arc(p.x, p.y, ringRadius, 0, Math.PI * 2);
+          sCtx.stroke();
+
+          // Core bright pin
+          sCtx.fillStyle = isSelected ? "#ffffff" : baseColor;
+          sCtx.beginPath();
+          sCtx.arc(p.x, p.y, isSelected ? 4.5 : 3.2, 0, Math.PI * 2);
+          sCtx.fill();
+
+          // Target Label Card
+          sCtx.font = isSelected ? "bold 12px sans-serif" : "11px sans-serif";
+          sCtx.fillStyle = isSelected ? "#ffffff" : "rgba(226, 232, 240, 0.85)";
+          sCtx.textAlign = "left";
+          sCtx.fillText(target.name, p.x + (isSelected ? 18 : 13), p.y + 4);
+
+          if (isSelected) {
+            // Selected crosshair reticle
+            sCtx.strokeStyle = "rgba(6, 182, 212, 0.8)";
+            sCtx.lineWidth = 1.5;
+            const r = 22;
+            sCtx.beginPath();
+            sCtx.moveTo(p.x - r, p.y); sCtx.lineTo(p.x - r + 6, p.y);
+            sCtx.moveTo(p.x + r, p.y); sCtx.lineTo(p.x + r - 6, p.y);
+            sCtx.moveTo(p.x, p.y - r); sCtx.lineTo(p.x, p.y - r + 6);
+            sCtx.moveTo(p.x, p.y + r); sCtx.lineTo(p.x, p.y + r - 6);
+            sCtx.stroke();
+          }
+        }
+      });
+
+      // Update HUD Coordinates
+      // Calculate RA & Dec at screen center (where camera points)
+      // Camera direction in 3D:
+      const camDirX = -Math.sin(yaw) * Math.cos(pitch);
+      const camDirY = Math.sin(pitch);
+      const camDirZ = Math.cos(yaw) * Math.cos(pitch);
+
+      let curDecDeg = Math.asin(Math.max(-1, Math.min(1, camDirY))) * 180 / Math.PI;
+      let curRaDeg = Math.atan2(camDirZ, camDirX) * 180 / Math.PI;
+      if (curRaDeg < 0) curRaDeg += 360;
+
+      document.getElementById("hudCoords").textContent = 
+        `RA ${curRaDeg.toFixed(1)}° · Dec ${curDecDeg >= 0 ? "+" : ""}${curDecDeg.toFixed(1)}°`;
+      document.getElementById("hudFov").textContent = `${Math.round(fov * 180 / Math.PI)}°`;
+
+      requestAnimationFrame(drawSphere);
+    }
+
+    // --- 3. SPHEREx BLINK VIEWER PLAYER ENGINE ---
+    const blinkCanvas = document.getElementById("blinkCanvas");
+    const bCtx = blinkCanvas.getContext("2d");
+
+    let currentFrameIdx = 0;
+    let isPlaying = true;
+    let fps = 3;
+    let blinkMode = "orig"; // "orig" or "diff"
+    let showCrosshair = true;
+    let lastBlinkTick = performance.now();
+
+    // Cache decoded Image objects
+    const imgCache = {};
+
+    function getOrLoadImage(url) {
+      if (!imgCache[url]) {
+        const img = new Image();
+        img.src = url;
+        imgCache[url] = img;
+      }
+      return imgCache[url];
+    }
+
+    function renderBlink() {
+      const target = TARGETS[currentTargetKey];
+      const frames = target.frames;
+      if (!frames || frames.length === 0) return;
+
+      if (currentFrameIdx >= frames.length) currentFrameIdx = 0;
+      const curFrame = frames[currentFrameIdx];
+      const imgUrl = (blinkMode === "diff") ? curFrame.diff : curFrame.orig;
+      const img = getOrLoadImage(imgUrl);
+
+      const w = blinkCanvas.width;
+      const h = blinkCanvas.height;
+      bCtx.fillStyle = "#000000";
+      bCtx.fillRect(0, 0, w, h);
+
+      bCtx.imageSmoothingEnabled = false; // Keep SPHEREx pixels crisp!
+
+      if (img.complete && img.naturalWidth > 0) {
+        bCtx.drawImage(img, 0, 0, w, h);
+      }
+
+      // Draw crosshair at predicted pixel position
+      if (showCrosshair && curFrame.px) {
+        const [px, py] = curFrame.px;
+        // In sample 39x39 images:
+        const gridSize = (img.naturalWidth > 0) ? img.naturalWidth : 39;
+        const scale = w / gridSize;
+        const cx = (px + 0.5) * scale;
+        const cy = (py + 0.5) * scale;
+
+        const gap = 6;
+        const arm = 12;
+
+        bCtx.lineWidth = 2.5;
+        bCtx.strokeStyle = "rgba(0, 0, 0, 0.8)";
+        drawCrossLines(bCtx, cx, cy, gap, arm);
+
+        bCtx.lineWidth = 1.2;
+        bCtx.strokeStyle = "#38bdf8"; // bright cyan
+        drawCrossLines(bCtx, cx, cy, gap, arm);
+      }
+
+      // Update labels
+      document.getElementById("frameCounter").textContent = `Khung ${currentFrameIdx + 1} / ${frames.length}`;
+      document.getElementById("frameDate").textContent = curFrame.date;
+      document.getElementById("sliderVal").textContent = currentFrameIdx + 1;
+      document.getElementById("frameSlider").max = Math.max(0, frames.length - 1);
+      document.getElementById("frameSlider").value = currentFrameIdx;
+    }
+
+    function drawCrossLines(ctx, cx, cy, gap, arm) {
+      ctx.beginPath();
+      ctx.moveTo(cx - gap - arm, cy); ctx.lineTo(cx - gap, cy);
+      ctx.moveTo(cx + gap, cy); ctx.lineTo(cx + gap + arm, cy);
+      ctx.moveTo(cx, cy - gap - arm); ctx.lineTo(cx, cy - gap);
+      ctx.moveTo(cx, cy + gap); ctx.lineTo(cx, cy + gap + arm);
+      ctx.stroke();
+    }
+
+    function blinkLoop(now) {
+      const interval = 1000 / fps;
+      if (isPlaying && (now - lastBlinkTick >= interval)) {
+        const frames = TARGETS[currentTargetKey].frames;
+        if (frames.length > 1) {
+          currentFrameIdx = (currentFrameIdx + 1) % frames.length;
+          renderBlink();
+        }
+        lastBlinkTick = now;
+      }
+      requestAnimationFrame(blinkLoop);
+    }
+
+    // --- 4. TARGET SELECTION & INTERACTION ---
+    window.selectTarget = function(key) {
+      if (!TARGETS[key]) return;
+      currentTargetKey = key;
+      const target = TARGETS[key];
+
+      // Update info panel
+      document.getElementById("targetTitle").textContent = target.name;
+      document.getElementById("targetBadge").textContent = target.badge;
+      document.getElementById("targetSub").textContent = target.desc;
+      document.getElementById("targetConclusion").innerHTML = target.conclusion;
+
+      // Animate Camera to aim directly at this target's RA & Dec
+      const ra = target.ra * Math.PI / 180;
+      const dec = target.dec * Math.PI / 180;
+
+      // Desired yaw: camera points along (camDirX, camDirY, camDirZ) = (cos(dec)*cos(ra), sin(dec), cos(dec)*sin(ra))
+      // Since camDirX = -sin(yaw)*cos(pitch), camDirZ = cos(yaw)*cos(pitch)
+      // yaw = atan2(-camDirX, camDirZ) = atan2(-cos(ra), sin(ra))
+      let wantedYaw = Math.atan2(-Math.cos(ra), Math.sin(ra));
+      // Normalize yaw difference to shortest path
+      while (wantedYaw - targetYaw > Math.PI) wantedYaw -= Math.PI * 2;
+      while (wantedYaw - targetYaw < -Math.PI) wantedYaw += Math.PI * 2;
+      
+      targetYaw = wantedYaw;
+      targetPitch = dec;
+
+      currentFrameIdx = 0;
+      renderBlink();
+    };
+
+    // --- 5. EVENT LISTENERS ---
+    // Sphere Drag Controls
+    sphereCanvas.addEventListener("pointerdown", (e) => {
+      isDragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      sphereCanvas.setPointerCapture(e.pointerId);
+    });
+
+    sphereCanvas.addEventListener("pointermove", (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+
+      const sens = 0.004;
+      targetYaw += dx * sens;
+      targetPitch -= dy * sens;
+
+      // Constrain pitch to avoid flipping over poles
+      targetPitch = Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, targetPitch));
+    });
+
+    const stopDrag = () => { isDragging = false; };
+    sphereCanvas.addEventListener("pointerup", stopDrag);
+    sphereCanvas.addEventListener("pointercancel", stopDrag);
+
+    // Zoom via wheel
+    sphereCanvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      fov += e.deltaY * 0.001;
+      fov = Math.max(25 * Math.PI / 180, Math.min(95 * Math.PI / 180, fov));
+    }, { passive: false });
+
+    // Click on target on canvas
+    sphereCanvas.addEventListener("click", (e) => {
+      const rect = sphereCanvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) * (sphereCanvas.width / rect.width);
+      const clickY = (e.clientY - rect.top) * (sphereCanvas.height / rect.height);
+
+      let closestKey = null;
+      let minDst = 24; // 24px click tolerance
+
+      targetKeys.forEach(k => {
+        const p = project3D(targetVectors[k], sphereCanvas.width, sphereCanvas.height);
+        if (p) {
+          const d = Math.hypot(p.x - clickX, p.y - clickY);
+          if (d < minDst) {
+            minDst = d;
+            closestKey = k;
+          }
+        }
+      });
+
+      if (closestKey) {
+        selectTarget(closestKey);
+      }
+    });
+
+    // Reset Camera Button
+    document.getElementById("resetCamBtn").addEventListener("click", () => {
+      selectTarget("barnard");
+    });
+
+    // Blink Controls
+    const playBtn = document.getElementById("playBtn");
+    playBtn.addEventListener("click", () => {
+      isPlaying = !isPlaying;
+      playBtn.textContent = isPlaying ? "❚❚ Tạm dừng" : "▶ Tiếp tục";
+    });
+
+    document.getElementById("prevBtn").addEventListener("click", () => {
+      const frames = TARGETS[currentTargetKey].frames;
+      currentFrameIdx = (currentFrameIdx - 1 + frames.length) % frames.length;
+      renderBlink();
+    });
+
+    document.getElementById("nextBtn").addEventListener("click", () => {
+      const frames = TARGETS[currentTargetKey].frames;
+      currentFrameIdx = (currentFrameIdx + 1) % frames.length;
+      renderBlink();
+    });
+
+    // Mode Toggle
+    const modeOrigBtn = document.getElementById("modeOrigBtn");
+    const modeDiffBtn = document.getElementById("modeDiffBtn");
+    const modeTag = document.getElementById("modeTag");
+
+    modeOrigBtn.addEventListener("click", () => {
+      blinkMode = "orig";
+      modeOrigBtn.className = "px-2.5 py-1 rounded font-medium bg-cyan-600 text-white cursor-pointer";
+      modeDiffBtn.className = "px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white cursor-pointer";
+      modeTag.textContent = "Ảnh gốc (Original)";
+      modeTag.className = "absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-semibold tracking-wider uppercase bg-black/70 border border-slate-700 text-cyan-300";
+      renderBlink();
+    });
+
+    modeDiffBtn.addEventListener("click", () => {
+      blinkMode = "diff";
+      modeDiffBtn.className = "px-2.5 py-1 rounded font-medium bg-cyan-600 text-white cursor-pointer";
+      modeOrigBtn.className = "px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white cursor-pointer";
+      modeTag.textContent = "Ảnh hiệu (Difference dipole)";
+      modeTag.className = "absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-semibold tracking-wider uppercase bg-black/70 border border-amber-500/50 text-amber-300";
+      renderBlink();
+    });
+
+    // Sliders
+    document.getElementById("frameSlider").addEventListener("input", (e) => {
+      currentFrameIdx = parseInt(e.target.value, 10);
+      renderBlink();
+    });
+
+    document.getElementById("speedSlider").addEventListener("input", (e) => {
+      fps = parseInt(e.target.value, 10);
+      document.getElementById("speedVal").textContent = `${fps} fps`;
+    });
+
+    document.getElementById("crosshairCheck").addEventListener("change", (e) => {
+      showCrosshair = e.target.checked;
+      renderBlink();
+    });
+
+    // --- 6. START DEMO ---
+    selectTarget("barnard");
+    requestAnimationFrame(drawSphere);
+    requestAnimationFrame(blinkLoop);
+  </script>
+</body>
+</html>
