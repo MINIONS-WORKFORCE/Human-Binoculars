@@ -122,9 +122,16 @@ src/coords/parse.ts             decimal degrees / hours-degrees -> degrees (Coor
 src/coords/format.ts            degrees -> "269.4521°", "17h57m48.50s", "+04°41′36.2″"
 src/coords/locate.ts            input -> position: coordinates, the 5 targets, then /api/resolve
 src/coords/CoordinatePreview.tsx shows the position in every notation while typing
-src/App.tsx                     demo page: type a target, load /api/frames, blink
+src/science/PhotometryPanel.tsx loads /api/photometry, shows shared/charts PhotometryChart
+src/science/SkyPanel.tsx        shared/skymap SkyMap (Aladin Lite) with a Gaia DR3 layer switch
+src/shared-modules.d.ts         types for the plain-JS components imported from ../shared
+src/App.tsx                     page: type a target, then blink, sky map and photometry
 e2e/blink.spec.ts               Playwright: play, step, difference, crosshair pixels
 e2e/target-input.spec.ts        Playwright: the three ways to type a target, errors
+e2e/science.spec.ts             Playwright: photometry chart and table, Gaia layer, 390px width
+e2e/view-url.spec.ts            Playwright: FOV and detector in the request and URL, reload, links
+e2e/warnings.spec.ts            Playwright: warning codes shown as sentences
+e2e/accessibility.spec.ts       Playwright: controls at least 44px, Tab reaches every control
 e2e/errors.spec.ts              Playwright: loading, 504 + Try again, 400, image failure
 ```
 
@@ -165,6 +172,36 @@ loops with requestAnimationFrame. Controls: Play/Pause (Space), previous/next
 Each frame shows its UTC date, wavelength and detector. Pixels stay square
 (whole device pixels per SPHEREx pixel, no smoothing) and the crosshair sits at
 `predicted_px` using the PNG top-left origin.
+
+## View in the URL, FOV and warnings
+
+The page keeps its view in the URL, so a reload or a shared link reopens it:
+`/?q=R+Draconis&fov=5&det=D3`. `q` is the text of the target field (a name or
+coordinates), `fov` the cutout width in arcminutes (2, 5 or 10; missing means the API
+default of 0.1°, shown as "Default (6′)"), `det` the detector. The FOV becomes the API's
+`size` in degrees (2′ → 0.0333, 5′ → 0.0833, 10′ → 0.1667). Changing the detector or FOV
+sends the request again. `src/urlState.ts` has the parsing and its tests; a link whose
+`q` cannot be read shows why and opens Barnard's Star.
+
+Each code in `warnings` becomes a sentence under the frame summary (`src/warnings.ts`).
+
+## Photometry chart and sky map
+
+Owner: Thạch. The page imports two components that live in `../shared/` because
+other modules use them too: `PhotometryChart` (`shared/charts/`, Plotly) and
+`SkyMap` (`shared/skymap/`, Aladin Lite). Both panels are loaded lazily, so the
+blink viewer does not wait for the two large libraries.
+
+- `/api/photometry` is called without `detector`; the chart filters D1 to D6 itself.
+  Points with `detected: false` are drawn as 3σ upper limits, `flagged` points
+  hollow. Each target without photometry gets an empty-state message. In the
+  fixture (and in the mock) only R Draconis has measurements.
+- The map centres on the requested RA/Dec and is twice as wide as the frames' footprint
+  (at least 6′). "Gaia layer" chooses real Gaia DR3 from VizieR, synthetic stars that work
+  offline, or no layer. Aladin and VizieR are at CDS; where CDS is blocked the map stays
+  grey and says so.
+- `vite.config.ts` lists React, Plotly and Aladin under `resolve.dedupe`, so files in
+  `../shared` use this folder's copies (one React, and CI installs only `frontend/`).
 
 ## When the API contract changes
 

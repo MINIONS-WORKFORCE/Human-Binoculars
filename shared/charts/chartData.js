@@ -25,6 +25,14 @@ export function mjdToIso(mjd) {
   return new Date((mjd - MJD_UNIX_EPOCH) * MS_PER_DAY).toISOString();
 }
 
+/** Use day-level ticks when all observations fall within ~2 months; month-year otherwise. */
+export function dateTickFormat(mjds) {
+  const valid = mjds.filter((mjd) => Number.isFinite(mjd));
+  if (valid.length === 0) return "%b %Y";
+  const spanDays = Math.max(...valid) - Math.min(...valid);
+  return spanDays <= 60 ? "%d %b %Y" : "%b %Y";
+}
+
 /** "SPHEREx-D6" -> "D6" */
 export function detectorId(bandpassName) {
   return String(bandpassName).replace(/^SPHEREx-/, "");
@@ -101,7 +109,7 @@ function traces(points, options, theme) {
   return { series, showLegend: series.length > 1 };
 }
 
-function baseLayout(theme, { xTitle, yTitle, showLegend, top }) {
+export function baseLayout(theme, { xTitle, yTitle, showLegend, top }) {
   const axisFont = { color: theme.muted, size: 12, family: theme.fontMono };
   const titleFont = { color: theme.muted, size: 12 };
   return {
@@ -169,10 +177,16 @@ export function spectrumFigure(response, { selected = null, theme }) {
     showLegend,
     top: 28,
   });
+  addDetectorBands(layout, theme, selected);
+  return { data: series, layout };
+}
+
+/** Wavelength axis with the six detector bands drawn to scale; `selected` is outlined. */
+export function addDetectorBands(layout, theme, selected = null) {
   layout.xaxis.range = WAVELENGTH_RANGE;
   layout.xaxis.tickvals = [1, 2, 3, 4, 5];
 
-  // Detector bands to scale; every other one is shaded so the edges can be read.
+  // Every other band is shaded so the edges can be read.
   layout.shapes = DETECTORS.map((detector, index) => ({
     type: "rect",
     layer: "below",
@@ -201,8 +215,7 @@ export function spectrumFigure(response, { selected = null, theme }) {
       color: detector.id === selected ? theme.text : theme.muted,
     },
   }));
-
-  return { data: series, layout };
+  return layout;
 }
 
 export function lightcurveFigure(response, { theme }) {
@@ -228,8 +241,11 @@ export function lightcurveFigure(response, { theme }) {
     showLegend,
     top: 12,
   });
+  const plottedMjds = response.points
+    .filter((point) => point.flux != null)
+    .map((point) => point.time_mjd);
   layout.xaxis.type = "date";
-  layout.xaxis.tickformat = "%b %Y";
+  layout.xaxis.tickformat = dateTickFormat(plottedMjds);
   layout.xaxis.nticks = 6;
 
   return { data: series, layout };

@@ -1,0 +1,39 @@
+{
+  "data_kind": "mock",
+  "n_rows": 60,
+  "warnings": [
+    "NO_ABSOLUTE_APERTURE_CORRECTION",
+    "CALIBRATION_SYSTEMATICS_NOT_INCLUDED"
+  ],
+  "aperture_arcsec": 12.3,
+  "aperture_is": "radius",
+  "n_target_rows": 20,
+  "n_valid_target_fluxes": 20,
+  "variability": {
+    "chi2_reduced": 10.059357712374696,
+    "dof": 19,
+    "is_variable": true,
+    "method": "chi2_vs_reference",
+    "reference_validated": true,
+    "comparison_band": "synthetic-2um",
+    "wavelength_min_um": 2.0,
+    "wavelength_max_um": 2.0,
+    "reference_checks": [
+      {
+        "reference_id": "synthetic-control-1",
+        "gaia_source_id": null,
+        "chi2_reduced": 1.4618005135447936,
+        "n": 20,
+        "stable_within_errors": true
+      },
+      {
+        "reference_id": "synthetic-control-2",
+        "gaia_source_id": null,
+        "chi2_reduced": 1.1805397997897817,
+        "n": 20,
+        "stable_within_errors": true
+      }
+    ]
+  },
+  "api_payload_status": "written"
+}

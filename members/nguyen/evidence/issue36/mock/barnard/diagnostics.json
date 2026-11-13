@@ -1,0 +1,148 @@
+{
+  "data_kind": "mock",
+  "api_version": "0.1",
+  "target": {
+    "ra": 269.44850252543836,
+    "dec": 4.739420051112412,
+    "name": "Barnard's Star",
+    "target_key": "barnard"
+  },
+  "catalog_pm": {
+    "pmra": -801.5509783684709,
+    "pmdec": 10362.394206546573,
+    "source": "gaia_dr3",
+    "epoch": "J2016.0"
+  },
+  "points": [
+    {
+      "frame_id": "synthetic-barnard-00",
+      "mjd": 60000.0,
+      "measured": {
+        "ra": 269.44690506904,
+        "dec": 4.760000625439602,
+        "err_arcsec": 0.1415918276146401
+      },
+      "predicted": {
+        "ra": 269.4469050690354,
+        "dec": 4.760000625439591
+      },
+      "offset_arcsec": 1.651842826223533e-08,
+      "measured_px": [
+        34.0,
+        34.00000000000205
+      ],
+      "warnings": []
+    },
+    {
+      "frame_id": "synthetic-barnard-01",
+      "mjd": 60090.0,
+      "measured": {
+        "ra": 269.44685001429696,
+        "dec": 4.760709892443824,
+        "err_arcsec": 0.14159153446523942
+      },
+      "predicted": {
+        "ra": 269.44685001429235,
+        "dec": 4.760709892443827
+      },
+      "offset_arcsec": 1.6518357660853144e-08,
+      "measured_px": [
+        34.03211598313312,
+        33.584819313300436
+      ],
+      "warnings": []
+    },
+    {
+      "frame_id": "synthetic-barnard-02",
+      "mjd": 60180.0,
+      "measured": {
+        "ra": 269.446794959441,
+        "dec": 4.761419159436947,
+        "err_arcsec": 0.14159173571609537
+      },
+      "predicted": {
+        "ra": 269.4467949594364,
+        "dec": 4.7614191594369375
+      },
+      "offset_arcsec": 1.6518374113259243e-08,
+      "measured_px": [
+        34.06423196594393,
+        33.16963863040801
+      ],
+      "warnings": []
+    },
+    {
+      "frame_id": "synthetic-barnard-03",
+      "mjd": 60270.0,
+      "measured": {
+        "ra": 269.44673990447194,
+        "dec": 4.762128426419134,
+        "err_arcsec": 0.14159164995629855
+      },
+      "predicted": {
+        "ra": 269.44673990446734,
+        "dec": 4.762128426419104
+      },
+      "offset_arcsec": 1.651867950811501e-08,
+      "measured_px": [
+        34.096347948498526,
+        32.7544579510999
+      ],
+      "warnings": []
+    },
+    {
+      "frame_id": "synthetic-barnard-04",
+      "mjd": 60360.0,
+      "measured": {
+        "ra": 269.4466848493899,
+        "dec": 4.762837693390107,
+        "err_arcsec": 0.14159154209697988
+      },
+      "predicted": {
+        "ra": 269.4466848493853,
+        "dec": 4.762837693390097
+      },
+      "offset_arcsec": 1.6518346244646035e-08,
+      "measured_px": [
+        34.12846393076383,
+        32.339277275409096
+      ],
+      "warnings": []
+    },
+    {
+      "frame_id": "synthetic-barnard-05",
+      "mjd": 60450.0,
+      "measured": {
+        "ra": 269.44662979419485,
+        "dec": 4.763546960349309,
+        "err_arcsec": 0.14159173849352813
+      },
+      "predicted": {
+        "ra": 269.44662979419024,
+        "dec": 4.763546960349279
+      },
+      "offset_arcsec": 1.6518626833002552e-08,
+      "measured_px": [
+        34.160579912739344,
+        31.924096603535453
+      ],
+      "warnings": []
+    }
+  ],
+  "fit": {
+    "pmra": -801.5747794107792,
+    "pmdec": 10362.390766624523,
+    "pmra_err": 97.1296211588379,
+    "pmdec_err": 97.12955318002427,
+    "n_points": 6,
+    "baseline_days": 450.0,
+    "pmdec_sign_matches_catalog": true
+  },
+  "warnings": [
+    "APPARENT_LINEAR_TREND_NO_PARALLAX_FIT",
+    "NO_REFERENCE_STAR_REGISTRATION",
+    "GAUSSIAN_PSF_APPROXIMATION",
+    "PIXELS_REQUIRE_MATCHING_PNG_GRID",
+    "ERRORS_INFLATED_BY_RESIDUAL_SCATTER;SYSTEMATIC_FLOOR_IS_ASSUMED"
+  ]
+}

@@ -108,6 +108,15 @@ def frames(query: FramesQuery):
     return result
 
 
+TARGET_PREDICTED_PX = {
+    "barnard": [[17.0, 19.0], [19.0, 19.0], [21.0, 19.0]],
+    "wise0855": [[19.0, 17.0], [19.0, 19.0], [19.0, 21.0]],
+    "epsindib": [[17.5, 17.5], [19.5, 19.5], [21.5, 21.5]],
+    "rwaur": [[19.0, 19.0], [19.0, 19.0], [19.0, 19.0]],
+    "rdra": [[19.0, 19.0], [19.0, 19.0], [19.0, 19.0]],
+}
+
+
 def sample_frames(query, requested_target):
     result = sample("frames_barnard_d6.json")
     result["target"] = requested_target
@@ -124,13 +133,27 @@ def sample_frames(query, requested_target):
     for index, frame in enumerate(result["frames"]):
         frame_id = f"fixture-{identity}-{index}"
         frame["id"] = frame_id
-        frame["predicted_px"] = frame["predicted_px"] if query.target_key else None
+        predicted = (
+            TARGET_PREDICTED_PX[query.target_key][index]
+            if query.target_key in TARGET_PREDICTED_PX and index < len(TARGET_PREDICTED_PX[query.target_key])
+            else frame["predicted_px"]
+        ) if query.target_key else None
+        frame["predicted_px"] = predicted
         frame["png"] = f"/api/frames/{frame_id}.png"
         frame["diff_png"] = f"/api/frames/{frame_id}/diff.png"
-        published[frame_id] = (
-            (SAMPLES / f"png/frame-{index}.png").read_bytes(),
-            (SAMPLES / f"png/frame-{index}_diff.png").read_bytes(),
+        target_png = SAMPLES / f"png/targets/{query.target_key}_{index}.png" if query.target_key else None
+        target_diff = SAMPLES / f"png/targets/{query.target_key}_{index}_diff.png" if query.target_key else None
+        png_bytes = (
+            target_png.read_bytes()
+            if (target_png and target_png.is_file())
+            else (SAMPLES / f"png/frame-{index}.png").read_bytes()
         )
+        diff_bytes = (
+            target_diff.read_bytes()
+            if (target_diff and target_diff.is_file())
+            else (SAMPLES / f"png/frame-{index}_diff.png").read_bytes()
+        )
+        published[frame_id] = (png_bytes, diff_bytes)
     result["reference_frame_id"] = result["frames"][0]["id"]
     return Frames.model_validate(result), published
 
@@ -147,6 +170,11 @@ def image(frame_id, difference):
 
 
 def photometry(query: PhotometryQuery):
+    from .observed_frames import observed_photometry
+
+    observed = observed_photometry(query, target(query))
+    if observed is not None:
+        return observed
     result = sample("photometry_rdra.json")
     if query.target_key != result["target"]["target_key"]:
         result.update(reference_star=None, points=[], variability=None)

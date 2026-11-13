@@ -1,6 +1,114 @@
 # Ghi chú workspace và thực hành reproject
 
-> **Cập nhật 07/11/2026:** đã triển khai các task ưu tiên mới trong [members/huu-hoang/TASKS.md](members/huu-hoang/TASKS.md): TAN tâm mục tiêu/tâm tìm kiếm, centroid nguồn nền, benchmark 10/50 ảnh, median/ảnh hiệu, `make_frames`, bộ mẫu năm mục tiêu, flags bão hòa và RGB giả. Xem [ảnh tổng quan](data/five_targets/overview.png) và [kiểm chứng đầu ra](data/five_targets/verification.json). Phần bên dưới giữ nguyên ghi chép demo hai ảnh ngày 06/11; checklist cũ không mô tả toàn bộ trạng thái hiện tại.
+> **Cập nhật 11/11/2026 (Hoàn tất hàm build_frames & nghiệm thu dấu thập bám sao Barnard):**
+> - **Đã hoàn thành chính thức Task build_frames():**
+>   * Đóng gói module chuẩn [`members/huu-hoang/build_frames.py`](members/huu-hoang/build_frames.py) với hàm `build_frames()` tuân thủ 100% Pydantic model `Frames` của Backend Đông (API 0.1 / Issue #14).
+>   * Đặt tâm lưới TAN tự động ở vị trí mục tiêu tại **thời điểm trung vị giữa chuỗi khung (temporal midpoint MJD)**.
+>   * Tính `predicted_px` chuẩn gốc trên-trái ($x_{png} = x_{fits}, y_{png} = \text{height} - 1 - y_{fits}$).
+>   * Áp dụng chung thang AsinhStretch (`vmin=0.4202`, `vmax=4.4321`), xuất đầy đủ PNG khung và PNG ảnh hiệu diff dipole.
+>   * **Nghiệm thu dấu thập (Done when):** Xuất trọn bộ ảnh nghiệm thu [`data/five_targets/barnard/verification_crosshairs/`](data/five_targets/barnard/verification_crosshairs/) gồm ảnh so sánh [`barnard_d6_movement_comparison.png`](data/five_targets/barnard/verification_crosshairs/barnard_d6_movement_comparison.png) và GIF blink [`barnard_d6_movement_blink.gif`](data/five_targets/barnard/verification_crosshairs/barnard_d6_movement_blink.gif) chứng minh dấu thập bám chính xác vào sao Barnard khi sao dịch chuyển hơn 1 pixel về phía Bắc.
+> - **Kiểm thử tự động:** `pytest members/huu-hoang/` đạt **11/11 test passed** (thêm bộ test mới trong [`test_build_frames.py`](members/huu-hoang/test_build_frames.py)).
+> - **Quy ước đặt tên rõ nghĩa:** Đã bổ sung [`data/tasks_def/README.md`](data/tasks_def/README.md) giải thích tường minh toàn bộ các thư mục bài tập (D, E, F) để toàn đội dễ hiểu và không dùng tên viết tắt khó hiểu.
+> **Đã chạy lại và nghiệm thu hiển thị Barnard — 10/11/2026:** chạy trực tiếp trên Windows với cùng Python 3.12.10 và bộ dữ liệu cũ, không thay đổi Smart App Control, không dùng WSL. `build_frames()` mặc định dùng nội suy WCS + SciPy bilinear để không phụ thuộc việc import mô-đun diện tích chồng lấp không dùng đến của reproject.
+>
+> - **Việc 1 đạt tiêu chí hiển thị:** 6 PNG khung, 3 PNG ảnh hiệu, 6 PNG dấu thập, 2 RGB và 3 GIF blink. [Ảnh D6 phóng lớn](data/observation_products/barnard_motion/D6-motion-detail.png), [blink D6](data/observation_products/barnard_motion/D6-blink.gif), [kiểm chứng](members/huu-hoang/handoff/barnard_validation.json).
+> - D6 dịch khoảng **1,13 pixel** giữa hai khung; dự đoán khoảng **1,07 pixel**. Dấu thập lệch tâm khớp vùng cánh sao **0,17 và 0,15 pixel**. Lõi bão hòa vẫn bị mask màu tím; không suy đo quang hoặc chuyển động riêng chính xác từ phép kiểm hiển thị này.
+> - Đối chiếu FITS WISE 0855 lần trước: **2.906 pixel chung**, sai lệch lớn nhất **4,45 × 10⁻⁸ MJy/sr**. Backend mới loại biên chặt hơn: 2.906 pixel hữu hạn so với 2.988 cũ; không tuyên bố hai phương pháp giống hoàn toàn ở biên.
+> - **33 test đạt** cho hàm mới, API fixture và frame jobs. Ruff đạt. Bộ script cũ gọi trực tiếp reproject/astropy.stats vẫn có thể bị Windows chặn, chưa tuyên bố toàn repo đạt kiểm thử.
+> - Chạy lại: `.venv/Scripts/python.exe members/huu-hoang/build_frames.py`. Chi tiết: [gói bàn giao](members/huu-hoang/handoff/README.md). Các điểm chặn ghi phía dưới là lịch sử trước khi có cách chạy này.
+
+> **Đồng bộ cục bộ và triển khai tiếp — 10/11/2026:** đã hợp nhất `human-binoculars/huu-hoang` tại `771e7d0` với thay đổi cục bộ, không còn xung đột Git. Giữ cả script gốc được GitHub tham chiếu và các module cục bộ mới. Stash sao lưu vẫn còn.
+>
+> - **Việc 1:** đã viết `shared.image_processing.build_frames()` (export qua `shared/frames_pipeline.py`) và runner `members/huu-hoang/build_frames.py`: TAN ở trung điểm thời gian, median, thang chung, PNG/diff, `predicted_px`, ảnh dấu thập và RGB. **Chưa nghiệm thu Barnard** vì Windows Application Control chặn DLL `_overlap` của reproject; cài lại đúng phiên bản ghim vẫn lỗi.
+> - **Việc 2:** backend hiện tại dùng chung bộ lọc FLAGS; đã bổ sung helper diff tím `#703090`, RGB D6-D3-D1 và giao diện `build_frames`. Chưa nối sản phẩm mở rộng vào schema HTTP hoặc nghiệm thu với Đông.
+> - **Việc 3:** đã chuẩn bị [gói bàn giao](members/huu-hoang/handoff/README.md), manifest SHA-256 báo cáo và CSV đủ 58 dipole. Đối chiếu báo cáo cũ: nền gần 0/18, nền xa 5/18. Chờ Nguyên duyệt; chưa gửi tin nhắn hay xác nhận khoa học.
+> - **Việc 4:** đã có hướng dẫn diễn tập trong gói bàn giao; người học chưa thực hiện buổi tự code bấm giờ.
+> - **Kiểm tra lần này:** 2 test helper/chuyển động-WCS đạt; Ruff, cú pháp và `git diff --check` đạt. Bộ kiểm thử toàn phần bị lỗi thu thập do Windows chặn DLL reproject/astropy; kết quả 8/8 cũ bên dưới không phải bằng chứng cho code mới.
+>
+> Các trạng thái “100%” và đường dẫn `data/` trong phần ghi chú GitHub bên dưới là bản ghi trước khi đồng bộ. Dữ liệu cục bộ đang nằm trong `target_observations`, `wise0855_alignment`, `wise0855_two_epoch_comparison`, `observation_products`; dùng đường dẫn trong gói bàn giao để kiểm tra trạng thái hiện tại.
+
+> **Cập nhật 10/11/2026 (Tổng hợp trạng thái & Phân loại việc đã xong / chưa xong):**
+> - **Dữ liệu `data/`:** ĐÃ HOÀN TẤT TÁI TẠO 100% tất cả các bộ dữ liệu và ảnh thực hành:
+>   * `data/reproject_wise0855/`: 16 file (FITS, PNG, blink GIF, report.json).
+>   * `data/tan_wise0855/`: 50 cutout D3/D6, alignment evidence (<0.06 px shift), frames median & difference.
+>   * `data/five_targets/`: Đủ 5 mục tiêu (Barnard, Epsilon Indi B, WISE 0855, RW Aurigae, R Draconis) gồm 78 cutout, 39 median, 24 ảnh hiệu, 13 RGB giả, `overview.png`, `verification.json`.
+>   * `data/tasks_def/`: Đủ 4 folder D (tự dựng lại), E (sửa màu NaN tím `#703090`, trích 58 cặp dipole), F & F_wide (trích phổ Luhman 16).
+> - **Kiểm thử tự động:** `pytest members/huu-hoang/` đạt **8/8 test passed**.
+> - **Tiến độ cả nhóm:** Nhánh `origin/dev` đã cập nhật commit mới của Đông (hoàn thành API 7-endpoint fixture theo Issue #14, kèm hướng dẫn bàn giao `docs/team/handoff.md` và `docs/team/workflow.md`).
+
+---
+
+## 📌 BẢNG THEO DÕI TIẾN ĐỘ CÔNG VIỆC CỦA HỮU HOÀNG
+
+### A. CÁC CÔNG VIỆC ĐÃ HOÀN THÀNH (100% ĐẠT TIÊU CHÍ)
+
+1. **Task: Viết hàm `build_frames()` & Nghiệm thu dấu thập trên sao Barnard:**
+   - **Trạng thái:** ✅ **HOÀN THÀNH 100%**
+   - **Mã nguồn:** [`members/huu-hoang/build_frames.py`](members/huu-hoang/build_frames.py), kiểm thử [`members/huu-hoang/test_build_frames.py`](members/huu-hoang/test_build_frames.py).
+   - **Tiêu chí Done when ("PNG Barnard cho thấy sao dịch chỗ qua các khung. Dấu thập nằm trên sao"):**
+     * Đặt tâm lưới TAN tại thời điểm trung vị chuỗi ảnh (MJD 61033.97) giúp sao đi ngang qua tâm khung.
+     * Tính `predicted_px` đúng chuẩn PNG lật trục dọc:
+       - Visit 00 (MJD 60908.67): `[28.96, 29.57]`
+       - Visit 01 (MJD 61141.70): `[29.04, 28.51]` (sao dịch chuyển 1.06 px về phía Bắc theo Dec).
+     * Dùng chung thang norm AsinhStretch (`vmin=0.4202`, `vmax=4.4321`) cho cả hai khung ảnh.
+     * Xuất ảnh hiệu dipole [`D6_visit01_minus_D6_visit00.png`](data/five_targets/barnard/frames/D6_visit01_minus_D6_visit00.png) thể hiện rõ cặp tín hiệu âm/dương do sao dịch chuyển.
+     * Đạt tiêu chí trực quan với bộ ảnh nghiệm thu [`data/five_targets/barnard/verification_crosshairs/barnard_d6_movement_comparison.png`](data/five_targets/barnard/verification_crosshairs/barnard_d6_movement_comparison.png) và ảnh động [`barnard_d6_movement_blink.gif`](data/five_targets/barnard/verification_crosshairs/barnard_d6_movement_blink.gif): dấu thập đỏ 4 cạnh có khe giữa bám chính xác vào tâm sao Barnard trên từng khung.
+     * Xác thực hợp đồng dữ liệu: Kết quả validate đạt chuẩn 100% với model `Frames` của backend Đông.
+
+2. **Task: Mở cutout thật, đọc 6 HDU và bit FLAGS, viết make_grid() và căn 2 cutout bằng reproject_interp:**
+   - **Trạng thái:** ✅ **HOÀN THÀNH 100%**
+   - **Mã nguồn:** [`members/huu-hoang/reproject_demo.py`](members/huu-hoang/reproject_demo.py) và hàm `tan_grid()` trong [`members/huu-hoang/tan_pipeline.py`](members/huu-hoang/tan_pipeline.py).
+   - **Tiêu chí Done when ("2 ảnh đã căn, chồng lên nhau thấy sao trùng chỗ"):**
+     * Minh chứng định lượng: [`data/tan_wise0855/alignment_evidence.png`](data/tan_wise0855/alignment_evidence.png) (7 nguồn sao nền trùng khớp, độ lệch trung vị chỉ **0.057 px ≈ 0.35 arcsec**).
+     * Minh chứng trực quan: [`data/reproject_wise0855/blink_aligned.gif`](data/reproject_wise0855/blink_aligned.gif) (sao nền đứng yên bất động khi blink luân phiên).
+     * Đọc chuẩn 7 HDU và 14 bit FLAGS loại trừ: [`data/reproject_wise0855/report.json`](data/reproject_wise0855/report.json).
+
+3. **Task: Gom nhóm 30 ngày, cộng median theo detector × đợt quét, xuất PNG cùng thang asinh:**
+   - **Trạng thái:** ✅ **HOÀN THÀNH 100%**
+   - **Mã nguồn:** [`members/huu-hoang/frames.py`](members/huu-hoang/frames.py) và [`members/huu-hoang/five_targets.py`](members/huu-hoang/five_targets.py).
+   - **Kết quả:** Đủ các khung median và ảnh hiệu diff trong `data/tan_wise0855/frames/` và `data/five_targets/`.
+
+4. **Task: Xử lý cờ bão hòa (`OVERFLOW`, `NONLINEAR`) & ghép ảnh màu giả RGB 3 detector cho 5 mục tiêu:**
+   - **Trạng thái:** ✅ **HOÀN THÀNH 100%**
+   - **Mã nguồn:** [`members/huu-hoang/five_targets.py`](members/huu-hoang/five_targets.py), [`members/huu-hoang/verify_products.py`](members/huu-hoang/verify_products.py).
+   - **Kết quả:** Lọc 56 lượt pixel bão hòa ở Barnard, 342 lượt ở R Draconis; xuất 13 ảnh RGB giả và [`data/five_targets/overview.png`](data/five_targets/overview.png).
+
+5. **Task: Thực hành ngày đổi vai 10/11 (Trích phổ Luhman 16 làm phần của Nguyên) & tìm dipole:**
+   - **Trạng thái:** ✅ **HOÀN THÀNH 100%**
+   - **Mã nguồn:** [`members/huu-hoang/tasks_def.py`](members/huu-hoang/tasks_def.py).
+   - **Kết quả:** Sửa màu NaN tím `#703090` trên ảnh hiệu; trích 58 cặp dipole ứng viên; phát hiện bẫy cờ `SOURCE` chiếm trọn vành nền gần và thử nghiệm thành công vành nền rộng 12–25 px (`data/tasks_def/F_wide/spectrum.png`).
+
+6. **Task: Ảnh hiệu Barnard thành cặp sáng–tối (QA-19) & Một câu kết luận tiếng Anh cho mỗi mục tiêu trên website:**
+   - **Trạng thái:** ✅ **HOÀN THÀNH 100% & NGHIỆM THU TRỰC TIẾP TRÊN WEBSITE**
+   - **Mã nguồn:** [`frontend/src/targets.ts`](frontend/src/targets.ts), [`frontend/src/App.tsx`](frontend/src/App.tsx), [`frontend/src/blink/BlinkViewer.tsx`](frontend/src/blink/BlinkViewer.tsx), [`frontend/src/index.css`](frontend/src/index.css).
+   - **Kiểm thử tự động:**
+     * Unit tests: [`frontend/src/targets.test.ts`](frontend/src/targets.test.ts) đạt **166/166 vitest passed**.
+     * E2E tests: [`frontend/e2e/conclusion.spec.ts`](frontend/e2e/conclusion.spec.ts) đạt **7/7 Playwright passed**.
+   - **Tiêu chí Done when ("Hoàn thành khi đã có chạy kết quả trên website luôn"):**
+     * **Ảnh hiệu Barnard:** Bật tab "Difference" thấy rõ cặp cực sáng–tối (dipole) do chuyển động riêng của sao Barnard. Dòng chỉ dẫn trực quan giải thích rõ hiện tượng.
+     * **5 câu kết luận tiếng Anh:** Hiển thị thẻ card `Scientific Conclusion` trực quan cho cả 5 mục tiêu (Barnard's Star, WISE 0855, Epsilon Indi B, RW Aurigae, R Draconis) trên giao diện website.
+     * Nghiệm thu đạt tiêu chuẩn QA-19 trong [`docs/QA-matrix.md`](docs/QA-matrix.md).
+
+---
+
+### B. CÁC CÔNG VIỆC CHƯA XONG (CẦN LÀM TIẾP)
+
+#### 🟡 Việc 1: Tích hợp hàm xử lý ảnh vào `shared/frames_pipeline.py` cho Backend (Đông)
+- **Nội dung:**
+  - Trao đổi với Đông để kết nối trực tiếp hàm `build_frames()` từ `members/huu-hoang/build_frames.py` vào router `/api/frames` của backend.
+
+#### 🟡 Việc 2: Bàn giao báo cáo khoa học cho Nguyên
+- **Nội dung:**
+  - Bàn giao báo cáo trích phổ Luhman 16 (kết quả vành nền gần 0/18 vs vành nền rộng 5/18) để Nguyên duyệt vào runbook.
+  - Bàn giao danh sách 58 cặp dipole ứng viên để Nguyên kiểm tra chuyển động riêng.
+
+#### 🟡 Việc 3: Diễn tập bấm giờ (Chuẩn bị ngày thi 14–15/11)
+- **Nội dung:**
+  - Tự code tay từ đầu luồng xử lý: *Cutout $\to$ Mask flags $\to$ Căn TAN $\to$ Median $\to$ PNG + Diff* trong một thư mục trắng, bấm giờ để đảm bảo hoàn thành dưới 90 phút.
+  - Tự code tay từ đầu luồng xử lý: *Cutout $\to$ Mask flags $\to$ Căn TAN $\to$ Median $\to$ PNG + Diff* trong một thư mục trắng, bấm giờ để đảm bảo hoàn thành dưới 90 phút.
+
+---
+> **Cập nhật 07/11/2026:** đã triển khai các task ưu tiên mới trong [members/huu-hoang/PROCESSING_GUIDE.md](members/huu-hoang/PROCESSING_GUIDE.md): TAN tâm mục tiêu/tâm tìm kiếm, centroid nguồn nền, benchmark 10/50 ảnh, median/ảnh hiệu, `make_frames`, bộ mẫu năm mục tiêu, flags bão hòa và RGB giả. Xem [ảnh tổng quan](data/target_observations/target_observations_overview.png) và [kiểm chứng đầu ra](data/target_observations/product_verification.json). Phần bên dưới giữ nguyên ghi chép demo hai ảnh ngày 06/11; checklist cũ không mô tả toàn bộ trạng thái hiện tại.
 
 Cập nhật: 06/11/2026. Người học đã nắm SPHEREx, LVF, WCS không gian/phổ, flags, asinh và FITS; ghi chú này tập trung vào việc chạy và đọc kết quả.
 
@@ -8,20 +116,20 @@ Cập nhật: 06/11/2026. Người học đã nắm SPHEREx, LVF, WCS không gia
 
 **Mục tiêu đã chạy:** đưa ảnh SPHEREx 2026 của vùng quanh WISE 0855 lên lưới WCS ảnh 2025. Đây là ví dụ hình học, chưa xác nhận nguồn sao lùn nâu trên từng ảnh. Hai ảnh chưa khớp bước sóng nên không dùng chênh lệch sáng/tối để kết luận biến thiên.
 
-1. Xem ảnh trước mọi xử lý: [2025 gốc](data/reproject_wise0855/wise0855_2025_original.png), [2026 gốc](data/reproject_wise0855/wise0855_2026_original.png).
-2. Xem [bảng so sánh trước/sau](data/reproject_wise0855/comparison.png). Hai ô đầu đã mask; ô thứ ba đã reproject.
-3. Mở riêng [ảnh mốc 2025 sau mask](data/reproject_wise0855/wise0855_2025_reference.png) và [ảnh 2026 sau reproject](data/reproject_wise0855/wise0855_2026_aligned.png). Chúng dùng cùng lưới và thang hiển thị; tím là NaN.
-4. Xem [GIF blink](data/reproject_wise0855/blink_aligned.gif), đổi khung mỗi 0,9 giây. Đây là luân phiên ảnh trên cùng lưới, không mô phỏng chuyển động giữa hai ngày.
-5. Xem [footprint 2026](data/reproject_wise0855/footprint_2026.png) và [vùng hợp lệ cả hai năm](data/reproject_wise0855/common_valid.png): vàng dùng được, tím bị loại; không phải bản đồ độ sáng.
-6. Muốn kiểm tra số liệu: mở [report.json](data/reproject_wise0855/report.json). Muốn đọc số đo ảnh và WCS: mở `reprojected.fits` bằng công cụ FITS hoặc Astropy, không đọc như văn bản.
+1. Xem ảnh trước mọi xử lý: [2025 gốc](data/wise0855_two_epoch_comparison/wise0855_2025_original.png), [2026 gốc](data/wise0855_two_epoch_comparison/wise0855_2026_original.png).
+2. Xem [bảng so sánh trước/sau](data/wise0855_two_epoch_comparison/comparison.png). Hai ô đầu đã mask; ô thứ ba đã reproject.
+3. Mở riêng [ảnh mốc 2025 sau mask](data/wise0855_two_epoch_comparison/wise0855_2025_reference.png) và [ảnh 2026 sau reproject](data/wise0855_two_epoch_comparison/wise0855_2026_aligned.png). Chúng dùng cùng lưới và thang hiển thị; tím là NaN.
+4. Xem [GIF blink](data/wise0855_two_epoch_comparison/blink_aligned.gif), đổi khung mỗi 0,9 giây. Đây là luân phiên ảnh trên cùng lưới, không mô phỏng chuyển động giữa hai ngày.
+5. Xem [footprint 2026](data/wise0855_two_epoch_comparison/footprint_2026.png) và [vùng hợp lệ cả hai năm](data/wise0855_two_epoch_comparison/common_valid.png): vàng dùng được, tím bị loại; không phải bản đồ độ sáng.
+6. Muốn kiểm tra số liệu: mở [report.json](data/wise0855_two_epoch_comparison/two_epoch_comparison_report.json). Muốn đọc số đo ảnh và WCS: mở `reprojected.fits` bằng công cụ FITS hoặc Astropy, không đọc như văn bản.
 
 ### Tất cả file có tác dụng gì?
 
-| File trong `data/reproject_wise0855/` | Dùng để làm gì? |
+| File trong `data/wise0855_two_epoch_comparison/` | Dùng để làm gì? |
 | --- | --- |
 | `sia_qr2.xml` | Kết quả truy vấn IRSA gốc, bảng VOTable; không chứa ảnh |
 | `catalog.ecsv` | Cùng danh sách metadata chuyển sang bảng Astropy |
-| `inputs.json` | Nguồn gốc đúng hai ảnh: URL, OBSID, thời gian catalog, checksum |
+| `observation_manifest.json` | Nguồn gốc đúng hai ảnh: URL, OBSID, thời gian catalog, checksum |
 | `wise0855_2025.fits`, `wise0855_2026.fits` | Hai cutout gốc; giữ để tính toán, không sửa |
 | `wise0855_2025_original.png`, `wise0855_2026_original.png` | Hai bản hiển thị IMAGE trước mask/reproject; stretch riêng từng ảnh |
 | `wise0855_2025_reference.png` | Ảnh 2025 sau mask, dùng làm mốc |
@@ -34,7 +142,7 @@ Cập nhật: 06/11/2026. Người học đã nắm SPHEREx, LVF, WCS không gia
 | `report.json` | Thống kê, kiểm tra, bước sóng, giới hạn hiển thị, phiên bản thư viện |
 | `run.log` | Log UTF-8 tự lưu mỗi lần chạy script; lỗi vẫn được báo trong terminal |
 
-Script `members/huu-hoang/reproject_demo.py`: `download()` lấy dữ liệu; `validate_inputs()` kiểm tra checksum, OBSID, detector và năm FITS; `load()` đọc và mask; các hàm `export_*` xuất PNG/GIF; `main()` gọi reproject, kiểm tra và ghi kết quả. Nếu thiếu ảnh, script hướng dẫn chạy `--download`.
+Script `members/huu-hoang/compare_two_observations.py`: `download()` lấy dữ liệu; `validate_inputs()` kiểm tra checksum, OBSID, detector và năm FITS; `load()` đọc và mask; các hàm `export_*` xuất PNG/GIF; `main()` gọi reproject, kiểm tra và ghi kết quả. Nếu thiếu ảnh, script hướng dẫn chạy `--download`.
 
 ### Checklist và phần chưa làm
 
@@ -72,18 +180,18 @@ Mở terminal PowerShell mới tại gốc repo, kích hoạt Python và Node lo
 ```powershell
 # Chỉ áp dụng cho terminal hiện tại vì máy đang chặn chạy script PowerShell.
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-. .\scripts\activate-workspace.ps1
+. ./scripts/activate-workspace.ps1
 python --version
 node --version
 npm.cmd --version
 ```
 
-Sau đó dùng `python`, `npm.cmd test`, hoặc `npm.cmd run dev:starter`. Chọn `.venv\Scripts\python.exe` làm interpreter/kernel khi dùng VS Code/Jupyter. Script kích hoạt không sửa PATH toàn máy.
+Sau đó dùng `python`, `npm.cmd test`, hoặc `npm.cmd run dev:starter`. Chọn `.venv/Scripts/python.exe` làm interpreter/kernel khi dùng VS Code/Jupyter. Script kích hoạt không sửa PATH toàn máy.
 
 ## 1. Workspace đang có gì?
 
 - Đây là repo training cho NASA Space Apps 2026, bài toán SPHEREx Sky Viewer. README yêu cầu repo thi được tạo riêng khi bắt đầu; không sao chép code training sang repo thi.
-- `members/huu-hoang/`: phần xử lý ảnh: reproject, mask, stacking, difference và xuất PNG. Ví dụ mới nằm tại `members/huu-hoang/reproject_demo.py`.
+- `members/huu-hoang/`: phần xử lý ảnh: reproject, mask, stacking, difference và xuất PNG. Ví dụ mới nằm tại `members/huu-hoang/compare_two_observations.py`.
 - `members/duy-hoang/`: đã có bộ xử lý tọa độ, danh sách mục tiêu, viewer và blink demo. `coords/targets.js` có WISE 0855-0714 và Epsilon Indi B là các mục tiêu sao lùn nâu.
 - `scripts/check_env.py`: kiểm tra môi trường và truy vấn IRSA. Ví dụ này dùng tâm tìm kiếm WISE 0855 từ script đó: RA=133.7951°, Dec=-7.2451°.
 - `shared/`: dự kiến chứa phần dùng chung và API contract; `data/README.md` nói về fixture pack nhưng lúc bắt đầu workspace chỉ có README, chưa có FITS. `shared/data-layout.md` được nhắc trong README nhưng chưa tồn tại.
@@ -111,7 +219,7 @@ Truy vấn SIA collection `spherex_qr2` trả về 264 bản ghi quanh vùng tì
 | Bandwidth tại tâm tìm kiếm | 0,037187 µm | 0,036219 µm |
 | Pixel còn hợp lệ sau mask | 3.385 | 3.229 |
 
-Thời điểm SIA trong `inputs.json` lệch vài mili giây đến khoảng 0,04 giây so với header do độ chính xác biểu diễn MJD của catalog. Bảng trên dùng header FITS. Không dùng `DATE` tạo/xử lý file làm ngày quan sát.
+Thời điểm SIA trong `observation_manifest.json` lệch vài mili giây đến khoảng 0,04 giây so với header do độ chính xác biểu diễn MJD của catalog. Bảng trên dùng header FITS. Không dùng `DATE` tạo/xử lý file làm ngày quan sát.
 
 **Cùng D6 nhưng khác bước sóng tại tâm.** Cặp này đủ để thực hành đổi lưới; chưa được chọn tối ưu theo bước sóng. Muốn so sánh độ sáng hoặc tạo ảnh hiệu có ý nghĩa khoa học, cần chọn lại cặp gần bước sóng/bandwidth, xử lý PSF, nền và sai số. Hai phiên bản pipeline cũng khác nhau: v20 năm 2025 và v24 năm 2026.
 
@@ -121,7 +229,7 @@ Thời điểm SIA trong `inputs.json` lệch vài mili giây đến khoảng 0,
 
 Gửi yêu cầu đến SIA của IRSA, đọc ngày quan sát và detector, rồi lấy `access_url`. Thêm `?center=133.7951,-7.2451&size=0.1` để yêu cầu một miếng ảnh nhỏ quanh vùng cần học. Script kiểm tra năm trong catalog và xác nhận phản hồi tải về là FITS đọc được.
 
-`inputs.json` lưu OBSID, URL, thời gian, kích thước và SHA-256 của hai file. Nhờ vậy có thể biết chính xác ảnh nào đã được dùng.
+`observation_manifest.json` lưu OBSID, URL, thời gian, kích thước và SHA-256 của hai file. Nhờ vậy có thể biết chính xác ảnh nào đã được dùng.
 
 ### Bước 2 — Lấy IMAGE và WCS thật của nó
 
@@ -205,22 +313,22 @@ Từ thư mục gốc repo, PowerShell:
 
 ```powershell
 # Chạy offline với hai FITS đã tải; tái tạo hình, FITS đầu ra và report.
-.venv\Scripts\python members/huu-hoang/reproject_demo.py
+.venv/Scripts/python members/huu-hoang/compare_two_observations.py
 
 # Khi cần tải lại đúng hai OBSID từ IRSA (cần mạng).
-.venv\Scripts\python members/huu-hoang/reproject_demo.py --download
+.venv/Scripts/python members/huu-hoang/compare_two_observations.py --download
 ```
 
 Các thư viện xử lý chính đã chạy: numpy 2.5.4, astropy 8.0.2, reproject 0.21.0, matplotlib 3.11.2. Phiên bản thực tế lưu trong report. Với máy mới, tạo venv và cài `requirements.txt` theo README trước.
 
-Sản phẩm nằm tại [data/reproject_wise0855/](data/reproject_wise0855/):
+Sản phẩm nằm tại [data/wise0855_two_epoch_comparison/](data/wise0855_two_epoch_comparison/):
 
-- [Hình trước/sau](data/reproject_wise0855/comparison.png)
-- [Thông số và kiểm tra](data/reproject_wise0855/report.json)
-- [Nguồn hai ảnh](data/reproject_wise0855/inputs.json)
-- [FITS đã căn lưới](data/reproject_wise0855/reprojected.fits)
+- [Hình trước/sau](data/wise0855_two_epoch_comparison/comparison.png)
+- [Thông số và kiểm tra](data/wise0855_two_epoch_comparison/two_epoch_comparison_report.json)
+- [Nguồn hai ảnh](data/wise0855_two_epoch_comparison/observation_manifest.json)
+- [FITS đã căn lưới](data/wise0855_two_epoch_comparison/reprojected.fits)
 
-![Hai ảnh đã mask, ảnh sau reproject và footprint](data/reproject_wise0855/comparison.png)
+![Hai ảnh đã mask, ảnh sau reproject và footprint](data/wise0855_two_epoch_comparison/comparison.png)
 
 Vì `data/` bị gitignore, link hình chỉ hoạt động trên máy có sản phẩm. Clone repo mới cần chạy với `--download` để tái tạo.
 

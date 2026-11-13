@@ -10,17 +10,17 @@ SPHEREx có thể hiểu là một camera chụp bầu trời bằng ánh sáng 
 
 ### 1. Thuật ngữ cần hiểu trước
 
-| Từ trong đề | Hiểu đơn giản |
-| --- | --- |
-| Pixel | Một ô nhỏ của ảnh, chứa một giá trị đo độ sáng. |
-| Cutout | Miếng ảnh nhỏ được cắt từ ảnh lớn, chỉ giữ vùng trời cần xem. Cắt xong ảnh vẫn có thể bị xoay hoặc lệch so với ảnh khác. |
-| RA (Right Ascension — xích kinh) | Một tọa độ chỉ hướng trên trời, đóng vai trò giống kinh độ trên Trái Đất. Thường ghi bằng giờ góc: 24h = 360°. **RA = 12h không có nghĩa chụp lúc 12 giờ**, cũng không có nghĩa nhìn thẳng lên đầu. Trong mã này RA ghi bằng độ. |
-| Dec (Declination — xích vĩ) | Tọa độ còn lại, giống vĩ độ nhưng trên trời. Đo từ xích đạo trời: 0° ở xích đạo trời, +90° ở cực Bắc trời, −90° ở cực Nam trời. Xích đạo trời là phần kéo dài mặt phẳng xích đạo Trái Đất ra bầu trời, **không phải mặt đất nơi mình đứng**. |
-| FOV (Field of View — trường nhìn) | Độ rộng vùng trời muốn lấy vào ảnh. Trong bài, FOV tính bằng độ, không phải số pixel. |
-| WCS (World Coordinate System) | Thông tin cho biết mỗi pixel ứng với RA/Dec nào trên trời. Nhờ đó biết hai ảnh đang chụp cùng vị trí dù chúng xoay khác nhau. |
-| TAN (tangent-plane projection) | Cách biểu diễn vùng trời cong lên một mặt phẳng quanh tâm đã chọn. Dùng **cùng lưới TAN** nghĩa là mọi ảnh dùng cùng tâm, hướng và bước pixel. Chưa phải ghép thành một ảnh. |
-| Reproject / `reproject_interp` | Tái chiếu: chuyển số đo từ lưới ảnh gốc sang lưới mới bằng tọa độ trời. Đây là tên hàm thực hiện trong Python. |
-| Centroid; arcsec | Centroid là tâm sáng đo từ một nguồn trong ảnh. Arcsec là giây cung, đơn vị góc nhỏ: 1 arcsec = 1/3600 độ. |
+| Từ trong đề                       | Hiểu đơn giản                                                                                                                                                                                                                                |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pixel                             | Một ô nhỏ của ảnh, chứa một giá trị đo độ sáng.                                                                                                                                                                                              |
+| Cutout                            | Miếng ảnh nhỏ được cắt từ ảnh lớn, chỉ giữ vùng trời cần xem. Cắt xong ảnh vẫn có thể bị xoay hoặc lệch so với ảnh khác.                                                                                                                     |
+| RA (Right Ascension — xích kinh)  | Một tọa độ chỉ hướng trên trời, đóng vai trò giống kinh độ trên Trái Đất. Thường ghi bằng giờ góc: 24h = 360°. **RA = 12h không có nghĩa chụp lúc 12 giờ**, cũng không có nghĩa nhìn thẳng lên đầu. Trong mã này RA ghi bằng độ.             |
+| Dec (Declination — xích vĩ)       | Tọa độ còn lại, giống vĩ độ nhưng trên trời. Đo từ xích đạo trời: 0° ở xích đạo trời, +90° ở cực Bắc trời, −90° ở cực Nam trời. Xích đạo trời là phần kéo dài mặt phẳng xích đạo Trái Đất ra bầu trời, **không phải mặt đất nơi mình đứng**. |
+| FOV (Field of View — trường nhìn) | Độ rộng vùng trời muốn lấy vào ảnh. Trong bài, FOV tính bằng độ, không phải số pixel.                                                                                                                                                        |
+| WCS (World Coordinate System)     | Thông tin cho biết mỗi pixel ứng với RA/Dec nào trên trời. Nhờ đó biết hai ảnh đang chụp cùng vị trí dù chúng xoay khác nhau.                                                                                                                |
+| TAN (tangent-plane projection)    | Cách biểu diễn vùng trời cong lên một mặt phẳng quanh tâm đã chọn. Dùng **cùng lưới TAN** nghĩa là mọi ảnh dùng cùng tâm, hướng và bước pixel. Chưa phải ghép thành một ảnh.                                                                 |
+| Reproject / `reproject_interp`    | Tái chiếu: chuyển số đo từ lưới ảnh gốc sang lưới mới bằng tọa độ trời. Đây là tên hàm thực hiện trong Python.                                                                                                                               |
+| Centroid; arcsec                  | Centroid là tâm sáng đo từ một nguồn trong ảnh. Arcsec là giây cung, đơn vị góc nhỏ: 1 arcsec = 1/3600 độ.                                                                                                                                   |
 
 ### 2. Task chính yêu cầu gì?
 
@@ -53,9 +53,9 @@ Khi so thêm 44 ảnh D3 với ảnh mốc, **43 ảnh đạt**, **1 ảnh thi�
 Dùng các cutout khác nhau, đo ba lần sau một lần chạy khởi động. Bộ 50 ảnh gồm 45 D3 và 5 D6:
 
 | Số ảnh | Thời gian trung vị, xấp xỉ |
-| --- | ---: |
-| 10 | 0,047 giây |
-| 50 | 0,236 giây |
+| ------ | -------------------------: |
+| 10     |                 0,047 giây |
+| 50     |                 0,236 giây |
 
 **Ảnh hưởng:** giúp ước lượng người dùng phải chờ bao lâu và có cần tối ưu mã không; không đổi vị trí sao hoặc số đo độ sáng. Chỉ tính reproject lưới 59×59 khi dữ liệu đã trong bộ nhớ, không tính tải mạng, đọc file và xuất ảnh. Thời gian thay đổi theo tải máy, không áp thẳng cho ảnh detector lớn.
 
@@ -67,11 +67,11 @@ Dùng các cutout khác nhau, đo ba lần sau một lần chạy khởi động
 
 **“Tìm tâm tìm kiếm và các thông số ở đâu?”** Có ba nơi, phục vụ ba việc khác nhau:
 
-| Muốn biết gì? | Mở đâu? | Đọc mục nào? |
-| --- | --- | --- |
-| Mình yêu cầu tâm và trường nhìn nào? | [tan_pipeline.py](tan_pipeline.py) | `RA, DEC, FOV, SCALE` ở đầu file. |
-| Lần chạy đã dùng lưới nào? | [report.json](../../data/tan_wise0855/report.json) | `grid.ra_deg`, `dec_deg`, `fov_deg`, `scale_arcsec`, `shape`. |
-| Lưới thực sự lưu trong ảnh là gì? | [tan_pair.fits](../../data/tan_wise0855/tan_pair.fits), phần thông tin mô tả của `FRAME0` hoặc `FRAME44` | `CTYPE1/2`: phép chiếu; `CRVAL1/2`: tọa độ tâm chiếu; `CRPIX1/2`: pixel mốc; `CDELT1/2`: bước góc mỗi pixel trong lưới đầu ra này. |
+| Muốn biết gì?                        | Mở đâu?                                                                                                  | Đọc mục nào?                                                                                                                       |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Mình yêu cầu tâm và trường nhìn nào? | [tan_pipeline.py](tan_pipeline.py)                                                                       | `RA, DEC, FOV, SCALE` ở đầu file.                                                                                                  |
+| Lần chạy đã dùng lưới nào?           | [report.json](../../data/tan_wise0855/report.json)                                                       | `grid.ra_deg`, `dec_deg`, `fov_deg`, `scale_arcsec`, `shape`.                                                                      |
+| Lưới thực sự lưu trong ảnh là gì?    | [tan_pair.fits](../../data/tan_wise0855/tan_pair.fits), phần thông tin mô tả của `FRAME0` hoặc `FRAME44` | `CTYPE1/2`: phép chiếu; `CRVAL1/2`: tọa độ tâm chiếu; `CRPIX1/2`: pixel mốc; `CDELT1/2`: bước góc mỗi pixel trong lưới đầu ra này. |
 
 RA (Right Ascension — xích kinh) = 133,7951° và Dec (Declination — xích vĩ) = −7,2451° là tâm tìm kiếm được chọn từ ví dụ trước, không phải do đo tâm sáng tìm ra. FOV (Field of View — trường nhìn) = 0,1° là độ rộng yêu cầu; lưới 59 pixel × 6,2 arcsec sau làm tròn rộng khoảng 0,10161°. Trong FITS, pixel mốc là (30,30) vì đếm từ 1; trong Python là (29,29) vì đếm từ 0. Không nhầm tâm chiếu của WCS ảnh gốc với tâm cutout: pixel mốc của ảnh gốc có thể nằm ngoài miếng cắt.
 
@@ -96,16 +96,16 @@ Muốn quyết định tối ưu, trước tiên đặt giới hạn chờ cho n
 
 ### 1. Thuật ngữ cần hiểu trước
 
-| Từ trong đề | Hiểu đơn giản |
-| --- | --- |
-| Detector | Cảm biến thu ánh sáng của camera SPHEREx. D1, D3, D6 là ba cảm biến khác nhau. |
-| LVF (Linear Variable Filter) | Bộ lọc trên cảm biến: ở các vị trí khác nhau, nó cho các khoảng bước sóng khác nhau đi qua. Vì vậy cùng detector chưa chắc là cùng bước sóng. |
-| Đợt quét | Nhóm các lần quan sát gần nhau về thời gian. Trong bài này nhóm được suy từ ngày chụp, chưa phải tên đợt chính thức của nhiệm vụ. |
-| Median | Giá trị giữa sau khi sắp các số theo thứ tự. Ví dụ cùng một pixel có số đo 10, 12, 1000 thì median là 12, giúp giảm ảnh hưởng của giá trị bất thường. |
-| Khung; FITS; PNG | Khung là ảnh kết quả của một detector trong một đợt. FITS giữ số đo và thông tin tọa độ để tính toán; PNG là bản hiển thị để xem. |
-| Stretch / asinh | Cách ánh xạ số đo thành sáng tối. Asinh nén vùng rất sáng để vùng mờ dễ thấy hơn; không sửa số đo gốc hoặc tạo thêm tín hiệu. |
-| Ảnh hiệu | Ảnh thu được bằng cách lấy số đo của khung sau trừ khung trước tại cùng pixel. |
-| NaN; NVALID | NaN đánh dấu thiếu/bị loại, không có nghĩa độ sáng bằng 0. NVALID ghi số ảnh có dữ liệu tốt đóng góp tại mỗi pixel. |
+| Từ trong đề                  | Hiểu đơn giản                                                                                                                                         |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Detector                     | Cảm biến thu ánh sáng của camera SPHEREx. D1, D3, D6 là ba cảm biến khác nhau.                                                                        |
+| LVF (Linear Variable Filter) | Bộ lọc trên cảm biến: ở các vị trí khác nhau, nó cho các khoảng bước sóng khác nhau đi qua. Vì vậy cùng detector chưa chắc là cùng bước sóng.         |
+| Đợt quét                     | Nhóm các lần quan sát gần nhau về thời gian. Trong bài này nhóm được suy từ ngày chụp, chưa phải tên đợt chính thức của nhiệm vụ.                     |
+| Median                       | Giá trị giữa sau khi sắp các số theo thứ tự. Ví dụ cùng một pixel có số đo 10, 12, 1000 thì median là 12, giúp giảm ảnh hưởng của giá trị bất thường. |
+| Khung; FITS; PNG             | Khung là ảnh kết quả của một detector trong một đợt. FITS giữ số đo và thông tin tọa độ để tính toán; PNG là bản hiển thị để xem.                     |
+| Stretch / asinh              | Cách ánh xạ số đo thành sáng tối. Asinh nén vùng rất sáng để vùng mờ dễ thấy hơn; không sửa số đo gốc hoặc tạo thêm tín hiệu.                         |
+| Ảnh hiệu                     | Ảnh thu được bằng cách lấy số đo của khung sau trừ khung trước tại cùng pixel.                                                                        |
+| NaN; NVALID                  | NaN đánh dấu thiếu/bị loại, không có nghĩa độ sáng bằng 0. NVALID ghi số ảnh có dữ liệu tốt đóng góp tại mỗi pixel.                                   |
 
 ### 2. Task chính yêu cầu gì?
 
@@ -141,12 +141,12 @@ Nghĩa là: các ảnh đã căn ở A được ghép riêng theo từng cảm b
 
 **+ Gói thành hàm `make_frames(ra, dec, fov, det)`.** Nghĩa là gom chuỗi xử lý trên vào một lệnh gọi, để không phải chép và chạy thủ công từng bước.
 
-| Đầu vào | Ý nghĩa |
-| --- | --- |
-| `ra` | RA (Right Ascension — xích kinh) của tâm, bằng độ. |
-| `dec` | Dec (Declination — xích vĩ) của tâm, bằng độ. |
-| `fov` | FOV (Field of View — trường nhìn), độ rộng vùng cần xem, bằng độ. |
-| `det` | Detector, số cảm biến từ 1 đến 6. |
+| Đầu vào | Ý nghĩa                                                           |
+| ------- | ----------------------------------------------------------------- |
+| `ra`    | RA (Right Ascension — xích kinh) của tâm, bằng độ.                |
+| `dec`   | Dec (Declination — xích vĩ) của tâm, bằng độ.                     |
+| `fov`   | FOV (Field of View — trường nhìn), độ rộng vùng cần xem, bằng độ. |
+| `det`   | Detector, số cảm biến từ 1 đến 6.                                 |
 
 ```python
 from frames import make_frames
@@ -163,14 +163,14 @@ report = make_frames(133.7951, -7.2451, 0.1, 3)
 
 ### 1. Thuật ngữ cần hiểu trước
 
-| Từ trong đề | Hiểu đơn giản |
-| --- | --- |
-| Mục tiêu | Thiên thể hoặc vùng quanh thiên thể muốn khảo sát. Trong bài có năm mục tiêu. |
-| Epoch; chuyển động riêng | Epoch là mốc thời gian của tọa độ. Chuyển động riêng là tốc độ thiên thể đổi vị trí trên trời, nên tọa độ năm 2000 có thể không còn đúng cho năm 2026. |
-| Bão hòa; phi tuyến | Bão hòa: ánh sáng quá mạnh khiến cảm biến không ghi đúng độ sáng. Phi tuyến: số đo không còn tăng đúng tỷ lệ với ánh sáng đi vào. Các pixel này không đáng tin để ghép/đo. |
-| Flags; bit | Flags là các dấu chất lượng đi kèm từng pixel, lưu bằng các bit (giá trị 0/1). Mỗi bit báo một tình trạng, không phải cứ có flag là pixel hỏng. |
-| Mask | Đánh dấu pixel không dùng trong tính toán. Pixel đó có thể hiện thành vùng trống hoặc màu tím; không phải tô lại ngôi sao. |
-| RGB (Red, Green, Blue); màu giả | RGB là ba kênh đỏ, lục, lam của ảnh hiển thị. Màu giả là gán ba bộ dữ liệu hồng ngoại vào ba kênh đó để dễ quan sát. |
+| Từ trong đề                     | Hiểu đơn giản                                                                                                                                                              |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mục tiêu                        | Thiên thể hoặc vùng quanh thiên thể muốn khảo sát. Trong bài có năm mục tiêu.                                                                                              |
+| Epoch; chuyển động riêng        | Epoch là mốc thời gian của tọa độ. Chuyển động riêng là tốc độ thiên thể đổi vị trí trên trời, nên tọa độ năm 2000 có thể không còn đúng cho năm 2026.                     |
+| Bão hòa; phi tuyến              | Bão hòa: ánh sáng quá mạnh khiến cảm biến không ghi đúng độ sáng. Phi tuyến: số đo không còn tăng đúng tỷ lệ với ánh sáng đi vào. Các pixel này không đáng tin để ghép/đo. |
+| Flags; bit                      | Flags là các dấu chất lượng đi kèm từng pixel, lưu bằng các bit (giá trị 0/1). Mỗi bit báo một tình trạng, không phải cứ có flag là pixel hỏng.                            |
+| Mask                            | Đánh dấu pixel không dùng trong tính toán. Pixel đó có thể hiện thành vùng trống hoặc màu tím; không phải tô lại ngôi sao.                                                 |
+| RGB (Red, Green, Blue); màu giả | RGB là ba kênh đỏ, lục, lam của ảnh hiển thị. Màu giả là gán ba bộ dữ liệu hồng ngoại vào ba kênh đó để dễ quan sát.                                                       |
 
 ### 2. Task chính yêu cầu gì?
 
@@ -214,14 +214,14 @@ Ghép các khung cùng nhóm thời gian trên cùng TAN; giữ cùng thang từ
 
 **Kết quả bộ C:**
 
-| Mục tiêu | Cutout | Khung median | Ảnh hiệu | RGB |
-| --- | ---: | ---: | ---: | ---: |
-| Barnard | 12 | 6 | 3 | 2 |
-| Epsilon Indi B | 18 | 9 | 6 | 3 |
-| WISE 0855 | 18 | 9 | 6 | 3 |
-| RW Aurigae | 12 | 6 | 3 | 2 |
-| R Draconis | 18 | 9 | 6 | 3 |
-| Tổng | **78** | **39** | **24** | **13** |
+| Mục tiêu       | Cutout | Khung median | Ảnh hiệu |    RGB |
+| -------------- | -----: | -----------: | -------: | -----: |
+| Barnard        |     12 |            6 |        3 |      2 |
+| Epsilon Indi B |     18 |            9 |        6 |      3 |
+| WISE 0855      |     18 |            9 |        6 |      3 |
+| RW Aurigae     |     12 |            6 |        3 |      2 |
+| R Draconis     |     18 |            9 |        6 |      3 |
+| Tổng           | **78** |       **39** |   **24** | **13** |
 
 Các cột là đầu vào và sản phẩm ở nhiều bước, không phải các phần chia của tổng cutout. Ví dụ Barnard: 12 cutout → 6 median; cùng 6 median tạo 3 ảnh hiệu và 2 RGB. Vì vậy 6 + 3 + 2 = 11 sản phẩm không có nghĩa thiếu một cutout. `SOURCE`/`FULLSAMPLE` tự nó không khiến pixel bị loại, và không được tô màu riêng trên ảnh độ sáng: pixel vẫn hiện thang xám nếu không có cờ xấu đồng thời. SOURCE chỉ báo vị trí nguồn đã biết, chưa bảo đảm số đo tốt hay phát hiện mục tiêu.
 
@@ -233,12 +233,12 @@ Muốn xem cả năm mục tiêu cạnh nhau, mở [ảnh tổng quan](../../dat
 
 ### 1. Thuật ngữ cần hiểu trước
 
-| Từ trong đề | Hiểu đơn giản |
-| --- | --- |
-| Dựng lại | Tự viết lại phần xử lý trong thư mục mới, không chép mã cũ, rồi chạy ra kết quả. Khác với chỉ chạy lại một script đã viết. |
-| Thời gian chạy | Máy mất bao lâu để đọc dữ liệu, xử lý, lưu sản phẩm và kiểm tra. Không bao gồm thời gian người học viết mã. |
-| PNG (Portable Network Graphics) | Ảnh để xem; đã kéo giãn độ sáng. Không dùng số màu PNG để đo quang hoặc trích phổ. |
-| Bàn giao | Đưa file và cách dùng cho người nhận; cần phân biệt sản phẩm của mình với phần người khác chưa xác nhận. |
+| Từ trong đề                     | Hiểu đơn giản                                                                                                              |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Dựng lại                        | Tự viết lại phần xử lý trong thư mục mới, không chép mã cũ, rồi chạy ra kết quả. Khác với chỉ chạy lại một script đã viết. |
+| Thời gian chạy                  | Máy mất bao lâu để đọc dữ liệu, xử lý, lưu sản phẩm và kiểm tra. Không bao gồm thời gian người học viết mã.                |
+| PNG (Portable Network Graphics) | Ảnh để xem; đã kéo giãn độ sáng. Không dùng số màu PNG để đo quang hoặc trích phổ.                                         |
+| Bàn giao                        | Đưa file và cách dùng cho người nhận; cần phân biệt sản phẩm của mình với phần người khác chưa xác nhận.                   |
 
 ### 2. Task chính yêu cầu gì?
 
@@ -258,10 +258,10 @@ Nguồn Nguyên: [ANALYSIS.md](https://github.com/HoangKhoi1704/NASA-space-chall
 
 **Bước D3 — xuất vào thư mục riêng và kiểm tra.** [task_d.py](task_d.py) đọc cutout, che flags, đưa về TAN chung, median theo detector × nhóm thời gian, xuất PNG/FITS và ảnh hiệu. Ảnh hiệu = **đợt hiện tại trừ đợt liền trước** trong cùng detector; không mặc định mọi đợt trừ đợt đầu. Script đọc lại FITS để kiểm tra tâm WCS (World Coordinate System — hệ tọa độ ảnh), vùng thiếu theo NVALID (số ảnh hợp lệ đóng góp) và giá trị phép trừ; xác nhận PNG có trên đĩa.
 
-| Mục tiêu | Cutout đầu vào | Median | Ảnh hiệu | Thời gian chạy đo lần đầu |
-| --- | ---: | ---: | ---: | ---: |
-| WISE 0855 | 18 | 9 | 6 | khoảng 3,27 giây |
-| Barnard | 12 | 6 | 3 | khoảng 2,03 giây |
+| Mục tiêu  | Cutout đầu vào | Median | Ảnh hiệu | Thời gian chạy đo lần đầu |
+| --------- | -------------: | -----: | -------: | ------------------------: |
+| WISE 0855 |             18 |      9 |        6 |          khoảng 3,27 giây |
+| Barnard   |             12 |      6 |        3 |          khoảng 2,03 giây |
 
 Đây là số lượng ảnh, không phải số nguồn phát hiện. Hai ảnh cùng detector/cùng đợt tạo một median; các median lại được dùng để tạo ảnh hiệu. Không cộng cột median và ảnh hiệu để đối chiếu tổng cutout. WISE có 3 nhóm thời gian, Barnard có 2; nhóm là khoảng quan sát được chia theo ngưỡng gián đoạn 30 ngày của bộ C, **chưa đổi thành nhãn survey chính thức của Nguyên**.
 
@@ -281,10 +281,10 @@ Thời gian trên bao gồm đọc FITS cục bộ, kiểm SHA256, mask, reproje
 
 **+ Vòng 1 học trích phổ từ Nguyên; vòng 2 học tải dữ liệu từ Khôi.**
 
-| Vòng | Khi người sở hữu bàn giao | Demo trong lúc chưa có | Người học cần tự chạy lại |
-| --- | --- | --- | --- |
+| Vòng       | Khi người sở hữu bàn giao                                                                                                  | Demo trong lúc chưa có                                                                            | Người học cần tự chạy lại                                                                  |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | 1 — Nguyên | Nhận runbook trích phổ, quy tắc chọn ảnh/bước sóng, mask, nền, đơn vị, sai số và checklist; đối chiếu với ghi chú v0 đã có | Bài F sẽ đọc bước sóng từ WCS phổ và thử đo aperture trên FITS gốc; ghi rõ chưa được Nguyên duyệt | Đổi ảnh đầu vào, kiểm điểm phổ và giải thích vì sao không đo từ PNG/median nhiều bước sóng |
-| 2 — Khôi | Nhận mã SIA2/cutout, manifest/DB, collection và chính sách timeout/retry | Dùng `five_targets.py --download --target barnard` hoặc `--target wise-0855`; mã tự tải đã có ở C | Tìm ảnh → tải cutout → kiểm HDU/obs_id/detector/đơn vị → lưu nguồn tải và SHA256 |
+| 2 — Khôi   | Nhận mã SIA2/cutout, manifest/DB, collection và chính sách timeout/retry                                                   | Dùng `five_targets.py --download --target barnard` hoặc `--target wise-0855`; mã tự tải đã có ở C | Tìm ảnh → tải cutout → kiểm HDU/obs_id/detector/đơn vị → lưu nguồn tải và SHA256           |
 
 Theo lộ trình, mỗi vòng 50 phút, mỗi chiều dạy 25 phút; Hữu Hoàng còn dạy Nguyên cộng ảnh và dạy Khôi đọc FITS/che flags. Demo độc lập không thay thế việc hai bên học và tự chạy lại; trạng thái buổi dạy chéo vẫn **chưa xác nhận**.
 
@@ -298,14 +298,14 @@ Theo lộ trình, mỗi vòng 50 phút, mỗi chiều dạy 25 phút; Hữu Hoà
 
 **Chưa đủ để chốt mốc 8/11 của cả nhóm:** chưa có thời gian tự dựng lại của Hữu Hoàng/5 người còn lại; chưa xác nhận PNG do Khôi làm; chưa có xác nhận kỳ vọng v1 và hai vòng dạy chéo. Không ghi kết quả giả tưởng thành kết quả thật.
 
-| Người | Kết quả cần đưa vào bảng retro | Trạng thái kiểm được ở đây |
-| --- | --- | --- |
-| Thạch | Aladin + Gaia dưới 60 phút | Chưa nhận số đo |
-| Duy Hoàng | Viewer + mock dưới 90 phút | Chưa nhận số đo |
-| Đông | Mock API + cache dưới 60 phút | Chưa nhận số đo |
-| Khôi | SIA2 → cutout → DB Barnard dưới 60 phút; PNG thực hành | Chưa nhận số đo/sản phẩm |
-| Hữu Hoàng | Tự dựng cutout → PNG + ảnh hiệu dưới 90 phút | Có demo kỹ thuật; chưa đo bài tự dựng |
-| Nguyên | Kiểm 5 mục tiêu theo kỳ vọng dưới 60 phút; kỳ vọng v1 | Có tài liệu v0 và audit; chưa xác nhận mốc này |
+| Người     | Kết quả cần đưa vào bảng retro                         | Trạng thái kiểm được ở đây                     |
+| --------- | ------------------------------------------------------ | ---------------------------------------------- |
+| Thạch     | Aladin + Gaia dưới 60 phút                             | Chưa nhận số đo                                |
+| Duy Hoàng | Viewer + mock dưới 90 phút                             | Chưa nhận số đo                                |
+| Đông      | Mock API + cache dưới 60 phút                          | Chưa nhận số đo                                |
+| Khôi      | SIA2 → cutout → DB Barnard dưới 60 phút; PNG thực hành | Chưa nhận số đo/sản phẩm                       |
+| Hữu Hoàng | Tự dựng cutout → PNG + ảnh hiệu dưới 90 phút           | Có demo kỹ thuật; chưa đo bài tự dựng          |
+| Nguyên    | Kiểm 5 mục tiêu theo kỳ vọng dưới 60 phút; kỳ vọng v1  | Có tài liệu v0 và audit; chưa xác nhận mốc này |
 
 **Sau khi nhận bàn giao:** giữ nguyên dữ liệu demo để đối chiếu, kiểm schema và định danh dữ liệu của Khôi trước khi tạo manifest tương thích; chạy lại D trên đầu vào của Khôi vào thư mục mới. Nhận Nguyên kiểm quy tắc chọn ảnh/bandpass và ghép kết quả theo obs_id; không gán cluster 30 ngày thành survey của Nguyên chỉ bằng tên. Bàn giao cho Khôi/Đông đường dẫn PNG/FITS/report, ngày chụp, detector, thang hiển thị, vùng thiếu và giới hạn khoa học. Tiếp theo E sửa lỗi theo issue thực tế; chưa có issue thì kiểm tra chủ động và ghi rõ đó là lỗi tự phát hiện.
 
@@ -313,13 +313,13 @@ Theo lộ trình, mỗi vòng 50 phút, mỗi chiều dạy 25 phút; Hữu Hoà
 
 ### 1. Thuật ngữ cần hiểu trước
 
-| Thuật ngữ | Hiểu đơn giản |
-| --- | --- |
-| Issue | Phiếu lỗi có cách tái hiện, kết quả mong muốn, kết quả thực tế và người phụ trách. |
-| Stretch / kéo giãn | Đổi cách ánh xạ số đo thành độ sáng/màu để nhìn; không đổi số đo trong FITS. |
-| Cặp sáng–tối | Hai vùng hiệu trái dấu ở gần nhau. Nếu ảnh sau trừ ảnh trước, vị trí mới của nguồn di chuyển có thể dương và vị trí cũ có thể âm; nhiều lỗi cũng tạo hình tương tự. |
-| photutils | Thư viện Python xử lý/đo nguồn thiên văn; ở đây dùng `find_peaks` để tìm cực đại của ảnh hiệu và của ảnh đổi dấu. |
-| MAD / sigma | Median Absolute Deviation — độ lệch tuyệt đối trung vị; `mad_std` quy đổi thành ước lượng độ phân tán kiểu sigma. Đây là ngưỡng phát hiện thực hành, không phải sai số đo flux hoặc xác suất phát hiện đúng. |
+| Thuật ngữ          | Hiểu đơn giản                                                                                                                                                                                                |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Issue              | Phiếu lỗi có cách tái hiện, kết quả mong muốn, kết quả thực tế và người phụ trách.                                                                                                                           |
+| Stretch / kéo giãn | Đổi cách ánh xạ số đo thành độ sáng/màu để nhìn; không đổi số đo trong FITS.                                                                                                                                 |
+| Cặp sáng–tối       | Hai vùng hiệu trái dấu ở gần nhau. Nếu ảnh sau trừ ảnh trước, vị trí mới của nguồn di chuyển có thể dương và vị trí cũ có thể âm; nhiều lỗi cũng tạo hình tương tự.                                          |
+| photutils          | Thư viện Python xử lý/đo nguồn thiên văn; ở đây dùng `find_peaks` để tìm cực đại của ảnh hiệu và của ảnh đổi dấu.                                                                                            |
+| MAD / sigma        | Median Absolute Deviation — độ lệch tuyệt đối trung vị; `mad_std` quy đổi thành ước lượng độ phân tán kiểu sigma. Đây là ngưỡng phát hiện thực hành, không phải sai số đo flux hoặc xác suất phát hiện đúng. |
 
 ### 2. Task chính yêu cầu gì?
 
@@ -369,14 +369,14 @@ Kiểm tra tự động bổ sung: ca không có dịch chuyển chỉ có nhi�
 
 ### 1. Thuật ngữ cần hiểu trước
 
-| Thuật ngữ | Hiểu đơn giản |
-| --- | --- |
-| Phổ | Độ sáng theo bước sóng; cần nhiều số đo tương thích. Ba detector được tô RGB không tự trở thành phổ. |
-| WCS phổ | Thông tin đổi vị trí pixel thành bước sóng và độ rộng dải đo. Ở FITS này là WCS thay thế khóa `W`, dùng bảng `WCS-WAVE`. |
-| Aperture / khẩu độ đo | Vùng tròn gom tín hiệu quanh tọa độ mục tiêu; không phải lỗ mở vật lý của kính. |
-| Annulus / vành đo nền | Vành tròn bên ngoài khẩu độ để ước lượng nền cần trừ. Pixel nền phải phù hợp, không lấy nguồn lân cận làm nền. |
-| Flux; mJy | Mật độ thông lượng nhận từ nguồn; mJy là millijansky. IMAGE dùng MJy/sr là độ sáng bề mặt, cần nhân góc khối pixel trước khi ra mJy. |
-| Forced photometry | Đo tại vị trí dự đoán ngay cả khi chưa tìm thấy nguồn rõ; ra số đo chưa có nghĩa xác nhận phát hiện đúng nguồn. |
+| Thuật ngữ             | Hiểu đơn giản                                                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Phổ                   | Độ sáng theo bước sóng; cần nhiều số đo tương thích. Ba detector được tô RGB không tự trở thành phổ.                                 |
+| WCS phổ               | Thông tin đổi vị trí pixel thành bước sóng và độ rộng dải đo. Ở FITS này là WCS thay thế khóa `W`, dùng bảng `WCS-WAVE`.             |
+| Aperture / khẩu độ đo | Vùng tròn gom tín hiệu quanh tọa độ mục tiêu; không phải lỗ mở vật lý của kính.                                                      |
+| Annulus / vành đo nền | Vành tròn bên ngoài khẩu độ để ước lượng nền cần trừ. Pixel nền phải phù hợp, không lấy nguồn lân cận làm nền.                       |
+| Flux; mJy             | Mật độ thông lượng nhận từ nguồn; mJy là millijansky. IMAGE dùng MJy/sr là độ sáng bề mặt, cần nhân góc khối pixel trước khi ra mJy. |
+| Forced photometry     | Đo tại vị trí dự đoán ngay cả khi chưa tìm thấy nguồn rõ; ra số đo chưa có nghĩa xác nhận phát hiện đúng nguồn.                      |
 
 ### 2. Task chính yêu cầu gì?
 
@@ -402,13 +402,13 @@ Nếu mẫu đạt, tính tổng có trọng số sau trừ nền, nhân diện 
 
 **Bước F3 — kết quả thật và lý do không có phổ dùng được.**
 
-| Trạng thái mẫu đầu vào | Số cutout | Ý nghĩa |
-| --- | ---: | --- |
-| Thiếu nền hợp lệ (`insufficient_background`) | 11 | Sau loại SOURCE và pixel xấu, vành thử không đủ 20 pixel nền; các mẫu này có 0 pixel nền dùng được |
-| Khẩu độ bị mask/không đầy đủ (`masked_or_edge_aperture`) | 6 | Không đủ diện tích có số đo hợp lệ trong khẩu độ; không tự bù phần mất |
-| Không có khẩu độ chồng lên ảnh (`outside_image`) | 1 | Không có vùng khẩu độ đo được trong mảng ảnh trả về; cần kiểm footprint/cutout |
-| Đạt điều kiện demo (`ok`) | **0** | **Chưa có điểm phổ thật đủ điều kiện để vẽ/diễn giải** |
-| Tổng đầu vào | **18** | Mỗi ảnh được phân loại theo lý do dừng đầu tiên; không cộng nhiều lỗi của một ảnh |
+| Trạng thái mẫu đầu vào                                   | Số cutout | Ý nghĩa                                                                                            |
+| -------------------------------------------------------- | --------: | -------------------------------------------------------------------------------------------------- |
+| Thiếu nền hợp lệ (`insufficient_background`)             |        11 | Sau loại SOURCE và pixel xấu, vành thử không đủ 20 pixel nền; các mẫu này có 0 pixel nền dùng được |
+| Khẩu độ bị mask/không đầy đủ (`masked_or_edge_aperture`) |         6 | Không đủ diện tích có số đo hợp lệ trong khẩu độ; không tự bù phần mất                             |
+| Không có khẩu độ chồng lên ảnh (`outside_image`)         |         1 | Không có vùng khẩu độ đo được trong mảng ảnh trả về; cần kiểm footprint/cutout                     |
+| Đạt điều kiện demo (`ok`)                                |     **0** | **Chưa có điểm phổ thật đủ điều kiện để vẽ/diễn giải**                                             |
+| Tổng đầu vào                                             |    **18** | Mỗi ảnh được phân loại theo lý do dừng đầu tiên; không cộng nhiều lỗi của một ảnh                  |
 
 Điều này không chứng minh Luhman 16 không tồn tại hoặc không có phổ. Nó cho thấy **bộ chọn ảnh và cách đo nền demo hiện chưa đủ**. Không giảm tiêu chí hoặc dùng pixel SOURCE làm nền chỉ để có đường phổ. File [samples.ecsv](../../data/tasks_def/F/samples.ecsv) vẫn lưu các lần thử/bước sóng/trạng thái; [report.json](../../data/tasks_def/F/report.json) có số đo kiểm tra và giới hạn. Bước sóng được đọc thành công không đồng nghĩa flux tại đó hợp lệ.
 
@@ -434,17 +434,17 @@ Thí nghiệm này cho **5/18 mẫu đạt điều kiện số học**: 3 D1 và
 
 Đây là **checklist đề xuất dựa trên tài liệu đã có của Nguyên và hướng dẫn IRSA**, chưa gắn nhãn “checklist của Nguyên đã duyệt”.
 
-| Cần kiểm | Kết quả demo | Việc còn lại |
-| --- | --- | --- |
-| Danh tính, epoch và vị trí theo thời gian | Có SIMBAD, dự báo tới thời điểm ảnh | Nguyên xác nhận đúng hệ/thành phần, thị sai/quỹ đạo và tâm đo |
-| Dữ liệu truy nguồn được, không đo từ PNG | Có 18 FITS QR2, manifest, SHA256, obs_id/detector | Thay bằng manifest chính thức của Đông/Khôi khi có; kiểm release và bản ghi trùng |
-| Bước sóng/bandwidth từng ảnh | Đọc từ WCS phổ tại tọa độ đo | Chọn thêm detector/ảnh, kiểm biến thiên bandpass trong aperture |
-| Mask chất lượng và coverage | Có kiểm toàn khẩu độ; có mẫu bị loại | Kiểm footprint, chọn ảnh tránh phần mất dữ liệu; không khôi phục lõi bão hòa |
-| Nền không bị nguồn chi phối | Demo phát hiện không đủ nền ở 11 mẫu | Nguyên chọn nền xa hơn/FOV lớn hơn hoặc mô hình PSF+nền phù hợp trường chen chúc |
-| Đơn vị và bất định | Có công thức MJy/sr → mJy và variance gốc, kiểm số học | Xác nhận pixel solid angle, PSF/aperture correction, hiệu chuẩn và hệ đôi |
-| Có điểm phổ thật đủ điều kiện | Cơ sở 0/18; thí nghiệm nền rộng có 5/18 mẫu đạt điều kiện số học | Chưa qua kiểm khoa học; Nguyên kiểm nền/nguồn/phương pháp trước khi dùng các điểm này |
-| Kiểm phổ tham chiếu, đồng thời và đặc trưng | Chưa làm | Nguyên đối chiếu công cụ phổ IRSA, thời điểm, sai số; không suy nhiệt độ/phân tử từ demo |
-| Bài đổi vai 90 phút và quan sát Khôi | Chưa xác nhận | Hữu Hoàng tự làm theo runbook, ghi thời gian thật; Khôi/Nguyên ghi nhận và sửa runbook |
+| Cần kiểm                                    | Kết quả demo                                                     | Việc còn lại                                                                             |
+| ------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Danh tính, epoch và vị trí theo thời gian   | Có SIMBAD, dự báo tới thời điểm ảnh                              | Nguyên xác nhận đúng hệ/thành phần, thị sai/quỹ đạo và tâm đo                            |
+| Dữ liệu truy nguồn được, không đo từ PNG    | Có 18 FITS QR2, manifest, SHA256, obs_id/detector                | Thay bằng manifest chính thức của Đông/Khôi khi có; kiểm release và bản ghi trùng        |
+| Bước sóng/bandwidth từng ảnh                | Đọc từ WCS phổ tại tọa độ đo                                     | Chọn thêm detector/ảnh, kiểm biến thiên bandpass trong aperture                          |
+| Mask chất lượng và coverage                 | Có kiểm toàn khẩu độ; có mẫu bị loại                             | Kiểm footprint, chọn ảnh tránh phần mất dữ liệu; không khôi phục lõi bão hòa             |
+| Nền không bị nguồn chi phối                 | Demo phát hiện không đủ nền ở 11 mẫu                             | Nguyên chọn nền xa hơn/FOV lớn hơn hoặc mô hình PSF+nền phù hợp trường chen chúc         |
+| Đơn vị và bất định                          | Có công thức MJy/sr → mJy và variance gốc, kiểm số học           | Xác nhận pixel solid angle, PSF/aperture correction, hiệu chuẩn và hệ đôi                |
+| Có điểm phổ thật đủ điều kiện               | Cơ sở 0/18; thí nghiệm nền rộng có 5/18 mẫu đạt điều kiện số học | Chưa qua kiểm khoa học; Nguyên kiểm nền/nguồn/phương pháp trước khi dùng các điểm này    |
+| Kiểm phổ tham chiếu, đồng thời và đặc trưng | Chưa làm                                                         | Nguyên đối chiếu công cụ phổ IRSA, thời điểm, sai số; không suy nhiệt độ/phân tử từ demo |
+| Bài đổi vai 90 phút và quan sát Khôi        | Chưa xác nhận                                                    | Hữu Hoàng tự làm theo runbook, ghi thời gian thật; Khôi/Nguyên ghi nhận và sửa runbook   |
 
 **Sau khi nhận kết quả của họ:** Đông/Khôi đưa manifest/FITS và metadata collection, thời điểm, detector, footprint, flags, variance; Hữu Hoàng đối chiếu nguồn/đơn vị/SHA256 rồi dùng FITS gốc. Nguyên đưa runbook và quy tắc nền/khẩu độ/bước sóng, tiêu chí loại mẫu và chuẩn đối chiếu; Hữu Hoàng chạy lại trong thư mục mới, trả bảng mẫu có trạng thái, hình khẩu độ/nền và báo cáo kiểm cho Nguyên. Chỉ khi có điểm đo đạt kiểm và Nguyên duyệt mới chốt hoàn thành trích phổ khoa học. Nếu bị chặn quá 30 phút, ghi rõ chặn và làm demo/secondary theo lộ trình; không báo đã có kết quả của người khác.
 

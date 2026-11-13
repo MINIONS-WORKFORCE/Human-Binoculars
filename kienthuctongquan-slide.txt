@@ -1,0 +1,64 @@
+39h
+
+phần kỹ thuật
+độ chính xác về pixel
+lsao 1000 bức thành web?
+
+1. khía niệm
+RA giờ phút giây
+DEC độ
+giống kinh độ và vĩ độ nhưng chiếu lên bầu trời
+xích vĩ đi từ cực nam lên cực bắc (dec)
+xích kinh RA
+
+ngôi sao ko đứng yên, chuyển động
+nếu lấy tọa độ từ wiki để lập trình thì sẽ trượt mục tiêu
+-> vừa định vị vừa đo độ sáng
+- số càng lớn thì ngôi sao càng tối
+- sphere khác camera
+- quét 102 bước sóng
+- bộ lọc LVF là trái tim sphere
+- mỗi vị trí trên kính chỉ cho 1 bước sóng (nhận 1 màu) đi qua nên
+
+- vậy làm sao chụp toàn bộ màu? -> chụp nhiều lần khi ngôi sao lướt qua cảm biến -> gom các video đó lại
+
+- nếu đội thi ko hiểu kiến thức vật lí hay ko hiểu về nguyên tắc phân tách ánh sang
+phải xây dựng được bộ lọc phần mềm để lấy ra và so sánh được chụp ở cùng 1 giải sóng
+
+data thô thì lsao
+nhận từ nasa các tệp ảnh FITS (70mb/tệp)
+1 tệp FITS gồm có 6 HDU (giống tệp photoshop có các layer)
+trong kgian thì 1 điểm sáng có nhiều thông tin
+lớp 1 IMG thông tin về độ sáng
+lớp 2 flags chỉ ra lỗi cảm biến hoặc bão hòa ánh sáng
+lớp 3 varience đọ sai số thống kê
+lớp 4 zodi ghi lại lượng hhh sáng nền của vtru
+
+vậy nếu có hàng ngàn tệp mỗi tệp 70mb thì làm sao?
+-> sử dụng giao thức SIAA2 thay vì tải nguyên bức tranh khổng lồ thì giao thức sẽ cutout các ảnh bao quanh mục tiêu cần tìm
+- tải về rồi thì sẽ chưa ghép thành video được, nên mình sẽ phải căn ảnh (reproject), họ sd WCS để dùng toán nội suy, kéo giãn về 1 hệ quy chiếu cố định
+- vd flipbook, các ảnh phải cùng kích thước và nét vẽ, thì khi lật nhanh bằng tay sẽ tạo ra hiệu ứng ko bị loạn xạ
+
+màn hình máy tính ko hiện nổi độ sáng đúng như ngôi sao phát, nên nhóm phải dung kéo giãn asinh để tính 1 thang độ sáng chung, nếu mình tự kéo sáng thì khi phát video toàn bộ màn hình sẽ bị nhấp nháy
+- và để rõ ràng mới hội oồng, mình phải áp dụng kỹ thuật ảnh hiệu (lấy khung hình sau trừ trước) để kiếm vật thể di chuyển, oốm đỏ là vị trí mới, oốm xanh là vừa rời đi
+
+ko nên phụ thuộc vào video bắt mắt mà còn phải phụ thuộc vào các con số khoa học (sai 1 pixel là cook)
+vì thế minh fdungf 1 phần mềm vẽ vòng tròn quanh ngôi sao trên tưng fbuwcs rồi công thông số ánh sáng của từng vòng tròn đó lại
+
+hệ quả của việc ko tách lớp nền thì toàn bộ oộ sáng sẽ bị sai lệch
+
+vì thế trên mọi biểu đồ vẽ ra phải kèm 1 thanh sai số
+bằng chiến thuật sử dụng sao đối chứng nằm im ngay mục tiêu chính để chứng minh phần mềm ko sinh ra sự biến thiên ảo
+
+5 mục tiêu: bài 1 làm sao để gặp 1 phần mềm ko sập khi ngôi sao di chuyển quá nhanh thi minh dùng case ngôi sao Bernard (quá sáng, dễ bão hòa cảm biến của spherex) thì mình sẽ phải tìm cách đọc lớp flags này và loại trừ các pixel hỏng. Bài 2 sao wise 0855 (gần như tàng hình, quá tối, ko phát sáng), chỉ hiện ở D5 và D6. nếu hệ thống LVF gộp sai bước sóng mình sẽ ko tìm thấy sao lùn nâu này. bài 3 RW-arigate hệ sao biến thiên ko theo quy luật, bài 4 case ít ảnh thì dùng thuật toán gấp pha bằng cách theo dõi 
+bài 5 epxilon di chuyển chỉ 1 pixel (cực khó phát hiện) -> kết nối gai dia 3 lấy tọa oộ từ 2016 để dự đoạn quỹ đạo lên giao diện web
+
+
+phần con người
+cách phân bố trong 39h
+đầu tiên định nghĩa 1 api giả để áng chừng được sự kết nối giữa đội frontend và backend sau khi backend hoàn thành thì bàn giao qua luồng api này 1 phát ăn luôn
+trước khi gõ thì phải cam kết các trường thông tin trong tên json giả cột nào là thời gian, cột nào là độ sáng để hệ thống luôn tự đáp ứng
++1 chiến thuật xây đường hầm thông qua từ 2 phía (thay vì bên frontend đợi backend thì họ tính toán điểm giao cắt và thử nghiệm trên những dữ liệu giả trước)
+=> chìa khóa để dự nn thành công là loại bỏ sự chờ đợi hay nút thắt cổ chai nên thêm quy tắc 30p (nếu 1 thành viên ko hoàn thành được task đó trong 30p thì báo cáo cho leader hỗ trợ), mỗi người phải bt cách phần việc của người bên cạnh để khi oồng đội ngủ thì mình vẫn có thể hoàn thành phần việc mà ko phụ thuộc vào họ
+lưu ý vào lúc 24h phải có phiên bản sản phẩm mvp nếu nó lỗi thì sẽ sụp đổ
+=> dù con người hay máy tính đang có quét toàn bộ thông báo hay email thì chúng ta cũng cần bộ lọc như LVF và cần xây các quan hệ làm việc mà ko cần trói buộc nhau. để nhìn thấy uược những vì sao thì chúng ta phải trừ đi được lớp bụi ở sân nhà thì mình mới nhìn được bao la cách hàng nghìn năm ánh sáng, có thể sự vật không thay đổi nhưng vì môi trường xung quanh nó thay đổi mà thôi

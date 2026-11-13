@@ -20,7 +20,10 @@ from astropy.io import fits
 from astropy.table import Table
 from astropy.visualization import AsinhStretch, ImageNormalize
 from astropy.wcs import WCS
-from reproject import reproject_interp
+import sys
+
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2]))
+from shared.image_processing import reproject_compatible as reproject_interp
 from scipy.ndimage import maximum_filter
 
 ROOT = Path(__file__).resolve().parents[2]

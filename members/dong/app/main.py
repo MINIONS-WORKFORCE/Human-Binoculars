@@ -16,6 +16,20 @@ from .fixture_api import router
 from .services.fixtures import FixtureError
 
 app = FastAPI(title="Human Binoculars API", version="0.1")
+
+
+# Registered before CORSMiddleware, so it runs inside it. Starlette otherwise answers
+# an unhandled exception in its outermost layer, outside CORS: that 500 would carry no
+# Access-Control-Allow-Origin, the browser would hide it, and the frontend could only
+# report NETWORK instead of the contract's INTERNAL.
+@app.middleware("http")
+async def unexpected_error_inside_cors(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as exc:  # noqa: BLE001 - every bug must become the contract's INTERNAL
+        return unexpected_error(request, exc)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=sorted(

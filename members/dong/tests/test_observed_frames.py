@@ -160,6 +160,22 @@ def test_changed_fixture_cannot_reuse_cached_frames(client, manifest):
     assert ErrorResponse.model_validate(response.json()).error.code == "INTERNAL"
 
 
+def test_partial_visit_missing_target_is_omitted(client, manifest):
+    index = json.loads(manifest.read_text(encoding="utf-8"))
+    for entry in index["entries"][:2]:
+        path = Path(entry["fits_path"])
+        with fits.open(path, mode="update") as hdus:
+            # The image still overlaps the output grid, but its target is outside.
+            hdus["IMAGE"].header["CRPIX2"] = -4.0
+        entry["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    manifest.write_text(json.dumps(index), encoding="utf-8")
+    response = client.get("/api/frames", params=QUERY)
+    assert response.status_code == 200, response.text
+    result = Frames.model_validate(response.json())
+    assert [frame.mjd for frame in result.frames] == [61000]
+    assert "TARGET_OUTSIDE_COVERAGE" in result.warnings
+
+
 def test_cutouts_removed_by_detector_filter_return_empty_frames(client, manifest):
     response = client.get("/api/frames", params={**QUERY, "detector": 1})
     assert response.status_code == 200, response.text

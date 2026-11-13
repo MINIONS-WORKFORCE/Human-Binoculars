@@ -25,7 +25,10 @@ from astropy.time import Time
 from astropy.visualization import AsinhStretch, ImageNormalize
 from astropy.wcs import WCS
 from PIL import Image
-from reproject import reproject_interp
+import sys
+
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2]))
+from shared.image_processing import reproject_compatible as reproject_interp
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "data" / "reproject_wise0855"

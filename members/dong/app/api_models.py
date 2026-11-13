@@ -113,7 +113,7 @@ class Frames(Versioned):
     norm: Norm
     reference_frame_id: str | None
     frames: list[Frame]
-    warnings: list[Literal["SATURATION_POSSIBLE", "FEW_FRAMES", "TRUNCATED", "MIXED_WAVELENGTH"]]
+    warnings: list[Literal["SATURATION_POSSIBLE", "FEW_FRAMES", "TRUNCATED", "MIXED_WAVELENGTH", "TARGET_OUTSIDE_COVERAGE"]]
 
     @model_validator(mode="after")
     def references(self):

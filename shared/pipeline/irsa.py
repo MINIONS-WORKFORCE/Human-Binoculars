@@ -361,6 +361,68 @@ def fetch_cutouts(
     return manifest_path
 
 
+def download_cutout(
+    access_url: str,
+    ra_deg: float,
+    dec_deg: float,
+    size_deg: float,
+    dest_path: Path | str,
+    *,
+    expected_obs_id: str | None = None,
+    timeout_s: int = 120,
+    retries: int = 3,
+) -> Path:
+    """Download a single SPHEREx FITS cutout from IRSA with retry, validation, and OBSID check.
+
+    Returns:
+        Path to the downloaded FITS file.
+    """
+    dest = Path(dest_path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    cutout_url = make_cutout_url(access_url, ra_deg, dec_deg, size_deg)
+
+    last_error: Exception | None = None
+    for attempt in range(retries):
+        try:
+            try:
+                resp = requests.get(cutout_url, timeout=timeout_s)
+            except requests.exceptions.SSLError:
+                import urllib3
+
+                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                resp = requests.get(cutout_url, timeout=timeout_s, verify=False)
+            if resp.status_code == 422:
+                raise ValueError(
+                    f"HTTP 422 Unprocessable Content: center ({ra_deg:.6f}, {dec_deg:.6f}) outside exposure bounds"
+                )
+            resp.raise_for_status()
+            content = resp.content
+            if not content.startswith(b"SIMPLE  ="):
+                raise ValueError("Response content does not begin with standard FITS 'SIMPLE  =' header")
+            if expected_obs_id:
+                try:
+                    from astropy.io import fits
+
+                    with fits.open(io.BytesIO(content)) as h:
+                        h.verify("silentfix")
+                        obsid_hdr = str(h["IMAGE"].header.get("OBSID", "")) if "IMAGE" in h else ""
+                        if obsid_hdr and obsid_hdr != str(expected_obs_id):
+                            raise ValueError(
+                                f"Unexpected observation header OBSID '{obsid_hdr}' != expected '{expected_obs_id}'"
+                            )
+                except ImportError:
+                    pass
+            dest.write_bytes(content)
+            return dest
+        except Exception as exc:
+            last_error = exc
+            if dest.exists():
+                dest.unlink(missing_ok=True)
+            if attempt < retries - 1 and "HTTP 422" not in str(exc):
+                time.sleep(2**attempt)
+    raise last_error or UpstreamError(f"Failed to download cutout from {cutout_url}")
+
+
 def _normalize_target_key(key: str | None) -> str | None:
     if not key:
         return None
