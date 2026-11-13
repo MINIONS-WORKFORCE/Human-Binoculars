@@ -11,7 +11,7 @@ const MESSAGES: Record<string, string> = {
   MIXED_WAVELENGTH:
     "These frames differ in wavelength, so a brightness change between them may be colour, not motion.",
   TARGET_OUTSIDE_COVERAGE:
-    "Some observations were omitted because they do not cover the predicted target position.",
+    "Some observations were left out because they do not cover the predicted target position.",
 };
 
 /** The sentence for a warning code; an unknown code is shown as it came. */

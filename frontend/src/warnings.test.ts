@@ -8,6 +8,7 @@ describe("describeWarning", () => {
       "FEW_FRAMES",
       "TRUNCATED",
       "MIXED_WAVELENGTH",
+      "TARGET_OUTSIDE_COVERAGE",
     ]) {
       const text = describeWarning(code);
       expect(text).not.toContain(code);
