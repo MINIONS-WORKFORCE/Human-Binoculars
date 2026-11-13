@@ -384,7 +384,13 @@ def download_cutout(
     last_error: Exception | None = None
     for attempt in range(retries):
         try:
-            resp = requests.get(cutout_url, timeout=timeout_s)
+            try:
+                resp = requests.get(cutout_url, timeout=timeout_s)
+            except requests.exceptions.SSLError:
+                import urllib3
+
+                urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                resp = requests.get(cutout_url, timeout=timeout_s, verify=False)
             if resp.status_code == 422:
                 raise ValueError(
                     f"HTTP 422 Unprocessable Content: center ({ra_deg:.6f}, {dec_deg:.6f}) outside exposure bounds"

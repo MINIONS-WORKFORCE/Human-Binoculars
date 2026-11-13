@@ -9,7 +9,6 @@ from functools import lru_cache
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from astropy.io import fits
 from shared.pipeline.irsa import find_frames
 
 from ..api_models import Frames, FramesQuery, Target
@@ -24,11 +23,6 @@ FIVE_TARGETS_FOLDERS = {
     "epsindib": "eps-ind-b",
     "rwaur": "rw-aur",
     "rdra": "r-dra",
-}
-SYNTHETIC_DETECTOR_SPECS = {
-    2: (1, 1.48, 1.48),
-    4: (3, 1.54, 1.80),
-    5: (6, 0.865, 0.95),
 }
 
 
@@ -76,90 +70,15 @@ def pack_entries(data_dir, query):
     return entries
 
 
-def _synthesize_detector_cutout(src_path: Path, out_path: Path, det: int, wave_scale: float, bw_scale: float) -> None:
-    """Create a lightweight FITS cutout for an adjacent SPHEREx detector band."""
-    with fits.open(src_path) as hdul:
-        new_hdul = fits.HDUList([hdu.copy() for hdu in hdul if hdu.name != "PSF"])
-        new_hdul["IMAGE"].header["DETECTOR"] = det
-        wave_values = new_hdul["WCS-WAVE"].data["VALUES"].copy()
-        wave_values[..., 0] *= wave_scale
-        wave_values[..., 1] *= bw_scale
-        new_hdul["WCS-WAVE"].data["VALUES"] = wave_values
-        new_hdul.writeto(out_path, overwrite=True)
-
-
-def ensure_all_detectors(data_dir: Path) -> None:
-    """Ensure D2, D4, D5 cutouts exist alongside D1, D3, D6 in data/five_targets and manifest.json."""
+def sync_five_targets_manifest(data_dir: Path) -> None:
+    """Keep data/fixtures/manifest.json synchronized with data/five_targets/*/inputs.json."""
     targets_dir = data_dir / "five_targets"
-    if not targets_dir.is_dir():
-        return
-
-    updated = False
-    for folder_name in FIVE_TARGETS_FOLDERS.values():
-        inputs_json = targets_dir / folder_name / "inputs.json"
-        if not inputs_json.is_file():
-            continue
-        try:
-            items = json.loads(inputs_json.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-
-        present = {item.get("detector") for item in items}
-        missing_dets = [det for det in SYNTHETIC_DETECTOR_SPECS if f"D{det}" not in present]
-        if not missing_dets:
-            continue
-
-        seen_keys = {(item["obs_id"], item["detector"]) for item in items}
-        new_items = []
-        for det in missing_dets:
-            src_det, wave_scale, bw_scale = SYNTHETIC_DETECTOR_SPECS[det]
-            for src_item in items:
-                if src_item.get("detector") != f"D{src_det}":
-                    continue
-                key = (src_item["obs_id"], f"D{det}")
-                if key in seen_keys:
-                    continue
-                src_path = (ROOT / src_item["path"]).resolve()
-                if not src_path.is_file():
-                    continue
-                out_path = src_path.with_name(src_path.name.replace(f"_D{src_det}", f"_D{det}"))
-                if not out_path.is_file():
-                    _synthesize_detector_cutout(src_path, out_path, det, wave_scale, bw_scale)
-                rel_path = str(out_path.relative_to(ROOT)) if out_path.is_relative_to(ROOT) else str(out_path)
-                sha256 = hashlib.sha256(out_path.read_bytes()).hexdigest()
-                new_url = (
-                    src_item.get("url", "")
-                    .replace(f"/{src_det}/level2_", f"/{det}/level2_")
-                    .replace(f"D{src_det}_spx", f"D{det}_spx")
-                )
-                new_items.append(
-                    {
-                        **src_item,
-                        "path": rel_path,
-                        "url": new_url,
-                        "detector": f"D{det}",
-                        "sha256": sha256,
-                    }
-                )
-                seen_keys.add(key)
-
-        if new_items:
-            items.extend(new_items)
-            inputs_json.write_text(json.dumps(items, indent=2), encoding="utf-8")
-            updated = True
-
     manifest_path = data_dir / "fixtures" / "manifest.json"
-    if not manifest_path.is_file():
+    if not targets_dir.is_dir() or not manifest_path.is_file():
         return
     try:
         manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
     except Exception:
-        return
-
-    manifest_entries = manifest_data.get("entries", [])
-    manifest_dets = {e.get("detector_short") or e.get("detector") for e in manifest_entries}
-    required_dets = {"D2", "D4", "D5"}
-    if not updated and (required_dets <= manifest_dets or {"SPHEREx-D2", "SPHEREx-D4", "SPHEREx-D5"} <= manifest_dets):
         return
 
     catalog_targets = targets()
@@ -205,20 +124,27 @@ def ensure_all_detectors(data_dir: Path) -> None:
                 }
             )
 
-    if rebuilt_entries:
-        manifest_path.write_text(
-            json.dumps(
-                {
-                    "version": manifest_data.get("version", "1.0.0"),
-                    "collection": manifest_data.get("collection", "spherex_qr2"),
-                    "total_targets": len(FIVE_TARGETS_FOLDERS),
-                    "total_frames": len(rebuilt_entries),
-                    "entries": rebuilt_entries,
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
+    if not rebuilt_entries:
+        return
+    manifest_entries = manifest_data.get("entries", [])
+    existing_shas = {e.get("sha256") for e in manifest_entries}
+    rebuilt_shas = {e["sha256"] for e in rebuilt_entries}
+    if len(manifest_entries) == len(rebuilt_entries) and existing_shas == rebuilt_shas:
+        return
+
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "version": manifest_data.get("version", "1.0.0"),
+                "collection": manifest_data.get("collection", "spherex_qr2"),
+                "total_targets": len(FIVE_TARGETS_FOLDERS),
+                "total_frames": len(rebuilt_entries),
+                "entries": rebuilt_entries,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
 
 
 def five_targets_entries(data_dir, query):
@@ -272,7 +198,7 @@ def five_targets_entries(data_dir, query):
 
 def matching_cutouts(query):
     data_dir = (ROOT / os.getenv("DATA_DIR", "data")).resolve()
-    ensure_all_detectors(data_dir)
+    sync_five_targets_manifest(data_dir)
     manifest = data_dir / "fixtures" / "manifest.json"
     if not manifest.is_file() and data_dir == ROOT / "data":
         manifest = ROOT / "members" / "khoi" / "fixtures_manifest.json"

@@ -152,7 +152,7 @@ def acquire_target(info):
             "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
         }
 
-    with ThreadPoolExecutor(max_workers=4) as pool:
+    with ThreadPoolExecutor(max_workers=12) as pool:
         entries = list(pool.map(fetch, selected))
     (folder / "inputs.json").write_text(json.dumps(entries, indent=2), encoding="utf-8")
     (folder / "catalog_groups.json").write_text(
