@@ -15,7 +15,7 @@ from ..api_models import Frames, FramesQuery, Target
 from .frame_rendering import build_frames
 
 ROOT = Path(__file__).resolve().parents[4]
-RENDER_VERSION = "api-0.1-tan-median-v2"
+RENDER_VERSION = "api-0.1-tan-median-v3"
 
 
 @dataclass(frozen=True)

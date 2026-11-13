@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
-from reproject import reproject_interp
+from shared.image_processing import reproject_compatible as reproject_interp
 from tan_pipeline import centroids, tan_grid
 
 

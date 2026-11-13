@@ -17,7 +17,8 @@ from astropy.table import Table
 from astropy.time import Time
 from astropy.wcs import WCS
 from PIL import Image
-from reproject import reproject_interp
+
+from shared.image_processing import build_frames, diff_png, mask_flags, rgb_png  # noqa: F401
 
 # Official API 0.1 build_frames implementation by Huu Hoang (Contract section 6)
 import sys
@@ -111,6 +112,8 @@ def local_inputs(query, data_dir):
 
 def make_frames(query, source_mode, data_dir, work_dir, stage):
     """Return a FramesResponse-compatible dict and PNG bytes indexed by filename."""
+    from shared.image_processing import reproject_compatible as reproject_interp
+
     notices = [
         {
             "code": "EXPERIMENTAL_GROUPING",
@@ -181,9 +184,7 @@ def make_frames(query, source_mode, data_dir, work_dir, stage):
             ]
             if not rejected:
                 raise ValueError("Missing flag definitions")
-            mask = sum(1 << int(flags.header[key]) for key in rejected)
-            pixels[(flags.data & mask) != 0] = np.nan
-            pixels[~np.isfinite(pixels)] = np.nan
+            pixels = mask_flags(pixels, flags.data, flags.header)
             aligned, footprint = reproject_interp(
                 (pixels, WCS(hdu.header, fobj=hdus).celestial),
                 grid,

@@ -235,7 +235,7 @@ export interface components {
             /** Frames */
             frames: components["schemas"]["Frame"][];
             /** Warnings */
-            warnings: ("SATURATION_POSSIBLE" | "FEW_FRAMES" | "TRUNCATED" | "MIXED_WAVELENGTH")[];
+            warnings: ("SATURATION_POSSIBLE" | "FEW_FRAMES" | "TRUNCATED" | "MIXED_WAVELENGTH" | "TARGET_OUTSIDE_COVERAGE")[];
         };
         /** Grid */
         Grid: {

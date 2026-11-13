@@ -1,0 +1,188 @@
+{
+  "checks": [
+    {
+      "frame_id": "D1-visit-0",
+      "predicted_px": [
+        28.963809597497278,
+        29.467816099368957
+      ],
+      "wing_fit": {
+        "centroid_px": [
+          29.043751355680545,
+          28.857094930228868
+        ],
+        "sigma_px": 4.051471080168858,
+        "valid_fit_pixels": 214,
+        "residual_px": 0.6159310279059406
+      },
+      "measured_px": [
+        29.043751355680545,
+        28.857094930228868
+      ],
+      "residual_px": 0.6159310279059406,
+      "status": "within_1px"
+    },
+    {
+      "frame_id": "D1-visit-1",
+      "predicted_px": [
+        29.027065305257523,
+        28.650139687964792
+      ],
+      "wing_fit": {
+        "centroid_px": [
+          28.202729242661633,
+          28.59676175644932
+        ],
+        "sigma_px": 2.721886494884972,
+        "valid_fit_pixels": 222,
+        "residual_px": 0.8260624356965793
+      },
+      "measured_px": [
+        28.202729242661633,
+        28.59676175644932
+      ],
+      "residual_px": 0.8260624356965793,
+      "status": "within_1px"
+    },
+    {
+      "frame_id": "D3-visit-0",
+      "predicted_px": [
+        28.955644797754665,
+        29.573358577465093
+      ],
+      "wing_fit": {
+        "centroid_px": [
+          29.008216433006186,
+          29.4058409205078
+        ],
+        "sigma_px": 2.911745133923353,
+        "valid_fit_pixels": 188,
+        "residual_px": 0.17557318196547164
+      },
+      "measured_px": [
+        29.008216433006186,
+        29.4058409205078
+      ],
+      "residual_px": 0.17557318196547164,
+      "status": "within_1px"
+    },
+    {
+      "frame_id": "D3-visit-1",
+      "predicted_px": [
+        29.03813298937013,
+        28.507073006159445
+      ],
+      "wing_fit": {
+        "centroid_px": [
+          28.65392737798914,
+          28.456031601444938
+        ],
+        "sigma_px": 2.4592660939061934,
+        "valid_fit_pixels": 209,
+        "residual_px": 0.38758118738126207
+      },
+      "measured_px": [
+        28.65392737798914,
+        28.456031601444938
+      ],
+      "residual_px": 0.38758118738126207,
+      "status": "within_1px"
+    },
+    {
+      "frame_id": "D6-visit-0",
+      "predicted_px": [
+        28.955644797754665,
+        29.573358577465093
+      ],
+      "wing_fit": {
+        "centroid_px": [
+          29.127957554143133,
+          29.562009423865025
+        ],
+        "sigma_px": 1.2861698435408322,
+        "valid_fit_pixels": 237,
+        "residual_px": 0.1726861004876464
+      },
+      "measured_px": [
+        29.127957554143133,
+        29.562009423865025
+      ],
+      "residual_px": 0.1726861004876464,
+      "status": "within_1px"
+    },
+    {
+      "frame_id": "D6-visit-1",
+      "predicted_px": [
+        29.03813298937013,
+        28.507073006159445
+      ],
+      "wing_fit": {
+        "centroid_px": [
+          28.893984184730993,
+          28.458498573141064
+        ],
+        "sigma_px": 0.8681071334370638,
+        "valid_fit_pixels": 236,
+        "residual_px": 0.15211296270189875
+      },
+      "measured_px": [
+        28.893984184730993,
+        28.458498573141064
+      ],
+      "residual_px": 0.15211296270189875,
+      "status": "within_1px"
+    }
+  ],
+  "method": "Robust Gaussian fit to valid intensity wings in a 16x16 pixel window; masked saturated core remains NaN. Center free within +/-4 pixels. Display alignment diagnostic, not precision astrometry or photometry.",
+  "shifts": [
+    {
+      "detector": "D1",
+      "measured_delta_px": [
+        -0.8410221130189122,
+        -0.26033317377954646
+      ],
+      "predicted_delta_px": [
+        0.06325570776024492,
+        -0.8176764114041646
+      ],
+      "measured_distance_px": 0.880392841836488
+    },
+    {
+      "detector": "D3",
+      "measured_delta_px": [
+        -0.3542890550170448,
+        -0.9498093190628616
+      ],
+      "predicted_delta_px": [
+        0.0824881916154645,
+        -1.0662855713056487
+      ],
+      "measured_distance_px": 1.0137349146021988
+    },
+    {
+      "detector": "D6",
+      "measured_delta_px": [
+        -0.23397336941214064,
+        -1.1035108507239606
+      ],
+      "predicted_delta_px": [
+        0.0824881916154645,
+        -1.0662855713056487
+      ],
+      "measured_distance_px": 1.1280424350438194
+    }
+  ],
+  "display_acceptance": {
+    "criterion": "D6: crosshair within 0.5px of fitted wings in both epochs; measured upward movement >0.5px on the fixed sky grid",
+    "passed": true,
+    "limit": "Saturated core excluded; validates display behavior, not precision proper motion."
+  },
+  "previous_run_regression": {
+    "common_pixels": 2906,
+    "max_abs_error": 4.452656554576606e-08,
+    "new_finite_pixels": 2906,
+    "old_finite_pixels": 2988,
+    "status": "pass",
+    "edge_policy": "conservative native-center bounds"
+  }
+}

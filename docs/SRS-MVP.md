@@ -20,7 +20,7 @@ Người viết: Thạch · Bản chụp ngày 9/11/2026, **cập nhật ngày 1
 | Must | 5 nút mục tiêu dùng `target_key`, nhờ đó có `predicted_px` để vẽ dấu thập | Barnard dịch rất nhanh nên cần vị trí dự đoán |
 | Must | Báo lỗi rõ ràng cho `BAD_COORDS`, `BAD_PARAM`, `UNKNOWN_TARGET`, `FRAME_NOT_FOUND`, `NO_FRAMES` và cảnh báo `FEW_FRAMES` | Yêu cầu MVP của đề |
 | Should | Ảnh hiệu (`diff_png`) có nút bật/tắt | Đã có |
-| Should | Cảnh báo `SATURATION_POSSIBLE`, `MIXED_WAVELENGTH` theo từng phản hồi | Có trong enum của hợp đồng |
+| Should | Cảnh báo `SATURATION_POSSIBLE`, `MIXED_WAVELENGTH`, `TARGET_OUTSIDE_COVERAGE` theo từng phản hồi | Có trong enum của hợp đồng |
 | Should | Link công khai cho frontend và backend | Luyện deploy trước ngày thi |
 | Could | Panel photometry: đường cong ánh sáng và phổ từ `/api/photometry` | Đã ghép vào frontend |
 | Could | Bản đồ Aladin + overlay Gaia DR3 cạnh viewer | Đã ghép vào frontend |
@@ -87,7 +87,7 @@ Mỗi yêu cầu có một người sở hữu và một người đỡ theo vò
 | FR-09 | Hiển thị đang tải, lỗi theo `error.code` và cảnh báo; nhãn dữ liệu mock/fixture | Must | Duy Hoàng | Đông | Xong cho API đồng bộ: có trạng thái chờ kèm đếm giây, đủ mã lỗi hợp đồng, nút thử lại và nhãn mock/fixture (nhánh `duy-hoang/frontend-real-api`) |
 | FR-10 | Fixture cho 5 mục tiêu chạy khi mất mạng | Must | Khôi (dựng), Đông (phục vụ) | Hữu Hoàng | Xong (fixture cục bộ) |
 | FR-11 | Ảnh hiệu (`diff_png`) có nút bật/tắt | Should | Hữu Hoàng (ảnh), Duy Hoàng (nút) | Nguyên | Xong |
-| FR-12 | Hiển thị cảnh báo của phản hồi: `SATURATION_POSSIBLE`, `MIXED_WAVELENGTH`, `FEW_FRAMES`, `TRUNCATED` | Should | Hữu Hoàng | Nguyên | Xong: mỗi mã có một câu riêng (`src/warnings.ts`); test `e2e/warnings.spec.ts` |
+| FR-12 | Hiển thị cảnh báo của phản hồi: `SATURATION_POSSIBLE`, `MIXED_WAVELENGTH`, `TARGET_OUTSIDE_COVERAGE`, `FEW_FRAMES`, `TRUNCATED` | Should | Hữu Hoàng | Nguyên | Xong: mỗi mã có một câu riêng (`src/warnings.ts`); test `e2e/warnings.spec.ts` |
 | FR-13 | Deploy frontend và backend lên link công khai | Should | Duy Hoàng | Đông | Chưa làm |
 | FR-14 | Panel đường cong ánh sáng và phổ từ `/api/photometry` (E6): điểm không phát hiện vẽ thành giới hạn trên 3σ, điểm có `flagged` vẽ rỗng, lọc detector, bảng số liệu | Could | Thạch | Nguyên | Xong trên mock và fixture |
 | FR-15 | Bản đồ Aladin + overlay Gaia DR3 cạnh viewer, tâm theo vị trí đang xem, chọn Gaia thật, sao giả hoặc tắt | Could | Thạch | Duy Hoàng | Xong; Gaia thật chưa kiểm vì không vào được CDS |
@@ -145,6 +145,7 @@ Cảnh báo không chặn kết quả: HTTP vẫn là 200 và nằm trong `warni
 | `FEW_FRAMES` | `warnings` của `/api/frames` | Ít hơn 3 khung, hoặc danh sách lọc ra rỗng | Hiện cảnh báo; blink ít ý nghĩa |
 | `TRUNCATED` | `warnings` của `/api/frames` | Đã cắt theo `max_frames` | Ghi chú nhỏ |
 | `MIXED_WAVELENGTH` | `warnings` của `/api/frames` | Các khung khác bước sóng | Cảnh báo khi so độ sáng theo thời gian |
+| `TARGET_OUTSIDE_COVERAGE` | `warnings` của `/api/frames` | Đã bỏ các quan sát không phủ vị trí dự đoán của mục tiêu | Hiện cảnh báo; số khung có thể ít hơn |
 | `BAD_COORDS` | HTTP 400 | `ra` hoặc `dec` ngoài khoảng | Lỗi cạnh ô nhập vị trí; `details.fields` nêu tên trường |
 | `BAD_PARAM` | HTTP 400 | Tham số khác sai (detector, `size`, `max_frames`, `name`…) | Lỗi cạnh ô tương ứng |
 | `UNKNOWN_TARGET` | HTTP 404 | `target_key` hoặc tên không có | Gợi ý 5 mục tiêu có sẵn |
@@ -153,7 +154,7 @@ Cảnh báo không chặn kết quả: HTTP vẫn là 200 và nằm trong `warni
 | `INTERNAL` | HTTP 500 | Lỗi không mong đợi (kể cả `DATA_MODE=live` chưa nối) | Hiện lỗi chung, báo nhóm |
 | `NETWORK` | chỉ trong frontend | Không kết nối được tới API | Nút thử lại |
 
-OpenAPI còn khai báo 502, 503 và 504 cho mọi endpoint, nhưng backend 0.1 chưa phát ra các mã lỗi riêng cho chúng. **Thời gian:** API trả JSON đồng bộ, không có job bất đồng bộ. Hạn mức "đang chậm sau 30 giây" của bản v1 chưa cần cho fixture và chưa được cài trong frontend.
+Mã `TARGET_OUTSIDE_COVERAGE` được thêm vào `openapi.yaml` ngày 12/11 (commit `40b74fc`, Hữu Hoàng); cần đối chiếu với wiki hợp đồng. OpenAPI còn khai báo 502, 503 và 504 cho mọi endpoint, nhưng backend 0.1 chưa phát ra các mã lỗi riêng cho chúng. **Thời gian:** API trả JSON đồng bộ, không có job bất đồng bộ. Hạn mức "đang chậm sau 30 giây" của bản v1 chưa cần cho fixture và chưa được cài trong frontend.
 
 ### Ví dụ phản hồi
 

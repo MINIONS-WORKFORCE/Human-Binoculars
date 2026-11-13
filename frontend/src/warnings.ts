@@ -10,6 +10,8 @@ const MESSAGES: Record<string, string> = {
     "Only the first frames are shown because the list was cut at the frame limit.",
   MIXED_WAVELENGTH:
     "These frames differ in wavelength, so a brightness change between them may be colour, not motion.",
+  TARGET_OUTSIDE_COVERAGE:
+    "Some observations were left out because they do not cover the predicted target position.",
 };
 
 /** The sentence for a warning code; an unknown code is shown as it came. */

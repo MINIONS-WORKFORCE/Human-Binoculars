@@ -453,6 +453,7 @@ function FrameSummary({
               ({preset.objectType})
             </span>
           </header>
+          <p>Background information; the displayed frames have not independently confirmed these claims.</p>
           <p className="target-conclusion-text">{preset.conclusion}</p>
         </section>
       )}
