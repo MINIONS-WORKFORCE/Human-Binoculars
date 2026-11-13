@@ -79,3 +79,6 @@ desktop.ini
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# Vercel CLI link (vercel link)
+.vercel

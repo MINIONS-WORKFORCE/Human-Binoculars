@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite",
     "dev:be": "node members/dong/dev.mjs",
+    "smoke": "node scripts/smoke.mjs",
     "dev:starter": "vite templates/vite-react",
     "build:starter": "vite build templates/vite-react",
     "test": "vitest run --passWithNoTests --exclude \"frontend/**\"",

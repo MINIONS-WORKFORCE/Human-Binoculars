@@ -409,8 +409,10 @@ function FrameSummary({
   return (
     <>
       <p className="summary" data-testid="frame-summary">
-        <strong>{data.frames.length} frames</strong> ·{" "}
-        {target.name ?? "custom position"} · RA {formatRa(target.ra)} Dec{" "}
+        <strong>
+          {data.frames.length} {data.frames.length === 1 ? "frame" : "frames"}
+        </strong>{" "}
+        · {target.name ?? "custom position"} · RA {formatRa(target.ra)} Dec{" "}
         {formatDec(target.dec)} · detector D{data.detector} · grid {grid.width}×
         {grid.height} at {grid.pixscale_arcsec}″/px
       </p>

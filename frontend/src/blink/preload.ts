@@ -18,6 +18,18 @@ export class PreloadError extends Error {
 }
 
 /**
+ * The PNGs come from the API origin, not the page's. Requesting them with CORS
+ * (the API allows it) keeps the canvas readable: a canvas drawn from cross-origin
+ * images without it is "tainted", and getImageData / toBlob (pixel tests, GIF
+ * export) throw. Set before src, as the browser reads it when the request starts.
+ */
+function corsImage(): HTMLImageElement {
+  const image = new Image();
+  image.crossOrigin = "anonymous";
+  return image;
+}
+
+/**
  * Loads all urls in parallel and resolves, in the same order, once every image is
  * decoded. onProgress(n) fires after each decoded image with the running count.
  * Rejects with PreloadError naming the first image that failed.
@@ -27,7 +39,7 @@ export async function preloadImages<
 >(
   urls: readonly string[],
   onProgress: (done: number) => void = () => {},
-  createImage: () => T = () => new Image() as unknown as T,
+  createImage: () => T = () => corsImage() as unknown as T,
 ): Promise<T[]> {
   let done = 0;
   return Promise.all(

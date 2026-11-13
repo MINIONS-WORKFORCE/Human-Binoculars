@@ -239,6 +239,13 @@ export function BlinkViewer({
           </>
         )}
       </div>
+      {count === 1 && (
+        <p className="blink-single" role="note" data-testid="single-frame">
+          Only one visit of this spot is available, so there is nothing to blink
+          yet. Try another detector, or check back when SPHEREx has looked
+          again.
+        </p>
+      )}
 
       <div className="blink-controls">
         <button

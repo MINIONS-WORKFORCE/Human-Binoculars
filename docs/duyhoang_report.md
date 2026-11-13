@@ -1,3 +1,100 @@
+# Báo cáo 12/11/2026: Sửa CORS 500, preset từ targets.json, smoke test, deploy Vercel, thử FITS thật
+
+**Người làm:** Duy Hoàng
+
+**URL production: https://human-binoculars.vercel.app** (gọi API https://human-binoculars.onrender.com)
+
+| Nhánh | Nội dung | Trạng thái |
+| --- | --- | --- |
+| `duy-hoang/frontend-real-api` | Nối frontend với API thật, trạng thái chờ/lỗi (báo cáo 11/11 bên dưới) | Đã push, chưa mở PR |
+| `duy-hoang/fix-cors-on-500` | Sửa CORS cho lỗi 500 trong `members/dong/app/main.py` | Đã push, chưa mở PR, cần Đông review |
+| `duy-hoang/frontend-targets-smoke` (xếp chồng trên nhánh 1) | Preset đọc từ `targets.json`, smoke test, cấu hình Vercel, xử lý khung từ FITS thật | Đã push, chưa mở PR |
+
+Nội dung 3 PR soạn sẵn trong `D:\nasa_app_challenge\pr-descriptions.md`, vì máy chưa có `gh` và trình duyệt tích hợp chưa đăng nhập GitHub.
+
+## 1. Sửa lỗi CORS ở response 500 (`fix-cors-on-500`)
+- **Nguyên nhân:** Starlette xử lý exception không bắt được ở `ServerErrorMiddleware`, lớp nằm ngoài `CORSMiddleware`. Response 500 `INTERNAL` vì vậy không có `Access-Control-Allow-Origin`, và trình duyệt chỉ báo `NETWORK`.
+- **Cách sửa:** thêm một middleware bắt mọi exception, đăng ký **trước** CORS nên nằm bên trong lớp CORS, và trả lỗi `INTERNAL` đúng định dạng hợp đồng.
+- **Test:** `test_unexpected_error_is_contract_json_with_cors`. Đã chạy thử: test báo đỏ khi chưa có bản sửa, xanh khi có.
+- **Kiểm chứng:** `pytest members` 73 pass, 1 bỏ qua. Ruff sạch trên `members/dong/app` và `tests` (lỗi sắp xếp import trong `scripts/legacy/` có từ trước).
+
+## 2. Preset đọc từ `shared/targets.json`
+- Tọa độ 5 mục tiêu giờ lấy từ cùng bảng với resolver của backend (SIMBAD ICRS, J2000). Tên hiển thị, aliases và mô tả vẫn giữ ở frontend; SIMBAD id được thêm làm alias.
+- Test mới: tọa độ preset phải trùng với kết quả `/api/resolve`.
+- R Draconis giờ hiện `16h32m40.23s`, đúng giá trị SIMBAD `16 32 40.2266`; trước đây do làm tròn nên hiện `40.22s`.
+
+## 3. Smoke test: `npm run smoke -- <api-url> --origin <frontend-url>`
+- Script `scripts/smoke.mjs`, không cần dependency. Kiểm tra:
+  - `/api/health`;
+  - với mỗi mục tiêu: `/api/resolve`, `/api/frames`, ảnh PNG và ảnh hiệu đầu tiên;
+  - CORS cho origin chỉ định (nếu có `--origin`).
+- Chờ tối đa 2 phút cho Render thức dậy. Trả exit code 1 nếu có kiểm tra nào lỗi.
+- CI: job `python` chạy backend ở chế độ fixture sau pytest rồi chạy smoke.
+
+| Chạy với | Kết quả |
+| --- | --- |
+| `npm run dev:be` (code `main`) | **11/11** |
+| Render, origin `https://human-binoculars.vercel.app` | **7/11.** CORS đạt, frames đạt cả 5 mục tiêu. `/api/resolve` trả 404 cho 4 mục tiêu ngoài Barnard: **Render đang chạy code cũ hơn PR #47**, và `git_sha` là `unknown` |
+
+## 4. Deploy Vercel
+- Project `human-binoculars`, team `duy-hoang2`. Deploy bằng CLI từ gốc repo:
+  - `vercel.json` build `frontend/`;
+  - `.vercelignore` chỉ upload `frontend/`, `shared/`, `api_samples/`.
+- `VITE_API_BASE_URL=https://human-binoculars.onrender.com`, đặt cho cả production, preview và development.
+- Đã kiểm tra bằng Edge headless:
+  - blink 3 khung từ Render;
+  - canvas đọc được pixel;
+  - dấu thập đúng màu tại `predicted_px`;
+  - console không lỗi.
+- Link production mở công khai. Link preview theo từng lần deploy cần đăng nhập Vercel (mặc định của Vercel).
+- Lần gọi đầu khi Render đang ngủ mất **53 s**. Trang hiện bộ đếm giây trong lúc chờ.
+- Hiện production được deploy tay từ nhánh `frontend-targets-smoke`. Muốn tự deploy mỗi lần push thì cần nối Vercel với GitHub (`vercel git connect`), việc này cần quyền admin của org `MINIONS-WORKFORCE`.
+- `vercel link` có tự thêm `.env*` vào `.gitignore`, dòng này sẽ bao luôn `.env.example`. Mình đã bỏ dòng đó, chỉ giữ `.vercel`.
+
+## 5. Thử viewer với FITS thật
+- Link Drive trong `scripts/download_fixtures.py` (nhánh `khoi/issue-34`) là link giả. Vì vậy mình chạy `members/khoi/build_five_targets_fixture.py` trong một worktree tạm để tải 30 cutout trực tiếp từ IRSA, rồi copy vào `data/fixtures/` (git bỏ qua).
+- Backend `main` tự nhận `data/fixtures/manifest.json` và dựng khung từ FITS.
+
+| Kiểm tra | Kết quả |
+| --- | --- |
+| Lưới | 59×59 (0.1°), viewer co giãn đúng: 13 pixel màn hình mỗi pixel SPHEREx ở `devicePixelRatio` 1.25 |
+| Dấu thập | Nằm tại `predicted_px` ≈ (29, 29), đúng tâm sao |
+| Bước sóng, ngày | `4.92 µm`, `2025-08-15 20:47 UTC` |
+| **Số khung** | **Chỉ 1 khung cho cả 5 mục tiêu, ở cả D6 lẫn D1.** Backend gộp ảnh cách nhau ≤ 30 ngày thành 1 visit (`group_images_into_visits`), mà 3 cutout mỗi detector của Khôi nằm trong cùng một tuần |
+
+Sửa phía frontend (commit `0db7f38`):
+- Ảnh tải với `crossOrigin="anonymous"`. Trước đây canvas vẽ từ ảnh khác origin bị "tainted", nên không đọc được pixel: không kiểm tra dấu thập bằng pixel được, và sau này không xuất GIF được.
+- Khi chỉ có 1 khung, viewer hiện câu giải thích vì sao chưa blink được, thay vì chỉ tắt nút Play. Sửa "1 frames" thành "1 frame". Thêm test Playwright cho trường hợp này.
+
+## 6. Cần báo team
+
+| Cho | Vấn đề | Đề xuất |
+| --- | --- | --- |
+| **Đông** | Render chạy code cũ hơn PR #47 (resolver chỉ biết Barnard), và `git_sha` = `unknown` | Redeploy Render từ `main`; đặt `GIT_SHA` để smoke test biết bản đang chạy. Review PR sửa CORS |
+| **Khôi** | Fixture FITS chỉ cho 1 visit mỗi mục tiêu, nên không blink được. Link Drive trong `download_fixtures.py` là link giả | Chọn cutout ở ít nhất 3 visit cách nhau trên 30 ngày (SPHEREx chụp lại cùng vùng trời khoảng 6 tháng một lần), và cập nhật link Drive thật |
+| **Khôi** | Cutout rộng 0.05° nhưng API mặc định dựng lưới 0.1°, nên viền ngoài không có dữ liệu | Tải cutout 0.1°, hoặc thống nhất `size` mặc định |
+| **Đông, Hữu Hoàng** | Pixel bị đánh dấu xấu (gồm cả lõi sao bão hoà) và vùng không có dữ liệu đều bị vẽ thành **đen** (NaN thành 0). Ngôi sao sáng nhất vì vậy trông như một lỗ đen: tâm Barnard D6 là `0` bao quanh bởi `255` | Đây là thay đổi hợp đồng PNG, cần team quyết. Ví dụ: PNG xám kèm kênh alpha cho pixel không có dữ liệu, còn pixel bão hoà thì vẽ trắng |
+
+## 7. Kiểm chứng (nhánh `frontend-targets-smoke`)
+| Lệnh | Kết quả |
+| --- | --- |
+| lint, typecheck | Sạch |
+| Vitest | 172 pass, 32 bỏ qua (test so mock với backend) |
+| Test so mock với backend (`LIVE_API_URL`, backend dùng `api_samples/`) | 32/32 |
+| build | Thành công |
+| Playwright (Edge, `--workers=2`) | **9/9** |
+| `pytest members` (nhánh sửa CORS) | 73 pass, 1 bỏ qua |
+
+Playwright với 6 worker (mặc định) từng báo đỏ khi máy đang tải FITS song song, vì mỗi test mất 30–40 s để mở trang. Chạy với 2 worker thì pass hết; đó là do máy quá tải, không phải lỗi code. CI dùng runner riêng nên không bị ảnh hưởng.
+
+## 8. Việc tiếp theo
+1. Mở 3 PR theo `pr-descriptions.md`, xem CI (nhất là job `e2e` trong container Playwright và bước smoke mới).
+2. Đông redeploy Render từ `main`, rồi chạy lại `npm run smoke -- https://human-binoculars.onrender.com --origin https://human-binoculars.vercel.app` (phải đạt 11/11).
+3. Khi có fixture nhiều visit: chạy lại kiểm tra FITS thật, xem blink và ảnh hiệu.
+4. Nối Vercel với GitHub để có bản preview cho mỗi PR.
+
+---
+
 # Báo cáo 11/11/2026: Nối frontend với backend thật, trạng thái chờ và lỗi
 
 **Người làm:** Duy Hoàng
