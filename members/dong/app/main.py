@@ -39,7 +39,7 @@ app.add_middleware(
         }
     ),
     allow_methods=["GET"],
-    expose_headers=["Server-Timing", "Cache-Control"],
+    expose_headers=["Server-Timing", "Cache-Control", "X-Cache"],
 )
 app.include_router(router)
 logger = logging.getLogger("uvicorn.error")

@@ -34,8 +34,8 @@ def resolve(query: Annotated[ResolveQuery, Query()]):
 
 
 @router.get("/api/frames", response_model=Frames, responses=ERRORS)
-def frames(query: Annotated[FramesQuery, Query()]):
-    return fixtures.frames(query)
+def frames(query: Annotated[FramesQuery, Query()], response: Response):
+    return fixtures.frames(query, response)
 
 
 @router.get(

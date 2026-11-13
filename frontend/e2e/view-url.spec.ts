@@ -7,7 +7,9 @@ const framesRequest = (page: Page) =>
 test("FOV and detector change the request and the URL (FR-02, FR-03)", async ({
   page,
 }) => {
+  const initial = framesRequest(page);
   await page.goto("/");
+  expect(new URL((await initial).url()).searchParams.get("size")).toBe("0.3");
   await expect(page.getByTestId("frame-summary")).toContainText("detector D6");
 
   const fov = framesRequest(page);

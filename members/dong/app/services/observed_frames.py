@@ -4,6 +4,7 @@ import csv
 import hashlib
 import json
 import os
+import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -15,7 +16,7 @@ from ..api_models import Frames, FramesQuery, Target
 from .frame_rendering import build_frames
 
 ROOT = Path(__file__).resolve().parents[4]
-RENDER_VERSION = "api-0.1-tan-median-v3"
+RENDER_VERSION = "api-0.1-tan-median-v4"
 
 
 @dataclass(frozen=True)
@@ -57,6 +58,8 @@ def pack_entries(data_dir, query):
                 "mjd": source["t_min"],
                 "ra": float(row["target_ra_deg"]),
                 "dec": float(row["target_dec_deg"]),
+                "cutout_size_deg": float(row["cutout_size_deg"]),
+                "source": source,
             }
         )
     return entries
@@ -93,9 +96,10 @@ def matching_cutouts(query):
         stat = path.stat()
         publisher = row["obs_publisher_did"]
         collection = publisher.partition("?")[0].rsplit("/", 1)[-1]
-        release = collection.removeprefix("spherex_")
-        if not collection.startswith("spherex_qr"):
+        match = re.fullmatch(r"spherex_((?:qr|dr)\d+)(?:_deep)?", collection)
+        if match is None:
             raise ValueError("Fixture does not identify the SPHEREx data release")
+        release = match[1]
         cutouts.append(
             Cutout(
                 path,
@@ -111,18 +115,23 @@ def matching_cutouts(query):
     return tuple(sorted(set(cutouts), key=lambda row: (row.mjd, row.obs_id, str(row.path))))
 
 
-@lru_cache(maxsize=16)
-def render_cached(query_json, target_json, cutouts):
-    # Version, query and input revisions are part of the public image identity.
-    # An old browser URL continues to identify its original bytes after a rebuild.
-    digest = hashlib.sha256(RENDER_VERSION.encode())
-    digest.update(query_json.encode())
+def verify_cutouts(cutouts):
     for cutout in cutouts:
-        digest.update(repr(cutout).encode())
         if cutout.sha256:
             with cutout.path.open("rb") as handle:
                 if hashlib.file_digest(handle, "sha256").hexdigest() != cutout.sha256:
                     raise ValueError("FITS fixture checksum mismatch")
+
+
+@lru_cache(maxsize=16)
+def render_cached(query_json, target_json, cutouts):
+    # Version, query and input revisions are part of the public image identity.
+    # An old browser URL continues to identify its original bytes after a rebuild.
+    verify_cutouts(cutouts)
+    digest = hashlib.sha256(RENDER_VERSION.encode())
+    digest.update(query_json.encode())
+    for cutout in cutouts:
+        digest.update(repr(cutout).encode())
     query = FramesQuery.model_validate_json(query_json)
     result, images = build_frames(cutouts, query, digest.hexdigest()[:24])
     frames = Frames.model_validate(

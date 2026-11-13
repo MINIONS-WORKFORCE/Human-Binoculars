@@ -1,14 +1,10 @@
 """Adapt Hữu Hoàng's TAN and FITS helpers to the API's in-memory image contract."""
 
-import io
 from importlib import import_module
 
 import numpy as np
 from astropy.time import Time
-from astropy.visualization import AsinhStretch
-from PIL import Image
-from reproject import reproject_interp
-
+from shared.image_processing import png_bytes, reproject_compatible, stretch
 from shared.pipeline.irsa import group_images_into_visits
 
 from .catalog import position_at
@@ -20,13 +16,6 @@ PIXEL_SCALE = 6.15
 
 class NoCoverage(Exception):
     """No indexed image overlaps the requested sky grid."""
-
-
-def encode_png(values):
-    buffer = io.BytesIO()
-    # TAN arrays are south-first. Browser image coordinates are north-first.
-    Image.fromarray(np.rint(values[::-1]).astype(np.uint8)).save(buffer, format="PNG")
-    return buffer.getvalue()
 
 
 def build_frames(cutouts, query, identity):
@@ -62,14 +51,14 @@ def build_frames(cutouts, query, identity):
             image, native_wcs, info = imaging.load_cutout(cutout.path, ra, dec)
             if info["detector"] != cutout.detector or info["obs_id"] != cutout.obs_id:
                 raise ValueError("FITS observation or detector differs from fixture metadata")
-            pixels, footprint = reproject_interp(
+            pixels, footprint = reproject_compatible(
                 (image, native_wcs), wcs, shape_out=shape, order="bilinear"
             )
             valid = (np.isfinite(pixels) & (footprint > 0)).any()
             if valid:
                 has_coverage = True
             elif not has_coverage:
-                _, geometric = reproject_interp(
+                _, geometric = reproject_compatible(
                     (np.ones_like(image), native_wcs), wcs, shape_out=shape
                 )
                 has_coverage = bool(geometric.any())
@@ -155,12 +144,11 @@ def build_frames(cutouts, query, identity):
         if limit == 0:
             limit = float(np.max(np.abs(values))) or 1.0
         for frame, image, diff in zip(frames, arrays, differences, strict=True):
-            scaled = AsinhStretch()((image - lo) / (hi - lo))
             # Separate slopes retain gray 128 at zero and use the full 0–255 range.
             signed = np.clip(np.nan_to_num(diff / limit, nan=0), -1, 1)
             published[frame["id"]] = (
-                encode_png(255 * np.nan_to_num(scaled, nan=0)),
-                encode_png(128 + signed * np.where(signed > 0, 127, 128)),
+                png_bytes(stretch(image, lo, hi)),
+                png_bytes(np.rint(128 + signed * np.where(signed > 0, 127, 128))),
             )
         waves, widths = zip(*wavelengths)
         if max(waves) - min(waves) > min(widths):

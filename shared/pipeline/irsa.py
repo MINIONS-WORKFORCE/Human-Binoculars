@@ -8,7 +8,6 @@ and manifest.json generation conforming to SRS-MVP Section 6.
 
 from __future__ import annotations
 
-import csv
 import hashlib
 import io
 import json
@@ -16,7 +15,6 @@ import logging
 import math
 import re
 import time
-import urllib.parse
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +34,15 @@ class UpstreamTimeout(UpstreamError):
     """Raised when IRSA times out repeatedly."""
 
 
+def _remaining_timeout(timeout_s: float, deadline: float | None) -> float:
+    if deadline is None:
+        return timeout_s
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise UpstreamTimeout("IRSA request deadline exceeded")
+    return min(timeout_s, remaining)
+
+
 def _normalize_detector(det: str | int | None) -> str | None:
     if det is None:
         return None
@@ -52,21 +59,23 @@ def _request_with_retry(
     *,
     timeout_s: int = 120,
     retries: int = 3,
+    deadline: float | None = None,
 ) -> requests.Response:
     last_err: Exception | None = None
     for attempt in range(retries):
+        timeout = _remaining_timeout(timeout_s, deadline)
         try:
-            resp = requests.get(url, params=params, timeout=timeout_s)
+            resp = requests.get(url, params=params, timeout=timeout)
             if resp.status_code == 502 or resp.status_code >= 500:
                 raise UpstreamError(f"HTTP {resp.status_code} server error from {url}")
             resp.raise_for_status()
             return resp
         except requests.Timeout as exc:
             last_err = UpstreamTimeout(f"Timeout after {timeout_s}s connecting to {url}: {exc}")
-        except Exception as exc:
+        except (requests.RequestException, UpstreamError) as exc:
             last_err = UpstreamError(f"Request failed: {exc}")
         if attempt < retries - 1:
-            time.sleep(2**attempt)
+            time.sleep(_remaining_timeout(2**attempt, deadline))
     raise last_err or UpstreamError("Request failed after retries")
 
 
@@ -111,6 +120,7 @@ def _query_tap_fallback(
     t_min: float | None = None,
     t_max: float | None = None,
     timeout_s: int = 120,
+    deadline: float | None = None,
 ) -> list[dict[str, Any]]:
     """Fallback query via IRSA TAP ADQL service."""
     adql_parts = [
@@ -147,7 +157,9 @@ def _query_tap_fallback(
         "FORMAT": "votable",
         "QUERY": adql,
     }
-    resp = _request_with_retry(IRSA_TAP_URL, params=params, timeout_s=timeout_s, retries=2)
+    resp = _request_with_retry(
+        IRSA_TAP_URL, params=params, timeout_s=timeout_s, retries=2, deadline=deadline
+    )
     return _parse_votable_xml(resp.content)
 
 
@@ -162,6 +174,8 @@ def find_images(
     search_radius_deg: float = 0.05,
     timeout_s: int = 120,
     retries: int = 3,
+    deadline: float | None = None,
+    tap_fallback: bool = True,
 ) -> list[dict[str, Any]]:
     """Query IRSA for SPHEREx images covering (ra_deg, dec_deg).
 
@@ -185,10 +199,14 @@ def find_images(
     raw_entries: list[dict[str, Any]] = []
     # Step 1: Attempt SIA2
     try:
-        resp = _request_with_retry(IRSA_SIA_URL, params=sia_params, timeout_s=timeout_s, retries=retries)
+        resp = _request_with_retry(
+            IRSA_SIA_URL, params=sia_params, timeout_s=timeout_s, retries=retries, deadline=deadline
+        )
         raw_entries = _parse_votable_xml(resp.content)
-    except Exception as exc:
-        logger.warning("SIA2 query failed (%s). Triggering TAP fallback...", exc)
+    except UpstreamError as exc:
+        if not tap_fallback:
+            raise
+        logger.warning("SIA2 query failed (%s). Trying TAP fallback.", type(exc).__name__)
         # Step 2: Fallback to TAP
         try:
             raw_entries = _query_tap_fallback(
@@ -199,8 +217,11 @@ def find_images(
                 t_min=t_min,
                 t_max=t_max,
                 timeout_s=timeout_s,
+                deadline=deadline,
             )
-        except Exception as tap_exc:
+        except UpstreamTimeout:
+            raise
+        except UpstreamError as tap_exc:
             raise UpstreamError(f"Both SIA2 and TAP queries failed. TAP error: {tap_exc}") from tap_exc
 
     # Deduplicate and filter by detector and collection
@@ -263,6 +284,7 @@ def fetch_cutouts(
     max_per_visit: int = 6,
     timeout_s: int = 120,
     retries: int = 3,
+    deadline: float | None = None,
 ) -> Path:
     """Downloads SPHEREx FITS cutouts from IRSA and writes manifest.json.
 
@@ -310,9 +332,11 @@ def fetch_cutouts(
 
         download_ok = False
         last_error = ""
+        failure_kind = "upstream"
         for attempt in range(retries):
+            timeout = _remaining_timeout(timeout_s, deadline)
             try:
-                resp = requests.get(cutout_url, timeout=timeout_s)
+                resp = requests.get(cutout_url, timeout=timeout)
                 resp.raise_for_status()
                 content = resp.content
                 # Quick verification that it is a valid FITS file (starts with SIMPLE =)
@@ -333,14 +357,18 @@ def fetch_cutouts(
                 })
                 download_ok = True
                 break
-            except Exception as exc:
+            except (requests.RequestException, OSError, ValueError) as exc:
                 last_error = str(exc)
+                failure_kind = "timeout" if isinstance(exc, requests.Timeout) else "upstream"
                 if dest_file.exists():
                     dest_file.unlink(missing_ok=True)
-                time.sleep(2**attempt)
+                if attempt < retries - 1:
+                    time.sleep(_remaining_timeout(2**attempt, deadline))
 
         if not download_ok:
-            failed.append({"obs_id": obs_id, "reason": last_error or "Download failed"})
+            failed.append({
+                "obs_id": obs_id, "reason": last_error or "Download failed", "kind": failure_kind,
+            })
 
     coll = images[0].get("obs_collection", "spherex_qr2") if images else "spherex_qr2"
     manifest_data = {
@@ -496,7 +524,7 @@ def find_frames(
 
         try:
             manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
-        except Exception as exc:
+        except (OSError, ValueError) as exc:
             logger.error("Failed to read manifest %s: %s", manifest_path, exc)
             return []
 

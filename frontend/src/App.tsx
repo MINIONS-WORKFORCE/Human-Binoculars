@@ -40,7 +40,7 @@ interface Request {
   /** Only known targets have one; without it the API sends no predicted_px. */
   targetKey?: string;
   detector: number;
-  /** Cutout width in arcminutes; null means the API's default size. */
+  /** Cutout width in arcminutes; null means the viewer default. */
   fov: Fov | null;
   /** The text typed in the target field, kept in the URL. */
   q: string;
@@ -57,6 +57,7 @@ const SkyPanel = lazy(() =>
 );
 
 const FIRST = TARGET_PRESETS[0];
+const DEFAULT_FOV_ARCMIN = 18;
 
 /** Map width in degrees: twice the frames' footprint for context, never under 6'. */
 const MIN_MAP_FOV_DEG = 0.1;
@@ -87,7 +88,7 @@ function requestFor(
 
 async function fetchFrames(request: Request): Promise<State> {
   try {
-    const size = request.fov === null ? undefined : fovToSize(request.fov);
+    const size = request.fov === null ? DEFAULT_FOV_ARCMIN / 60 : fovToSize(request.fov);
     return { status: "ready", data: await api.frames({ ...request, size }) };
   } catch (error) {
     return { status: "error", error: describeError(error) };
@@ -273,7 +274,7 @@ export default function App() {
               if (request) load({ ...request, fov: next });
             }}
           >
-            <option value="">Default (6′)</option>
+            <option value="">Default ({DEFAULT_FOV_ARCMIN}′)</option>
             {FOV_OPTIONS.map((option) => (
               <option key={option} value={option}>
                 {option}′
@@ -353,7 +354,7 @@ function PanelLoading({ children }: { children: string }) {
   );
 }
 
-/** "Loading frames…", then a seconds counter: a live IRSA query can take 2 minutes. */
+/** Show elapsed time while waiting for frames. */
 function LoadingFrames() {
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
@@ -369,7 +370,7 @@ function LoadingFrames() {
       <span className="spinner" aria-hidden="true" />
       Loading frames…
       {seconds >= SLOW_AFTER_S && (
-        <> {seconds} s. The NASA archive can take up to 2 minutes.</>
+        <> {seconds} s elapsed. Waiting for the NASA archive.</>
       )}
     </p>
   );

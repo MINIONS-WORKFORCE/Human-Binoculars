@@ -194,7 +194,7 @@ const ERRORS: Record<ErrorCode, Omit<ErrorInfo, "code">> = {
   },
   UPSTREAM_TIMEOUT: {
     message:
-      "The NASA archive took more than 2 minutes to answer. Try again in a moment.",
+      "The request to the NASA archive timed out. Try again in a moment.",
     retry: true,
   },
   INTERNAL: {

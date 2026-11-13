@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { PhotometryChart } from "../../../shared/charts/Charts.jsx";
 import { api, ApiError, friendlyMessage, type Photometry } from "../api";
+import { useMock } from "../config";
 import "./science.css";
 
 export interface PhotometryPanelProps {
@@ -99,8 +100,9 @@ export function PhotometryPanel({ ra, dec, targetKey }: PhotometryPanelProps) {
             <PhotometryChart data={state.data} />
             {mode === "fixture" && (
               <p className="panel-note">
-                Fixture data: synthetic example values that test the interface,
-                not the science.
+                {useMock
+                  ? "Fixture data: synthetic example values that test the interface."
+                  : "Fixture data: measurements from local FITS where available. Example values may appear when FITS are missing."}
               </p>
             )}
           </>

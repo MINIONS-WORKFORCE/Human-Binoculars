@@ -23,6 +23,7 @@ from astropy.wcs import WCS
 import sys
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2]))
+from shared.image_processing import mask_flags
 from shared.image_processing import reproject_compatible as reproject_interp
 from scipy.ndimage import maximum_filter
 
@@ -60,7 +61,9 @@ def load_cutout(path, ra=RA, dec=DEC):
         }
         bits = sum(1 << bit for bit in set(rejected.values()))
         flagged = (flags & bits) != 0
-        good = np.isfinite(raw) & ~flagged
+        # Some archive cutouts omit MP_* definitions. Preserve the existing
+        # finite-pixel fallback when the header supplies no rejectable bits.
+        pixels = mask_flags(raw, flags, fh) if rejected else np.where(np.isfinite(raw), raw, np.nan)
         spectral = header.copy()
         for k in list(spectral):
             if k.startswith(("A_", "B_", "AP_", "BP_")):
@@ -75,13 +78,13 @@ def load_cutout(path, ra=RA, dec=DEC):
             "wave_um": float(wave),
             "bandwidth_um": float(width),
             "rejected_flags": rejected,
-            "valid_pixels": int(good.sum()),
+            "valid_pixels": int(np.isfinite(pixels).sum()),
             "bad_pixel_frac": float(flagged.mean()),
             "flag_counts": {
                 k: int(((flags & (1 << int(fh[k]))) != 0).sum()) for k in fh if k.startswith("MP_")
             },
         }
-        return np.where(good, raw, np.nan), wcs, info
+        return pixels, wcs, info
 
 
 def acquire(limit=50):

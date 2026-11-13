@@ -37,6 +37,12 @@ Daily scope comes from GitHub Issues. Models and samples follow the
         legacy/                  SIA2 notes, cache design and Day 6 delivery history
 
 The router calls the fixture service, which prepares model-validated results.
+For known targets with indexed FITS, E6 and E7 measure the original exposures
+using `shared.science`. The detector filter applies before measurement, and E6
+uses `aperture_arcsec` as a radius. E6 uses the same visit numbering as E3 and
+publishes only rows with a valid wavelength. Science points identify source
+exposures. Astrometry leaves `measured_px` null when no matching display grid is
+provided. If FITS are unavailable, the endpoints serve the existing examples.
 The application translates service errors into the shared JSON error shape.
 The historical app remains available through app.legacy_main because existing
 team guides still link to that entry point.
@@ -49,9 +55,22 @@ the distinction between synthetic examples and observed data.
 ## Run
 
 Run commands from the repository root with dependencies installed in .venv.
-Configure API_HOST and API_PORT in the root .env, set DATA_MODE=fixture, and
+Configure API_HOST and API_PORT in the root .env, set DATA_MODE=live and
+VITE_USE_MOCK=false, and
 set CORS_ALLOW_ORIGINS to the frontend origins. Start with npm run dev:be.
 Restart the launcher after editing .env.
+
+In live mode, E3, E6 and E7 fetch FITS cutouts from IRSA on demand. The default
+collection is `spherex_dr1`, with `spherex_qr3` used when discovery is empty.
+The downloader samples up to six visits and one exposure per detector per visit.
+The upstream deadline is 65 seconds. FITS are written to a temporary workspace
+under `DATA_DIR/cache` and removed after processing. Live responses are cached
+on disk in `DATA_DIR/cache/api-0.1-live` before any new archive lookup.
+The cache key includes the endpoint, collection settings and all validated
+query parameters. Results expire after 15 minutes, or after 1 minute when
+frames report `FEW_FRAMES` or science returns no points. Frame responses expose
+`X-Cache: HIT` or `X-Cache: MISS`. Reloading frames after a backend restart
+republishes PNGs from the cached response if it is still available.
 
 Read the [frontend guide](../../shared/api-contract/frontend-guide.md) for
 the request parameters and seven endpoints exposed in /docs.
@@ -115,6 +134,64 @@ the historical entry point still supports.
 
 `test_observed_frames.py` exercises a deterministic FITS manifest, cache
 reuse and invalidation, and the observed Barnard pack when available locally.
+
+## MVP v1 acceptance backend
+
+The [SRS](https://github.com/MINIONS-WORKFORCE/Human-Binoculars/wiki/System-Requirement-Specific-Of-The-SphereX-website)
+describes a different wire contract from the current public API 0.1. Start
+`app.mvp_main:app` to try the SRS contract. The public entry point
+`app.main:app` and its OpenAPI schema are still available for the existing
+frontend. The [MVP v1 OpenAPI snapshot](../../shared/api-contract/openapi-mvp-v1.yaml)
+is checked against the generated schema.
+
+Run from the repository root. On Windows PowerShell:
+
+```powershell
+$env:API_MODE = "mock"
+.venv/Scripts/python.exe -m uvicorn app.mvp_main:app --app-dir members/dong --port 8001
+```
+
+Open `/docs` on port 8001. GET `/health` checks liveness. GET `/api/targets`
+returns the five target centers propagated to the midpoint of the QR2 period
+in the SRS. For GET `/api/frames`, use a target's `ra_deg` and `dec_deg` as
+`s_ra` and `s_dec`, use `spherex_qr2` or `spherex_qr3` as
+`obs_collection`, use a band such as `SPHEREx-D6`, and send the FOV in degrees
+as `cutout_size_deg` (arcminutes divided by 60). The maximum is 0.2 degrees.
+Open each returned `image_url` on the same backend.
+
+- **Mock.** Works without FITS. Results carry `data_kind: mock` and a
+  `MOCK_DATA` warning. Synthetic frames have no observational source IDs.
+- **Real.** Set `API_MODE=real` and restart. The backend reads a matching
+  prebuilt bundle first, then the disk cache, then IRSA SIA2 and the cutout
+  service. Up to six cutouts are used per visit. The renderer masks flags,
+  aligns onto one TAN grid and uses one asinh stretch. Each frame records
+  the contributing ObsCore product IDs. No matching archive data returns
+  `200` with `NO_DATA`; a release is never substituted. The API maps invalid
+  inputs to `422`, archive errors to `502`, and timeouts to `504`. A request
+  has a 120-second budget and the logs record timing per stage.
+- **Cache.** PNG and metadata are published in the same disk-cache record
+  under `DATA_DIR/cache/mvp`. `X-Cache` reports `PREBUILT`, `HIT`, or `MISS`.
+  Keys include release, detector, FOV, and time bounds. Exact coordinates
+  distinguish different TAN centers within the SRS's rounded sky bucket.
+
+To prepare a bundle from the local v1 notebook pack, run:
+
+```powershell
+.venv/Scripts/python.exe members/dong/scripts/prepare_mvp_bundle.py barnard
+```
+
+Use `--manifest data/fixtures/manifest.json` for the team's FITS manifest.
+Select the target, `--detector`, `--fov-arcmin` and `--collection` for each
+bundle. The script writes PNG files and `bundle.json` under
+`DATA_DIR/prebuilt/<target>/<D>/<key>/`. It requires actual FITS of the selected
+release, detector and field size. Keep the prebuilt and cache directories,
+FITS and environment values out of Git.
+
+Run `python -m pytest members/dong/tests/test_mvp_api.py -q` for the MVP
+checks, including both response modes, offline bundle delivery, source IDs,
+cache reuse, validation and upstream failures. Full offline acceptance for
+five targets across six detectors depends on the corresponding team FITS
+or prebuilt bundles.
 
 ## Historical exercises
 
