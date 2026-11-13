@@ -23,5 +23,6 @@ declare module "*/shared/skymap/SkyMap.jsx" {
     /** "vizier" is real Gaia DR3, "mock" is synthetic stars, "off" hides the layer. */
     gaia?: "vizier" | "mock" | "off";
     survey?: string;
+    onSwitchGaia?: (gaia: "vizier" | "mock" | "off") => void;
   }): ReactElement;
 }

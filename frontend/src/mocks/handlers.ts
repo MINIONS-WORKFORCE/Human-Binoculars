@@ -4,7 +4,40 @@
 import { http, HttpResponse } from "msw";
 import targetTable from "../../../shared/targets.json";
 import type { Resolve } from "../api/client";
-import { samplePng, samples } from "./samples";
+import { samplePng, samples, targetSamplePng } from "./samples";
+
+const TARGET_PREDICTED_PX: Record<string, Array<[number, number]>> = {
+  barnard: [
+    [17.0, 19.0],
+    [19.0, 19.0],
+    [21.0, 19.0],
+  ],
+  wise0855: [
+    [19.0, 17.0],
+    [19.0, 19.0],
+    [19.0, 21.0],
+  ],
+  epsindib: [
+    [17.5, 17.5],
+    [19.5, 19.5],
+    [21.5, 21.5],
+  ],
+  rwaur: [
+    [19.0, 19.0],
+    [19.0, 19.0],
+    [19.0, 19.0],
+  ],
+  rdra: [
+    [19.0, 19.0],
+    [19.0, 19.0],
+    [19.0, 19.0],
+  ],
+};
+
+interface PublishedEntry {
+  index: number;
+  targetKey?: string;
+}
 
 /** Names the API echoes in `target` (members/dong/app/services/fixtures.py). */
 const TARGETS: Record<string, string> = {
@@ -51,7 +84,7 @@ const catalogRecord = (key: string | null) =>
   CATALOG.find((entry) => entry.record.target_key === key)?.record;
 
 /** frame id -> sample index, filled by /api/frames like the backend's image registry. */
-const published = new Map<string, number>();
+const published = new Map<string, PublishedEntry>();
 
 function fail(
   status: number,
@@ -152,8 +185,13 @@ function shortHash(text: string): string {
 }
 
 function png(id: string, difference: boolean) {
-  const index = published.get(id);
-  const bytes = index === undefined ? undefined : samplePng(index, difference);
+  const item = published.get(id);
+  const bytes =
+    item === undefined
+      ? undefined
+      : item.targetKey
+        ? targetSamplePng(item.targetKey, item.index, difference)
+        : samplePng(item.index, difference);
   if (!bytes)
     return fail(
       404,
@@ -214,11 +252,18 @@ export const handlers = [
         .slice(0, q.max_frames ?? 60)
         .map((frame, index) => {
           const id = `fixture-${identity}-${index}`;
-          published.set(id, index);
+          published.set(id, {
+            index,
+            targetKey: echoed.target_key ?? undefined,
+          });
+          const predicted = echoed.target_key
+            ? (TARGET_PREDICTED_PX[echoed.target_key]?.[index] ??
+              frame.predicted_px)
+            : null;
           return {
             ...frame,
             id,
-            predicted_px: echoed.target_key ? frame.predicted_px : null,
+            predicted_px: predicted,
             png: `/api/frames/${id}.png`,
             diff_png: `/api/frames/${id}/diff.png`,
           };

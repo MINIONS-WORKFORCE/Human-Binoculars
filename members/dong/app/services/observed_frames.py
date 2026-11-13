@@ -62,6 +62,63 @@ def pack_entries(data_dir, query):
     return entries
 
 
+def five_targets_entries(data_dir, query):
+    """Load cutouts directly from data/five_targets/ if manifest.json is absent."""
+    targets_dir = data_dir / "five_targets"
+    if not targets_dir.is_dir():
+        return []
+    folder_map = {
+        "barnard": "barnard",
+        "wise0855": "wise-0855",
+        "epsindib": "eps-ind-b",
+        "rwaur": "rw-aur",
+        "rdra": "r-dra",
+    }
+    target_key = query.target_key
+    if not target_key and query.ra is not None and query.dec is not None:
+        coords_map = {
+            "barnard": (269.452, 4.693),
+            "wise0855": (133.819, -7.247),
+            "epsindib": (331.044, -56.783),
+            "rwaur": (77.465, 30.402),
+            "rdra": (247.554, 66.705),
+        }
+        for k, (cra, cdec) in coords_map.items():
+            if (query.ra - cra) ** 2 + (query.dec - cdec) ** 2 < 0.04:
+                target_key = k
+                break
+    folder = folder_map.get(target_key)
+    if not folder:
+        return []
+    inputs_json = targets_dir / folder / "inputs.json"
+    if not inputs_json.is_file():
+        return []
+    try:
+        items = json.loads(inputs_json.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    entries = []
+    for item in items:
+        fpath = (ROOT / item["path"]).resolve()
+        if not fpath.is_file():
+            continue
+        det_str = item["detector"]
+        det_int = int(det_str.removeprefix("D"))
+        if query.detector is not None and det_int != query.detector:
+            continue
+        entries.append(
+            {
+                "fits_path": str(fpath),
+                "obs_id": item["obs_id"],
+                "obs_publisher_did": f"ivo://irsa.ipac/spherex_qr2?{item['obs_id']}/D{det_int}",
+                "detector": f"SPHEREx-D{det_int}",
+                "mjd": float(item["mjd"]),
+                "sha256": item.get("sha256", ""),
+            }
+        )
+    return entries
+
+
 def matching_cutouts(query):
     data_dir = (ROOT / os.getenv("DATA_DIR", "data")).resolve()
     manifest = data_dir / "fixtures" / "manifest.json"
@@ -80,6 +137,8 @@ def matching_cutouts(query):
             json.loads(manifest.read_text(encoding="utf-8"))
     if not any(Path(row["fits_path"]).is_file() for row in entries):
         entries = pack_entries(data_dir, query)
+    if not any(Path(row["fits_path"]).is_file() for row in entries):
+        entries = five_targets_entries(data_dir, query)
     if not any(Path(row["fits_path"]).is_file() for row in entries):
         return None
 
