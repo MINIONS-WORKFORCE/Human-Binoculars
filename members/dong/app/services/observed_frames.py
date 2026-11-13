@@ -9,11 +9,11 @@ from functools import lru_cache
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from shared.pipeline.irsa import find_frames
+from shared.pipeline.irsa import find_frames, group_images_into_visits
 
-from ..api_models import Frames, FramesQuery, Target
-from .catalog import targets
-from .frame_rendering import build_frames
+from ..api_models import Frames, FramesQuery, PhotometryQuery, Target
+from .catalog import position_at, targets
+from .frame_rendering import PIXEL_SCALE, build_frames
 
 ROOT = Path(__file__).resolve().parents[4]
 RENDER_VERSION = "api-0.1-tan-median-v3"
@@ -270,3 +270,145 @@ def render_cached(query_json, target_json, cutouts):
         }
     )
     return frames, images
+
+
+@lru_cache(maxsize=32)
+def _measure_target_photometry(target_key: str, data_dir_str: str, aperture_arcsec: float):
+    """Measure multi-band circular aperture photometry from local FITS cutouts."""
+    import math
+
+    import numpy as np
+    from astropy.io import fits
+    from astropy.wcs import WCS
+    from astropy.wcs.utils import proj_plane_pixel_area
+
+    cutouts = matching_cutouts(FramesQuery(ra=0.0, dec=0.0, target_key=target_key))
+    if not cutouts:
+        return ()
+
+    points = []
+    groups = group_images_into_visits(
+        [{"t_min": c.mjd, "cutout": c} for c in cutouts]
+    )
+    for visit, group in enumerate(groups, start=1):
+        for item in group:
+            cutout = item["cutout"]
+            coord = position_at(target_key, cutout.mjd)
+            if coord is None:
+                continue
+            with fits.open(cutout.path) as hdus:
+                header = hdus["IMAGE"].header
+                image = np.array(hdus["IMAGE"].data, dtype=float)
+                if "ZODI" in hdus:
+                    image = image - np.array(hdus["ZODI"].data, dtype=float)
+                variance = (
+                    np.array(hdus["VARIANCE"].data, dtype=float)
+                    if "VARIANCE" in hdus
+                    else np.ones_like(image)
+                )
+                flags = np.array(hdus["FLAGS"].data)
+                fh = hdus["FLAGS"].header
+                bad_bits = sum(
+                    1 << int(fh[k])
+                    for k in fh
+                    if k.startswith("MP_") and k not in {"MP_SOURCE", "MP_FULLSAMPLE"}
+                )
+                is_bad = (flags & bad_bits) != 0
+                source_mask = (
+                    (flags & (1 << int(fh["MP_SOURCE"]))) != 0
+                    if "MP_SOURCE" in fh
+                    else np.zeros_like(flags, dtype=bool)
+                )
+                wcs = WCS(header, fobj=hdus).celestial
+                px, py = wcs.world_to_pixel(coord)
+                x0, y0 = float(px), float(py)
+                if not (0.0 <= x0 < image.shape[1] and 0.0 <= y0 < image.shape[0]):
+                    continue
+
+                spectral = header.copy()
+                for k in list(spectral):
+                    if k.startswith(("A_", "B_", "AP_", "BP_")):
+                        del spectral[k]
+                wave, _ = WCS(spectral, fobj=hdus, key="W").pixel_to_world_values(x0, y0)
+                if not (math.isfinite(float(wave)) and float(wave) > 0):
+                    continue
+                area = abs(float(proj_plane_pixel_area(wcs))) * (np.pi / 180) ** 2
+
+            yy, xx = np.indices(image.shape)
+            dist = np.hypot(xx - x0, yy - y0)
+            r_ap = max(1.5, float(aperture_arcsec) / PIXEL_SCALE)
+            ap_mask = dist <= r_ap
+            ann_mask = (dist >= 6.0) & (dist <= 12.0)
+            good_data = np.isfinite(image) & np.isfinite(variance) & (variance >= 0)
+
+            bg_mask = ann_mask & good_data & (~is_bad) & (~source_mask)
+            if bg_mask.sum() < 15:
+                bg_mask = ann_mask & good_data & (~is_bad)
+            if bg_mask.sum() < 10:
+                bg_mask = good_data & (~is_bad)
+            if bg_mask.sum() < 5:
+                continue
+
+            bg_level = float(np.median(image[bg_mask]))
+            bg_var = float(np.sum(variance[bg_mask]) / (bg_mask.sum() ** 2))
+            ap_good = ap_mask & good_data & (~is_bad)
+            flagged = bool((is_bad & ap_mask).any())
+            factor = area * 1e9
+
+            if ap_good.sum() > 0:
+                flux_mjy = float(np.sum(image[ap_good] - bg_level) * factor)
+                var_sum = float(np.sum(variance[ap_good]) + (int(ap_good.sum()) ** 2) * bg_var)
+                err_mjy = float(np.sqrt(max(var_sum, 1e-12)) * factor)
+                snr = float(flux_mjy / err_mjy) if err_mjy > 0 else None
+                detected = bool(snr is not None and snr >= 3.0 and flux_mjy > 0)
+            else:
+                flux_mjy, err_mjy, snr, detected = None, None, None, False
+
+            if flux_mjy is not None and not math.isfinite(flux_mjy):
+                flux_mjy = None
+            if err_mjy is not None and not math.isfinite(err_mjy):
+                err_mjy = None
+            if snr is not None and not math.isfinite(snr):
+                snr = None
+
+            points.append(
+                {
+                    "frame_id": f"phot-{target_key}-d{cutout.detector}-{cutout.obs_id}",
+                    "mjd": float(cutout.mjd),
+                    "wavelength_um": float(wave),
+                    "detector": int(cutout.detector),
+                    "release": cutout.release,
+                    "survey": int(visit),
+                    "flux_mjy": flux_mjy,
+                    "err_mjy": err_mjy,
+                    "snr": snr,
+                    "detected": detected,
+                    "flagged": flagged,
+                    "is_reference_star": False,
+                }
+            )
+    points.sort(key=lambda p: (p["mjd"], p["detector"], p["frame_id"]))
+    return tuple(points)
+
+
+def observed_photometry(query: PhotometryQuery, target_dict: dict):
+    """Return real multi-band photometry when running against local five_targets FITS data."""
+    data_dir = (ROOT / os.getenv("DATA_DIR", "data")).resolve()
+    if data_dir != (ROOT / "data").resolve() or not (data_dir / "five_targets").is_dir():
+        return None
+    if query.target_key not in {"barnard", "wise0855", "epsindib", "rwaur"}:
+        return None
+    points = [
+        dict(p)
+        for p in _measure_target_photometry(
+            query.target_key, str(data_dir), float(query.aperture_arcsec)
+        )
+        if query.detector is None or p["detector"] == query.detector
+    ]
+    return {
+        "api_version": "0.1",
+        "target": target_dict,
+        "reference_star": None,
+        "points": points,
+        "variability": None,
+    }

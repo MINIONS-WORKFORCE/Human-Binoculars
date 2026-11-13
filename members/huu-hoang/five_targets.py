@@ -193,7 +193,7 @@ def render(info):
         )
     # One global scale per RGB channel across visits, preserving changes between frames.
     visits = sorted(
-        set.intersection(*[{f["cluster_id"] for f in r["frames"]} for r in reports.values()])
+        set.intersection(*[{f["cluster_id"] for f in reports[d]["frames"]} for d in (1, 3, 6)])
     )
     rgb_report = []
     for visit in visits:

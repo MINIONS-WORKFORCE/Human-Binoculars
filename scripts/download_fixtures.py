@@ -59,34 +59,51 @@ def verify_fixtures(fixtures_path: Path = FIXTURES_DIR) -> bool:
     total_valid_fits = 0
     all_ok = True
 
+    manifest_entries = manifest.get("entries", [])
+    expected_total = 0
+
     for target in EXPECTED_TARGETS:
         target_dir = fixtures_path / target
-        if not target_dir.exists():
-            print(f"[-] {target}: Thiếu thư mục mục tiêu!")
-            all_ok = False
-            continue
+        if target_dir.exists():
+            fits_files = list(target_dir.glob("*.fits"))
+            valid_files = []
+            for f in fits_files:
+                if f.stat().st_size > 10000:
+                    with open(f, "rb") as fp:
+                        if fp.read(8) == b"SIMPLE  ":
+                            valid_files.append(f)
+            d6_count = sum(1 for f in valid_files if "_D6_" in f.name)
+            d1_count = sum(1 for f in valid_files if "_D1_" in f.name)
+            det_summary = f"D6: {d6_count}, D1: {d1_count}"
+        else:
+            target_entries = [e for e in manifest_entries if e.get("target_key") == target]
+            if not target_entries:
+                print(f"[-] {target}: Thiếu thư mục mục tiêu và không có trong manifest!")
+                all_ok = False
+                continue
+            valid_files = []
+            for e in target_entries:
+                raw_path = Path(e.get("fits_path") or e.get("path") or "")
+                f = raw_path if raw_path.is_absolute() else (ROOT_DIR / raw_path)
+                if f.is_file() and f.stat().st_size > 10000:
+                    with open(f, "rb") as fp:
+                        if fp.read(8) == b"SIMPLE  ":
+                            valid_files.append(f)
+            dets = sorted({e.get("detector_short") or e.get("detector", "") for e in target_entries})
+            det_summary = ", ".join(dets)
 
-        fits_files = list(target_dir.glob("*.fits"))
-        valid_files = []
-        for f in fits_files:
-            if f.stat().st_size > 10000:
-                with open(f, "rb") as fp:
-                    if fp.read(8) == b"SIMPLE  ":
-                        valid_files.append(f)
-
-        d6_count = sum(1 for f in valid_files if "_D6_" in f.name)
-        d1_count = sum(1 for f in valid_files if "_D1_" in f.name)
         status_icon = "✅" if len(valid_files) >= 3 else "❌"
         print(
             f" {status_icon} Mục tiêu '{target:10s}': {len(valid_files)} khung hợp lệ "
-            f"(D6: {d6_count}, D1: {d1_count}) -> {'ĐẠT (>= 3)' if len(valid_files) >= 3 else 'CHƯA ĐẠT'}"
+            f"({det_summary}) -> {'ĐẠT (>= 3)' if len(valid_files) >= 3 else 'CHƯA ĐẠT'}"
         )
         total_valid_fits += len(valid_files)
+        expected_total += max(6, len(valid_files))
         if len(valid_files) < 3:
             all_ok = False
 
     print("-" * 70)
-    print(f"Tổng số khung FITS hợp lệ: {total_valid_fits}/30")
+    print(f"Tổng số khung FITS hợp lệ: {total_valid_fits}/{expected_total}")
     if all_ok:
         print("=> TẤT CẢ 5 MỤC TIÊU ĐỀU ĐẠT TIÊU CHUẨN NGHIỆM THU ĐẦU-CUỐI!")
     else:

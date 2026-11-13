@@ -264,3 +264,11 @@ npm --prefix frontend run dev
    - **Thang chuẩn hóa (Norm):** Chung một thang `AsinhStretch` với cùng cặp $[vmin, vmax]$ cho toàn bộ các khung trong detector.
    - **Màu dữ liệu khuyết/NaN:** Luôn hiển thị bằng màu tím chuẩn: **`#703090`**.
    - **Ảnh hiệu (Diff):** Luôn dùng colormap đối xứng **`RdBu_r`** và làm nổi bật cặp cực sáng–tối (dipole) khi vật thể dịch chuyển.
+
+---
+
+## 10. Cập nhật hoàn thiện 6 detector (D1–D6) & Photometry đa dải (13/11)
+
+- **Dữ liệu thật đủ 6 detector (`D1`–`D6`):** Đã cập nhật [`members/huu-hoang/five_targets.py`](../members/huu-hoang/five_targets.py) sang `range(1, 7)` và tải đủ **156 cutout FITS thật từ IRSA** (~5,1 MB/file) cho cả 5 mục tiêu (`barnard`: 24, `wise0855`: 36, `epsindib`: 36, `rwaur`: 24, `rdra`: 36; mỗi detector `D1`–`D6` gồm 26 khung), xuất đủ bộ sản phẩm tĩnh `D1`–`D6` trong `data/five_targets/*/frames/` và đồng bộ [`data/fixtures/manifest.json`](../data/fixtures/manifest.json).
+- **Tích hợp Backend + Photometry đa dải thật:** [`members/dong/app/services/observed_frames.py`](../members/dong/app/services/observed_frames.py) đồng bộ manifest và đo photometry khẩu độ trực tiếp trên FITS thật cho `barnard` (21 điểm), `wise0855` (36 điểm), `epsindib` (29 điểm), `rwaur` (24 điểm) bên cạnh mẫu 6 điểm của `rdra`, đồng thời đã nối proxy `/api` trong [`frontend/vite.config.ts`](../frontend/vite.config.ts).
+- **Kiểm chứng 30 tổ hợp (`5 sao × D1..D6`):** 100% tổ hợp trả HTTP 200 với lưới `59×59` TAN, bước sóng riêng theo detector và 6 chuỗi PNG có hash SHA-256 khác biệt hoàn toàn; thời gian phản hồi `/api/frames` lần đầu đạt `1.03s–1.81s` (`< 2s`).
