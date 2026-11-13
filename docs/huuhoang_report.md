@@ -201,21 +201,28 @@ Khối thẻ `.target-conclusion-card` được render ngay dưới Blink Viewer
 
 ---
 
-## 8. Hướng dẫn chạy lại từ đầu (Reproduce)
+## 8. Hướng dẫn chạy lại từ đầu (Reproduce) & Tips cho đồng đội
 
-```bash
-# 1. Chạy toàn bộ test suite Python
-.venv/Scripts/pytest members/huu-hoang/ -v
+Xem chi tiết từng bước (chạy nhanh bằng ảnh PNG mẫu có sẵn trên Git lẫn chạy đầy đủ 156 FITS `D1`–`D6` + các lưu ý SkyMap/Warnings) tại [`docs/RUN_MVP_GUIDE.md`](RUN_MVP_GUIDE.md).
 
-# 2. Chạy toàn bộ test suite Frontend (Vitest)
-npm --prefix frontend test
+```powershell
+# 1. Tải & render đủ 156 cutout FITS (D1-D6) cho 5 mục tiêu vào data/five_targets/
+.venv\Scripts\python members/huu-hoang/five_targets.py --download
 
-# 3. Chạy kiểm thử End-to-End trên trình duyệt (Playwright)
-cd frontend && npm run e2e
+# 2. Cấu hình .env để nối Frontend với Backend thật (VITE_USE_MOCK=false, DATA_MODE=fixture)
+Copy-Item .env.example .env
 
-# 4. Mở giao diện website xem trực tiếp
+# 3. Terminal 1: Khởi động Backend FastAPI (tự đồng bộ manifest.json & photometry D1-D6)
+.venv\Scripts\python -m uvicorn members.dong.app.main:app --host 127.0.0.1 --port 8000
+
+# 4. Terminal 2: Khởi động Frontend Vite (proxy /api -> 127.0.0.1:8000)
 npm --prefix frontend run dev
-# -> Truy cập http://localhost:5173
+# -> Truy cập http://localhost:5173/
+
+# 5. Chạy các bộ test xác minh
+.venv\Scripts\pytest members/huu-hoang/ members/dong/ members/khoi/test_irsa.py
+npm --prefix frontend test
+frontend\node_modules\.bin\vitest.cmd run --passWithNoTests --exclude "frontend/**"
 ```
 
 ---
@@ -264,3 +271,11 @@ npm --prefix frontend run dev
    - **Thang chuẩn hóa (Norm):** Chung một thang `AsinhStretch` với cùng cặp $[vmin, vmax]$ cho toàn bộ các khung trong detector.
    - **Màu dữ liệu khuyết/NaN:** Luôn hiển thị bằng màu tím chuẩn: **`#703090`**.
    - **Ảnh hiệu (Diff):** Luôn dùng colormap đối xứng **`RdBu_r`** và làm nổi bật cặp cực sáng–tối (dipole) khi vật thể dịch chuyển.
+
+---
+
+## 10. Cập nhật hoàn thiện 6 detector (D1–D6) & Photometry đa dải (13/11)
+
+- **Dữ liệu thật đủ 6 detector (`D1`–`D6`):** Đã cập nhật [`members/huu-hoang/five_targets.py`](../members/huu-hoang/five_targets.py) sang `range(1, 7)` và tải đủ **156 cutout FITS thật từ IRSA** (~5,1 MB/file) cho cả 5 mục tiêu (`barnard`: 24, `wise0855`: 36, `epsindib`: 36, `rwaur`: 24, `rdra`: 36; mỗi detector `D1`–`D6` gồm 26 khung), xuất đủ bộ sản phẩm tĩnh `D1`–`D6` trong `data/five_targets/*/frames/` và đồng bộ [`data/fixtures/manifest.json`](../data/fixtures/manifest.json).
+- **Tích hợp Backend + Photometry đa dải thật:** [`members/dong/app/services/observed_frames.py`](../members/dong/app/services/observed_frames.py) đồng bộ manifest và đo photometry khẩu độ trực tiếp trên FITS thật cho `barnard` (21 điểm), `wise0855` (36 điểm), `epsindib` (29 điểm), `rwaur` (24 điểm) bên cạnh mẫu 6 điểm của `rdra`, đồng thời đã nối proxy `/api` trong [`frontend/vite.config.ts`](../frontend/vite.config.ts).
+- **Kiểm chứng 30 tổ hợp (`5 sao × D1..D6`):** 100% tổ hợp trả HTTP 200 với lưới `59×59` TAN, bước sóng riêng theo detector và 6 chuỗi PNG có hash SHA-256 khác biệt hoàn toàn; thời gian phản hồi `/api/frames` lần đầu đạt `1.03s–1.81s` (`< 2s`).

@@ -44,6 +44,7 @@ export function SkyMap({
   fovDeg = 10 / 60,
   gaia = "vizier",
   survey = "P/2MASS/color",
+  onSwitchGaia,
 }) {
   const mapRef = useRef(null);
   const view = useRef(null);
@@ -51,6 +52,24 @@ export function SkyMap({
   const [mapError, setMapError] = useState(false);
   const [status, setStatus] = useState({ state: "idle" });
   const [center, setCenter] = useState("");
+
+  // Suppress unhandled promise rejections from Aladin Lite when CDS/HiPS servers are unreachable
+  useEffect(() => {
+    const handleRejection = (event) => {
+      const reasonStr = String(event?.reason?.message || event?.reason || "");
+      if (
+        reasonStr.includes("HiPS") ||
+        reasonStr.includes("Failed to fetch") ||
+        reasonStr.includes("alasky") ||
+        reasonStr.includes("CDS") ||
+        reasonStr.includes("MocServer")
+      ) {
+        event.preventDefault();
+      }
+    };
+    window.addEventListener("unhandledrejection", handleRejection);
+    return () => window.removeEventListener("unhandledrejection", handleRejection);
+  }, []);
 
   // Aladin is created once; the next effect moves it.
   useEffect(() => {
@@ -124,7 +143,15 @@ export function SkyMap({
         >
           {statusText(status)}
         </p>
-        {gaia !== "off" && (
+        {status.state === "error" && gaia === "vizier" && onSwitchGaia ? (
+          <button
+            type="button"
+            className="skymap__button"
+            onClick={() => onSwitchGaia("mock")}
+          >
+            Use offline stars
+          </button>
+        ) : gaia !== "off" && (
           <button
             type="button"
             className="skymap__button"

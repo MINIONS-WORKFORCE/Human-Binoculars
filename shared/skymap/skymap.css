@@ -64,3 +64,8 @@
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
+
+/* Suppress Aladin's stuck status bar when offline or CDS HiPS tiles cannot be reached */
+.skymap__map .aladin-status-bar {
+  display: none !important;
+}

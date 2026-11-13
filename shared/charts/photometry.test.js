@@ -57,7 +57,17 @@ describe("the shared sample (api_samples/photometry_rdra.json)", () => {
     expect(data[0].error_y.array).toEqual([1, 1, 1, 1, 1, 1]);
     expect(data[0].x[0]).toBe("2025-05-06T00:00:00.000Z"); // MJD 60801
     expect(layout.xaxis.type).toBe("date");
+    expect(layout.xaxis.tickformat).toBe("%d %b %Y");
     expect(layout.showlegend).toBe(false);
+  });
+
+  it("uses month-year ticks when observations span more than 60 days", () => {
+    const longSpan = response([
+      point({ mjd: 60801 }),
+      point({ mjd: 60901 }),
+    ]);
+    const { layout } = photometryFigure(longSpan, { theme });
+    expect(layout.xaxis.tickformat).toBe("%b %Y");
   });
 
   it("switches the same points to a wavelength axis with the D1–D6 bands", () => {

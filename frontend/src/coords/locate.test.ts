@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createApiClient } from "../api/client";
 import { CoordError } from "./parse";
 import { locate, previewInput } from "./locate";
+import { TARGET_PRESETS } from "../targets";
 
 const api = createApiClient("http://api.test");
 
@@ -52,10 +53,25 @@ describe("previewInput (no network, runs on every keystroke)", () => {
         name: "Epsilon Indi B",
         targetKey: "epsindib",
         objectType: "Brown dwarf pair (Ba + Bb)",
-        raDeg: 331.0441,
-        decDeg: -56.7828,
+        // shared/targets.json, SIMBAD ICRS at epoch J2000.
+        raDeg: 331.04414658852124,
+        decDeg: -56.78284419511611,
       },
     });
+  });
+
+  it("finds every preset by its SIMBAD id from shared/targets.json", () => {
+    for (const id of ["NAME Barnard's star", "R Dra", "RW Aur"]) {
+      expect(previewInput(id)).toMatchObject({ status: "ready" });
+    }
+  });
+
+  it("agrees with the API resolver on every preset position", async () => {
+    // The mock mirrors the backend's /api/resolve, which reads the same table.
+    for (const t of TARGET_PRESETS) {
+      const resolved = await api.resolve(t.key);
+      expect([resolved.ra, resolved.dec]).toEqual([t.ra, t.dec]);
+    }
   });
 
   it("explains invalid coordinates", () => {

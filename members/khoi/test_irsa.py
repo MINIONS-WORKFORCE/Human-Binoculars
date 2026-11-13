@@ -80,7 +80,7 @@ def test_find_frames_five_targets_offline(target_key: str):
         # Check required fields in each frame
         for f in frames:
             assert f["target_key"] == target_key
-            assert f["detector"] in ("SPHEREx-D6", "SPHEREx-D1")
+            assert f["detector"] in {f"SPHEREx-D{i}" for i in range(1, 7)}
             assert "obs_id" in f
             assert "mjd" in f
             assert "fits_path" in f

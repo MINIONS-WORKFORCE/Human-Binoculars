@@ -52,6 +52,17 @@ const pngs = import.meta.glob<string>("../../../api_samples/png/*.png", {
   eager: true,
 });
 
+const targetPngs = import.meta.glob<string>("./target_png/*.png", {
+  query: "?inline",
+  import: "default",
+  eager: true,
+});
+
+function toBytes(dataUrl: string): Uint8Array<ArrayBuffer> {
+  const binary = atob(dataUrl.slice(dataUrl.indexOf(",") + 1));
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
 /** PNG bytes of sample frame `index` (0-based), or of its difference image. */
 export function samplePng(
   index: number,
@@ -61,7 +72,17 @@ export function samplePng(
     pngs[
       `../../../api_samples/png/frame-${index}${difference ? "_diff" : ""}.png`
     ];
-  if (!dataUrl) return undefined;
-  const binary = atob(dataUrl.slice(dataUrl.indexOf(",") + 1));
-  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return dataUrl ? toBytes(dataUrl) : undefined;
+}
+
+/** Target-specific simulated PNG bytes for the 5 challenge targets. */
+export function targetSamplePng(
+  targetKey: string,
+  index: number,
+  difference: boolean,
+): Uint8Array<ArrayBuffer> | undefined {
+  const key = `./target_png/${targetKey}_${index}${difference ? "_diff" : ""}.png`;
+  const dataUrl = targetPngs[key];
+  if (dataUrl) return toBytes(dataUrl);
+  return samplePng(index, difference);
 }

@@ -1,8 +1,9 @@
 // The five challenge targets, looked up before any online resolver.
-// key is the API's target_key. Barnard's position follows
-// shared/api-contract/frontend-guide.md; the others are SIMBAD J2000 positions
-// from members/duy-hoang/coords/targets.js. Replace with shared/targets.json
-// once it is published.
+// Positions come from shared/targets.json (SIMBAD ICRS, epoch J2000), the same
+// table the backend resolves from, so the page and the API never disagree.
+// key is the API's target_key; names, aliases and descriptions are the page's own.
+import targetTable from "../../shared/targets.json";
+
 export interface TargetPreset {
   key: string;
   name: string;
@@ -10,64 +11,83 @@ export interface TargetPreset {
   dec: number;
   aliases: string[];
   objectType: string;
+  /** Background science for the target (Hữu Hoàng, PR #50). */
   conclusion: string;
 }
 
+/** targets.json ids that differ from the API's target_key (as in catalog.py). */
+const TABLE_ID: Record<string, string> = {
+  epsindib: "epsilon-indi-b",
+  rwaur: "rw-aur",
+  rdra: "r-dra",
+};
+
+function position(key: string) {
+  const id = TABLE_ID[key] ?? key;
+  const row = targetTable.targets.find((t) => t.id === id);
+  if (!row) throw new Error(`shared/targets.json has no target "${id}"`);
+  return {
+    ra: row.astrometry.ra_deg,
+    dec: row.astrometry.dec_deg,
+    simbadId: row.simbad_id,
+  };
+}
+
+function preset(
+  key: string,
+  name: string,
+  aliases: string[],
+  objectType: string,
+  conclusion: string,
+): TargetPreset {
+  const { ra, dec, simbadId } = position(key);
+  return {
+    key,
+    name,
+    ra,
+    dec,
+    aliases: [...aliases, simbadId],
+    objectType,
+    conclusion,
+  };
+}
+
 export const TARGET_PRESETS: TargetPreset[] = [
-  {
-    key: "barnard",
-    name: "Barnard's Star",
-    ra: 269.4521,
-    dec: 4.6934,
-    aliases: ["Barnards Star", "Barnard Star", "Barnard", "GJ 699"],
-    objectType: "Red dwarf, largest proper motion in the sky",
-    conclusion:
-      "Barnard's Star exhibits rapid proper motion across observation epochs, producing a pronounced bright–dark dipole signature in difference imaging that directly confirms its transverse motion relative to the background sky.",
-  },
-  {
-    key: "wise0855",
-    name: "WISE 0855-0714",
-    ra: 133.8189,
-    dec: -7.247,
-    aliases: [
-      "WISE 0855",
-      "WISE J085510.83-071442.5",
-      "WISEA J085510.74-071442.5",
-    ],
-    objectType: "Coldest known brown dwarf",
-    conclusion:
-      "WISE 0855 is an ultra-cold sub-stellar brown dwarf whose thermal emission peaks predominantly in SPHEREx mid-infrared Detector 6 (4.5–5.0 µm) with noticeable proper motion displacement across survey visits.",
-  },
-  {
-    key: "epsindib",
-    name: "Epsilon Indi B",
-    ra: 331.0441,
-    dec: -56.7828,
-    aliases: ["eps Ind B", "eps Indi B", "GJ 845 B", "Gl 845 B"],
-    objectType: "Brown dwarf pair (Ba + Bb)",
-    conclusion:
-      "Epsilon Indi B is a nearby benchmark T-dwarf binary companion displaying shared proper motion with the host star and strong atmospheric methane absorption features in SPHEREx channels.",
-  },
-  {
-    key: "rwaur",
-    name: "RW Aurigae",
-    ra: 76.9565,
-    dec: 30.4014,
-    aliases: ["RW Aur"],
-    objectType: "Young variable star (T Tauri)",
-    conclusion:
-      "RW Aurigae is a young T Tauri binary system exhibiting prominent infrared excess and irregular multi-magnitude dimming episodes caused by circumstellar dust occultation.",
-  },
-  {
-    key: "rdra",
-    name: "R Draconis",
-    ra: 248.1676,
-    dec: 66.755,
-    aliases: ["R Dra"],
-    objectType: "Mira variable",
-    conclusion:
-      "R Draconis is a high-amplitude pulsating Mira variable demonstrating substantial seasonal brightness modulation and saturated core pixels during peak infrared emission.",
-  },
+  preset(
+    "barnard",
+    "Barnard's Star",
+    ["Barnards Star", "Barnard Star", "Barnard", "GJ 699"],
+    "Red dwarf, largest proper motion in the sky",
+    "Barnard's Star has the largest proper motion of any star, about 10.4″ a year, close to two SPHEREx pixels. In frames taken a year apart it should shift against the background stars, leaving a bright–dark dipole pair in the difference image.",
+  ),
+  preset(
+    "wise0855",
+    "WISE 0855-0714",
+    ["WISE 0855", "WISE J085510.83-071442.5", "WISEA J085510.74-071442.5"],
+    "Coldest known brown dwarf",
+    "WISE 0855 is an ultra-cold sub-stellar brown dwarf whose thermal emission peaks predominantly in SPHEREx mid-infrared Detector 6 (4.5–5.0 µm) with noticeable proper motion displacement across survey visits.",
+  ),
+  preset(
+    "epsindib",
+    "Epsilon Indi B",
+    ["eps Ind B", "eps Indi B", "GJ 845 B", "Gl 845 B"],
+    "Brown dwarf pair (Ba + Bb)",
+    "Epsilon Indi B is a nearby benchmark T-dwarf binary companion displaying shared proper motion with the host star and strong atmospheric methane absorption features in SPHEREx channels.",
+  ),
+  preset(
+    "rwaur",
+    "RW Aurigae",
+    ["RW Aur"],
+    "Young variable star (T Tauri)",
+    "RW Aurigae is a young T Tauri binary system exhibiting prominent infrared excess and irregular multi-magnitude dimming episodes caused by circumstellar dust occultation.",
+  ),
+  preset(
+    "rdra",
+    "R Draconis",
+    ["R Dra"],
+    "Mira variable",
+    "R Draconis is a high-amplitude pulsating Mira variable demonstrating substantial seasonal brightness modulation and saturated core pixels during peak infrared emission.",
+  ),
 ];
 
 export const DETECTORS = [1, 2, 3, 4, 5, 6] as const;
@@ -112,7 +132,8 @@ export function findPresetForTarget(target: {
   return (
     TARGET_PRESETS.find(
       (t) =>
-        Math.abs(t.ra - target.ra) < 0.05 && Math.abs(t.dec - target.dec) < 0.05,
+        Math.abs(t.ra - target.ra) < 0.05 &&
+        Math.abs(t.dec - target.dec) < 0.05,
     ) ?? null
   );
 }

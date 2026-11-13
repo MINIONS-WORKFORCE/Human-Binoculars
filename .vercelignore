@@ -1,0 +1,11 @@
+# Vercel builds frontend/ (see vercel.json). It also imports shared/ (design tokens,
+# targets.json) and api_samples/ (the mock data), so only those three are uploaded.
+/*
+!/frontend
+!/shared
+!/api_samples
+!/vercel.json
+/frontend/node_modules
+/frontend/dist
+/frontend/test-results
+/frontend/playwright-report

@@ -25,6 +25,14 @@ export function mjdToIso(mjd) {
   return new Date((mjd - MJD_UNIX_EPOCH) * MS_PER_DAY).toISOString();
 }
 
+/** Use day-level ticks when all observations fall within ~2 months; month-year otherwise. */
+export function dateTickFormat(mjds) {
+  const valid = mjds.filter((mjd) => Number.isFinite(mjd));
+  if (valid.length === 0) return "%b %Y";
+  const spanDays = Math.max(...valid) - Math.min(...valid);
+  return spanDays <= 60 ? "%d %b %Y" : "%b %Y";
+}
+
 /** "SPHEREx-D6" -> "D6" */
 export function detectorId(bandpassName) {
   return String(bandpassName).replace(/^SPHEREx-/, "");
@@ -233,8 +241,11 @@ export function lightcurveFigure(response, { theme }) {
     showLegend,
     top: 12,
   });
+  const plottedMjds = response.points
+    .filter((point) => point.flux != null)
+    .map((point) => point.time_mjd);
   layout.xaxis.type = "date";
-  layout.xaxis.tickformat = "%b %Y";
+  layout.xaxis.tickformat = dateTickFormat(plottedMjds);
   layout.xaxis.nticks = 6;
 
   return { data: series, layout };
