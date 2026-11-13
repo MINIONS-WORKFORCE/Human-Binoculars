@@ -19,7 +19,7 @@ const GAIA_OPTIONS: { value: GaiaSource; label: string }[] = [
 ];
 
 export function SkyPanel({ ra, dec, fovDeg }: SkyPanelProps) {
-  const [gaia, setGaia] = useState<GaiaSource>("vizier");
+  const [gaia, setGaia] = useState<GaiaSource>("mock");
 
   return (
     <section className="panel" aria-labelledby="sky-heading">

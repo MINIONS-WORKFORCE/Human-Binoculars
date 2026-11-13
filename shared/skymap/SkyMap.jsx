@@ -53,6 +53,24 @@ export function SkyMap({
   const [status, setStatus] = useState({ state: "idle" });
   const [center, setCenter] = useState("");
 
+  // Suppress unhandled promise rejections from Aladin Lite when CDS/HiPS servers are unreachable
+  useEffect(() => {
+    const handleRejection = (event) => {
+      const reasonStr = String(event?.reason?.message || event?.reason || "");
+      if (
+        reasonStr.includes("HiPS") ||
+        reasonStr.includes("Failed to fetch") ||
+        reasonStr.includes("alasky") ||
+        reasonStr.includes("CDS") ||
+        reasonStr.includes("MocServer")
+      ) {
+        event.preventDefault();
+      }
+    };
+    window.addEventListener("unhandledrejection", handleRejection);
+    return () => window.removeEventListener("unhandledrejection", handleRejection);
+  }, []);
+
   // Aladin is created once; the next effect moves it.
   useEffect(() => {
     let cancelled = false;
