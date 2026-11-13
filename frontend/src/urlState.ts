@@ -1,7 +1,7 @@
 // What the page keeps in its URL, so a reload or a shared link reopens the same view:
 //   ?q=Barnard%27s+Star&fov=5&det=D6
 // q is the text typed in the target field, fov the width of the cutout in arcminutes,
-// det the detector as D1 to D6. A missing fov uses the viewer default.
+// det the detector as D1 to D6. A missing fov means "the API's default size".
 
 /** FOV choices in arcminutes (SRS FR-02). Anything over 18' exceeds the API's 0.3 degree limit. */
 export const FOV_OPTIONS = [2, 5, 10] as const;

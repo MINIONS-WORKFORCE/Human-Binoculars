@@ -10,9 +10,11 @@ const FETCH_SIZE = "0.1667";
 test("FOV zooms without a request; detector refetches; both go in the URL (FR-02, FR-03)", async ({
   page,
 }) => {
-  const initial = framesRequest(page);
+  const first = framesRequest(page);
   await page.goto("/");
-  expect(new URL((await initial).url()).searchParams.get("size")).toBe("0.3");
+  expect(new URL((await first).url()).searchParams.get("size")).toBe(
+    FETCH_SIZE,
+  );
   await expect(page.getByTestId("frame-summary")).toContainText("detector D6");
 
   const calls: string[] = [];

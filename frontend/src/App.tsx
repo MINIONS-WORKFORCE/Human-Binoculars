@@ -42,8 +42,6 @@ interface Request {
   /** Only known targets have one; without it the API sends no predicted_px. */
   targetKey?: string;
   detector: number;
-  /** Cutout width in arcminutes; null means the viewer default. */
-  fov: Fov | null;
   /** The text typed in the target field, kept in the URL. */
   q: string;
 }
@@ -59,7 +57,6 @@ const SkyPanel = lazy(() =>
 );
 
 const FIRST = TARGET_PRESETS[0];
-const DEFAULT_FOV_ARCMIN = 18;
 
 /**
  * The API is asked once per target and detector, always for the widest field of
@@ -102,8 +99,10 @@ function requestFor(location: Location, detector: number, q: string): Request {
 
 async function fetchFrames(request: Request): Promise<State> {
   try {
-    const size = request.fov === null ? DEFAULT_FOV_ARCMIN / 60 : fovToSize(request.fov);
-    return { status: "ready", data: await api.frames({ ...request, size }) };
+    return {
+      status: "ready",
+      data: await api.frames({ ...request, size: FETCH_SIZE }),
+    };
   } catch (error) {
     return { status: "error", error: describeError(error) };
   }
@@ -302,8 +301,7 @@ export default function App() {
               setFovRequest({ arcmin: next === FETCH_FOV ? null : next });
             }}
           >
-            <option value="">Default ({DEFAULT_FOV_ARCMIN}′)</option>
-            {FOV_OPTIONS.map((option) => (
+            {[...FOV_OPTIONS].reverse().map((option) => (
               <option key={option} value={option}>
                 {option === FETCH_FOV ? "Whole image" : `${option}′`}
               </option>
@@ -389,7 +387,7 @@ function PanelLoading({ children }: { children: string }) {
   );
 }
 
-/** Show elapsed time while waiting for frames. */
+/** "Loading frames…", then a seconds counter: a live IRSA query can take 2 minutes. */
 function LoadingFrames() {
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
@@ -405,7 +403,7 @@ function LoadingFrames() {
       <span className="spinner" aria-hidden="true" />
       Loading frames…
       {seconds >= SLOW_AFTER_S && (
-        <> {seconds} s elapsed. Waiting for the NASA archive.</>
+        <> {seconds} s. The NASA archive can take up to 2 minutes.</>
       )}
     </p>
   );

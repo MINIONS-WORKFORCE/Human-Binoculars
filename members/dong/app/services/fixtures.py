@@ -133,6 +133,15 @@ def render(query, requested_target, cutouts):
              {"ra": query.ra, "dec": query.dec})
 
 
+TARGET_PREDICTED_PX = {
+    "barnard": [[17.0, 19.0], [19.0, 19.0], [21.0, 19.0]],
+    "wise0855": [[19.0, 17.0], [19.0, 19.0], [19.0, 21.0]],
+    "epsindib": [[17.5, 17.5], [19.5, 19.5], [21.5, 21.5]],
+    "rwaur": [[19.0, 19.0], [19.0, 19.0], [19.0, 19.0]],
+    "rdra": [[19.0, 19.0], [19.0, 19.0], [19.0, 19.0]],
+}
+
+
 def sample_frames(query, requested_target):
     result = sample("frames_barnard_d6.json")
     result["target"] = requested_target
