@@ -44,6 +44,7 @@ export function SkyMap({
   fovDeg = 10 / 60,
   gaia = "vizier",
   survey = "P/2MASS/color",
+  onSwitchGaia,
 }) {
   const mapRef = useRef(null);
   const view = useRef(null);
@@ -124,7 +125,15 @@ export function SkyMap({
         >
           {statusText(status)}
         </p>
-        {gaia !== "off" && (
+        {status.state === "error" && gaia === "vizier" && onSwitchGaia ? (
+          <button
+            type="button"
+            className="skymap__button"
+            onClick={() => onSwitchGaia("mock")}
+          >
+            Use offline stars
+          </button>
+        ) : gaia !== "off" && (
           <button
             type="button"
             className="skymap__button"

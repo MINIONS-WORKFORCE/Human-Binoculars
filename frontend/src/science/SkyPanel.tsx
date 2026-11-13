@@ -41,7 +41,13 @@ export function SkyPanel({ ra, dec, fovDeg }: SkyPanelProps) {
           </select>
         </label>
       </div>
-      <SkyMap raDeg={ra} decDeg={dec} fovDeg={fovDeg} gaia={gaia} />
+      <SkyMap
+        raDeg={ra}
+        decDeg={dec}
+        fovDeg={fovDeg}
+        gaia={gaia}
+        onSwitchGaia={setGaia}
+      />
       <p className="panel-note">
         Gaia positions are for epoch 2016.0, so a fast-moving star such as
         Barnard&rsquo;s Star sits away from where it appears in SPHEREx images.
