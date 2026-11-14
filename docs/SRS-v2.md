@@ -2,7 +2,7 @@
 
 Người viết: Thạch · Bản chụp ngày 14/11/2026
 
-> Bản gốc đang được nhóm chỉnh sửa và bình luận tại [tài liệu SRS v2](https://claude.ai/artifact/5wmLU91AsxEcF7RwKZ8PdH). File này là bản chụp để tra cứu trong repo; khi hai bản khác nhau, bản tài liệu là bản đúng. SRS của MVP (12/11) vẫn giữ ở [SRS-MVP.md](SRS-MVP.md).
+> Bản gốc đang được nhóm chỉnh sửa và bình luận tại [tài liệu SRS v2](https://claude.ai/artifact/5wmLU91AsxEcF7RwKZ8PdH). File này là bản chụp để tra cứu trong repo; khi hai bản khác nhau, bản tài liệu là bản đúng. SRS của MVP (12/11) đã được xoá khỏi `docs/` ngày 14/11; bản cuối còn trong lịch sử git: [SRS-MVP.md](https://github.com/MINIONS-WORKFORCE/Human-Binoculars/blob/1d54928595561031ca64dc2764802d96696d383d/docs/SRS-MVP.md).
 
 ## 1. Mục tiêu và phạm vi
 

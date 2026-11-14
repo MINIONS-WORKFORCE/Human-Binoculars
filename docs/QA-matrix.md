@@ -1,6 +1,6 @@
 # QA matrix – nghiệm thu MVP
 
-> Bản chụp ngày 9/11/2026, **cập nhật ngày 12/11/2026 theo hợp đồng API 0.1** (xem [SRS-MVP.md](SRS-MVP.md), mục 5 và 9). Các phép thử cũ nhắc đến `NO_DATA`, lỗi 422, 502/504, release QR2/QR3 và `API_MODE=mock` đã được viết lại hoặc bỏ vì hợp đồng 0.1 không có chúng. Kết quả chính thức được điền trong tab QA matrix của tài liệu SRS trực tuyến; file này để tra cứu trong repo.
+> Bản chụp ngày 9/11/2026, **cập nhật ngày 12/11/2026 theo hợp đồng API 0.1** (xem [SRS-MVP.md](https://github.com/MINIONS-WORKFORCE/Human-Binoculars/blob/1d54928595561031ca64dc2764802d96696d383d/docs/SRS-MVP.md), bản cuối trước khi file bị xoá, và [SRS-v2.md](SRS-v2.md); mục 5 và 9). Các phép thử cũ nhắc đến `NO_DATA`, lỗi 422, 502/504, release QR2/QR3 và `API_MODE=mock` đã được viết lại hoặc bỏ vì hợp đồng 0.1 không có chúng. Kết quả chính thức được điền trong tab QA matrix của tài liệu SRS trực tuyến; file này để tra cứu trong repo.
 
 Mỗi dòng là một phép thử có kết quả rõ ràng, lấy từ mục 9 và mục 7 của SRS. Phép thử chính thức chạy trên một máy không phải máy của người viết code. Khi chạy, ghi vào cột Ghi chú: máy nào, ngày nào, commit nào. Nếu không đạt, mở issue cho người sở hữu và dán link issue vào Ghi chú.
 
