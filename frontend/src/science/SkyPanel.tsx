@@ -14,12 +14,11 @@ type GaiaSource = "vizier" | "mock" | "off";
 
 const GAIA_OPTIONS: { value: GaiaSource; label: string }[] = [
   { value: "vizier", label: "Gaia DR3 (VizieR)" },
-  { value: "mock", label: "Synthetic stars (offline)" },
   { value: "off", label: "Off" },
 ];
 
 export function SkyPanel({ ra, dec, fovDeg }: SkyPanelProps) {
-  const [gaia, setGaia] = useState<GaiaSource>("mock");
+  const [gaia, setGaia] = useState<GaiaSource>("vizier");
 
   return (
     <section className="panel" aria-labelledby="sky-heading">

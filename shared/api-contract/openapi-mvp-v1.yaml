@@ -53,6 +53,7 @@ paths:
         required: true
         schema:
           enum:
+          - spherex_dr1
           - spherex_qr2
           - spherex_qr3
           type: string
@@ -418,6 +419,7 @@ components:
         obs_collection:
           type: string
           enum:
+          - spherex_dr1
           - spherex_qr2
           - spherex_qr3
           title: Obs Collection

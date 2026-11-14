@@ -92,8 +92,8 @@ npm test                          # Vitest
 
 ## Data notes
 
-- SIA2 collections: `spherex_qr3`, `spherex_qr3_deep`, `spherex_qr2`, `spherex_qr2_deep`. The name is read from `.env`.
-- As of 3/11, `spherex_qr3` returns **0** images at WISE 0855 while `spherex_qr2` returns 256 (MJD 60800–61174, about May 2025 to May 2026). Query both collections, not QR3 alone.
+- Current live priority is `spherex_dr1`, followed by `spherex_qr3`. QR2 remains only as historical evidence and is not selected by the live default. The active collection is read from `.env`.
+- DR1 and QR3 were released in November 2026. QR2 remains useful for historical coverage and must be labelled with its release. Query the configured collection and record the actual `obs_collection` returned by IRSA.
 - Always use cutouts (`access_url` + `?center=ra,dec&size=deg`), never full files (hundreds of MB each).
 
 ## Troubleshooting

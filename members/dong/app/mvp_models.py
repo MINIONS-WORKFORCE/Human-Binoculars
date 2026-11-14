@@ -14,7 +14,7 @@ from .legacy.schemas import (
 
 
 class MVPQuery(FramesQuery):
-    obs_collection: Literal["spherex_qr2", "spherex_qr3"]
+    obs_collection: Literal["spherex_dr1", "spherex_qr2", "spherex_qr3"]
 
 
 class MVPTarget(Model):

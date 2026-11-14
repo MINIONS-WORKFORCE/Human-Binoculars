@@ -229,6 +229,11 @@ def photometry(query: PhotometryQuery):
     observed = measured_science(query, "photometry", query.aperture_arcsec)
     if observed is not None:
         return observed
+    if live_mode():
+        fail(404, "NO_PHOTOMETRY", "IRSA returned no usable photometry for this target.", {
+            "target_key": query.target_key,
+            "collection": os.getenv("SPHEREX_COLLECTION", "spherex_dr1"),
+        })
     result = sample("photometry_rdra.json")
     if query.target_key != result["target"]["target_key"]:
         result.update(reference_star=None, points=[], variability=None)
@@ -243,6 +248,11 @@ def astrometry(query: ScienceQuery):
     observed = measured_science(query, "astrometry")
     if observed is not None:
         return observed
+    if live_mode():
+        fail(404, "NO_ASTROMETRY", "IRSA returned no usable astrometry for this target.", {
+            "target_key": query.target_key,
+            "collection": os.getenv("SPHEREX_COLLECTION", "spherex_dr1"),
+        })
     result = sample("astrometry_barnard.json")
     if query.target_key != result["target"]["target_key"]:
         entry = targets().get(query.target_key)

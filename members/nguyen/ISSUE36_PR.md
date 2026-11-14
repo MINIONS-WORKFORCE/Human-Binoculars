@@ -3,6 +3,8 @@
 Refs #36. Add original-FITS aperture photometry and Gaussian-centroid astrometry,
 CSV measurement exports, and projections validated against main's API 0.1 models.
 Choose aperture_arcsec=12.3 as a radius; preserve rejected rows and diagnostics.
+
+The live path queries SPHEREx DR1 first and QR3 only when DR1 has no coverage. It never substitutes api_samples for a live response. Barnard astrometry uses the catalog proper motion propagated to each observation MJD. R Dra photometry keeps flagged and non-detected measurements in the response.
 Keep the existing frontend API samples, OpenAPI, routes and shared target table.
 
 ## How to try it
@@ -11,7 +13,7 @@ From the repo root with Python 3.12 dependencies installed:
 
 ```powershell
 python -m pytest members/nguyen/tests -q
-python members/dong/scripts/validate_api_samples.py
+python -m pytest members/nguyen/tests members/dong/tests -q
 python members/nguyen/build_samples.py
 python members/nguyen/issue36.py data/science_acceptance_mock/rdra-manifest.json --output data/issue36/rdra
 python members/nguyen/issue36.py data/science_acceptance_mock/barnard-manifest.json --output data/issue36/barnard

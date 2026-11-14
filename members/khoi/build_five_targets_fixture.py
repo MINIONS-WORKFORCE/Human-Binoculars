@@ -12,6 +12,7 @@ import hashlib
 import json
 import logging
 import math
+import os
 import sys
 import time
 from pathlib import Path
@@ -23,10 +24,11 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from shared.pipeline.irsa import find_images, make_cutout_url, _normalize_detector
+from shared.pipeline.irsa import find_images, make_cutout_url
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("khoi.build_fixtures")
+COLLECTION = os.getenv("SPHEREX_COLLECTION", "spherex_dr1")
 
 import requests
 
@@ -75,11 +77,13 @@ TARGETS = [
 
 # Detectors: D6 (longest, 4.4-5.0um) and D1 (shortest, 0.75-1.11um)
 SELECTED_DETECTORS = ["SPHEREx-D6", "SPHEREx-D1"]
-CUTOUT_SIZE_DEG = 0.05    # 3 arcmin (optimal for fast download and inside image polygon)
-FRAMES_PER_DETECTOR = 3   # 3 for D6 + 3 for D1 = 6 frames per target (>= 3 requirement)
+CUTOUT_SIZE_DEG = 0.05  # 3 arcmin (optimal for fast download and inside image polygon)
+FRAMES_PER_DETECTOR = 3  # 3 for D6 + 3 for D1 = 6 frames per target (>= 3 requirement)
 
 
-def compute_epoch_coord(ra_j2000: float, dec_j2000: float, pm_ra_cosdec: float, pm_dec: float, epoch: float = 2025.5) -> tuple[float, float]:
+def compute_epoch_coord(
+    ra_j2000: float, dec_j2000: float, pm_ra_cosdec: float, pm_dec: float, epoch: float = 2025.5
+) -> tuple[float, float]:
     dt = epoch - 2000.0
     cos_dec = math.cos(math.radians(dec_j2000))
     dra = (pm_ra_cosdec / 3600000.0) * dt / max(abs(cos_dec), 1e-6)
@@ -100,7 +104,7 @@ def download_cutout_file(url: str, dest_path: Path, retries: int = 2) -> bool:
                 return False
             dest_path.write_bytes(resp.content)
             return True
-        except Exception:
+        except (requests.RequestException, OSError, ValueError):
             if dest_path.exists():
                 dest_path.unlink(missing_ok=True)
             if attempt < retries - 1:
@@ -140,10 +144,18 @@ def build_all_fixtures() -> dict:
             det_short = det.replace("SPHEREx-", "")
             print(f"     -> Truy vấn detector {det} trên IRSA...", end=" ", flush=True)
 
-            images = find_images(ra_epoch, dec_epoch, collection="spherex_qr2", detector=det, search_radius_deg=0.03)
+            images = find_images(
+                ra_epoch, dec_epoch, collection=COLLECTION, detector=det, search_radius_deg=0.03
+            )
             if len(images) < FRAMES_PER_DETECTOR:
                 # Try slightly wider cone
-                images = find_images(ra_epoch, dec_epoch, collection="spherex_qr2", detector=det, search_radius_deg=0.05)
+                images = find_images(
+                    ra_epoch,
+                    dec_epoch,
+                    collection=COLLECTION,
+                    detector=det,
+                    search_radius_deg=0.05,
+                )
             print(f"Tìm thấy {len(images)} ảnh ứng viên")
 
             saved_for_det = 0
@@ -199,7 +211,11 @@ def build_all_fixtures() -> dict:
                         continue
 
                 # Otherwise download
-                print(f"        [Tải FITS] {filename} (từ {img.get('obs_id')})...", end=" ", flush=True)
+                print(
+                    f"        [Tải FITS] {filename} (từ {img.get('obs_id')})...",
+                    end=" ",
+                    flush=True,
+                )
                 ok = download_cutout_file(cutout_url, fits_file)
                 if not ok:
                     print("Bỏ qua (ngoài biên hoặc lỗi)")
@@ -244,7 +260,7 @@ def build_all_fixtures() -> dict:
     manifest = {
         "version": "1.0.0",
         "author": "Khoi (members/khoi/build_five_targets_fixture.py)",
-        "collection": "spherex_qr2",
+        "collection": COLLECTION,
         "cutout_size_deg": CUTOUT_SIZE_DEG,
         "total_targets": len(TARGETS),
         "total_frames": len(manifest_entries),
@@ -277,14 +293,18 @@ def build_all_fixtures() -> dict:
     ]
     for key, info in summary_by_target.items():
         pass_str = "✅ ĐẠT" if info["total"] >= 3 else "❌ CHƯA ĐẠT"
-        md_lines.append(f"| `{key}` | **{info['name']}** | {info['D6']} | {info['D1']} | **{info['total']}** | {pass_str} |")
+        md_lines.append(
+            f"| `{key}` | **{info['name']}** | {info['D6']} | {info['D1']} | **{info['total']}** | {pass_str} |"
+        )
 
-    md_lines.extend([
-        "",
-        "## Kiểm tra tính năng find_frames()",
-        "- Chế độ `fixture`: Đọc trực tiếp từ `manifest.json` và trả về danh sách khung FITS mà không cần gọi mạng.",
-        "- Đạt 100% tiêu chí Done when của Issue #21."
-    ])
+    md_lines.extend(
+        [
+            "",
+            "## Kiểm tra tính năng find_frames()",
+            "- Chế độ `fixture`: Đọc trực tiếp từ `manifest.json` và trả về danh sách khung FITS mà không cần gọi mạng.",
+            "- Đạt 100% tiêu chí Done when của Issue #21.",
+        ]
+    )
 
     summary_md.write_text("\n".join(md_lines), encoding="utf-8")
     print(f"-> Đã ghi báo cáo tóm tắt: {summary_md}")

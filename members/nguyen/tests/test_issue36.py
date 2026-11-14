@@ -9,7 +9,7 @@ from astropy.io import fits
 from test_science import ROOT, image
 
 from shared.science import APERTURE_ARCSEC, astrometry, photometry
-from shared.science_api import photometry_payload
+from shared.science_api import astrometry_payload, photometry_payload
 from shared.science_contract import normalized_target
 
 
@@ -49,7 +49,8 @@ def test_public_functions_match_active_backend(tmp_path):
     models.Photometry.model_validate(photo)
     models.Astrometry.model_validate(astro)
     assert photo["target"]["target_key"] == "rdra"
-    assert "warnings" not in photo and "data_kind" not in photo
+    assert isinstance(photo["warnings"], list)
+    assert isinstance(astro["warnings"], list)
     assert all(p["measured_px"] is None for p in astro["points"])
     assert "warnings" in photometry(items, target(), diagnostics=True)
 
@@ -102,6 +103,29 @@ def test_current_team_target_schema_and_epoch_are_preserved():
     assert barnard["epoch_jyear"] == 2000
     assert barnard["pmdec"] > 10000
     models.Astrometry.model_validate(astrometry([], barnard))
+
+
+def test_astrometry_payload_exposes_signed_tangent_residuals():
+    payload = astrometry_payload(
+        {
+            "target": {"ra": 10.0, "dec": 20.0, "name": "x", "target_key": "x"},
+            "catalog_pm": {"pmra": 0.0, "pmdec": 0.0, "source": "test", "epoch": "J2000.0"},
+            "fit": None,
+            "points": [
+                {
+                    "frame_id": "frame-1",
+                    "mjd": 60000.0,
+                    "measured": {"ra": 10.0001, "dec": 19.9999, "err_arcsec": 0.1},
+                    "predicted": {"ra": 10.0, "dec": 20.0},
+                    "offset_arcsec": 0.5,
+                    "measured_px": None,
+                }
+            ],
+        }
+    )
+    point = payload["points"][0]
+    assert point["residual_ra_mas"] > 0
+    assert point["residual_dec_mas"] < 0
 
 
 def test_equal_mjd_retains_correct_frame_identity(tmp_path):

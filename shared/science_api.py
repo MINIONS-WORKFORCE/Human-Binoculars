@@ -6,6 +6,9 @@ provenance, saturation reasons or wavelength-calibration warnings.
 
 import math
 
+import astropy.units as u
+from astropy.coordinates import SkyCoord
+
 TARGET_KEYS = {
     "r-dra": "rdra",
     "eps-ind-b": "epsindib",
@@ -27,7 +30,10 @@ PHOTO_FIELDS = (
     "flagged",
     "is_reference_star",
 )
-ASTRO_FIELDS = ("frame_id", "mjd", "measured", "predicted", "offset_arcsec", "measured_px")
+ASTRO_FIELDS = (
+    "frame_id", "mjd", "measured", "predicted", "offset_arcsec",
+    "residual_ra_mas", "residual_dec_mas", "measured_px",
+)
 FIT_FIELDS = ("pmra", "pmdec", "pmra_err", "pmdec_err", "n_points", "baseline_days")
 
 
@@ -62,17 +68,34 @@ def photometry_payload(diagnostic):
         "reference_star": reference,
         "points": points,
         "variability": variability,
+        "warnings": diagnostic.get("warnings", []),
     }
 
 
 def astrometry_payload(diagnostic):
     """Return E7 fields only. measured_px stays null without matching PNG WCS."""
+    points = []
+    for point in diagnostic["points"]:
+        payload = {key: point[key] for key in ASTRO_FIELDS if key in point}
+        measured = point.get("measured")
+        predicted = point.get("predicted")
+        if measured is not None and predicted is not None:
+            reference = SkyCoord(predicted["ra"], predicted["dec"], unit="deg")
+            observed = SkyCoord(measured["ra"], measured["dec"], unit="deg")
+            east, north = reference.spherical_offsets_to(observed)
+            payload["residual_ra_mas"] = east.to_value(u.mas)
+            payload["residual_dec_mas"] = north.to_value(u.mas)
+        else:
+            payload["residual_ra_mas"] = None
+            payload["residual_dec_mas"] = None
+        points.append(payload)
     return {
         "api_version": "0.1",
         "target": _target(diagnostic["target"]),
         "catalog_pm": diagnostic["catalog_pm"],
-        "points": [{key: point[key] for key in ASTRO_FIELDS} for point in diagnostic["points"]],
+        "points": points,
         "fit": None
         if diagnostic["fit"] is None
         else {key: diagnostic["fit"][key] for key in FIT_FIELDS},
+        "warnings": diagnostic.get("warnings", []),
     }

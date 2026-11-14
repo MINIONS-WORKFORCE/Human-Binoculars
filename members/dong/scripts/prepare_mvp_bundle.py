@@ -100,7 +100,7 @@ def main():
     parser.add_argument("--detector", type=int, choices=range(1, 7))
     parser.add_argument("--fov-arcmin", type=float)
     parser.add_argument(
-        "--collection", choices=["spherex_qr2", "spherex_qr3"], default="spherex_qr2"
+        "--collection", choices=["spherex_dr1", "spherex_qr2", "spherex_qr3"], default="spherex_dr1"
     )
     parser.add_argument("--manifest", type=Path)
     args = parser.parse_args()

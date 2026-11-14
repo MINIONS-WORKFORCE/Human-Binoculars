@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import os
 import sys
 from pathlib import Path
 
@@ -18,7 +19,7 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from shared.pipeline.irsa import find_images, _normalize_detector
+from shared.pipeline.irsa import _normalize_detector, find_images
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("khoi.survey")
@@ -75,7 +76,9 @@ TARGETS_DEF = [
 DETECTORS = ["SPHEREx-D1", "SPHEREx-D2", "SPHEREx-D3", "SPHEREx-D4", "SPHEREx-D5", "SPHEREx-D6"]
 
 
-def propagate_coord_linear(ra_deg: float, dec_deg: float, pm_ra_cosdec: float, pm_dec: float, dt_years: float) -> tuple[float, float]:
+def propagate_coord_linear(
+    ra_deg: float, dec_deg: float, pm_ra_cosdec: float, pm_dec: float, dt_years: float
+) -> tuple[float, float]:
     """Linear propagation of coordinates over dt_years."""
     cos_dec = math.cos(math.radians(dec_deg))
     dra = (pm_ra_cosdec / 3600000.0) * dt_years / max(abs(cos_dec), 1e-6)
@@ -83,8 +86,9 @@ def propagate_coord_linear(ra_deg: float, dec_deg: float, pm_ra_cosdec: float, p
     return (ra_deg + dra, dec_deg + ddec)
 
 
-def survey_all_targets(collection: str = "spherex_qr2", epoch_year: float = 2025.5) -> dict:
+def survey_all_targets(collection: str | None = None, epoch_year: float = 2026.0) -> dict:
     """Surveys 5 targets across all 6 detectors in the specified collection."""
+    collection = collection or os.getenv("SPHEREX_COLLECTION", "spherex_dr1")
     dt = epoch_year - 2000.0
     summary_results: list[dict] = []
 
@@ -99,7 +103,9 @@ def survey_all_targets(collection: str = "spherex_qr2", epoch_year: float = 2025
         )
         print(f"-> Đang truy vấn mục tiêu: {tgt['name']} (ID: {tgt['id']})")
         print(f"   J2000: RA={tgt['ra_j2000']:.6f}°, Dec={tgt['dec_j2000']:.6f}°")
-        print(f"   J{epoch_year:.1f}: RA={ra_epoch:.6f}°, Dec={dec_epoch:.6f}° (dịch chuyển: {math.hypot(ra_epoch-tgt['ra_j2000'], dec_epoch-tgt['dec_j2000'])*3600:.1f}\")")
+        print(
+            f'   J{epoch_year:.1f}: RA={ra_epoch:.6f}°, Dec={dec_epoch:.6f}° (dịch chuyển: {math.hypot(ra_epoch - tgt["ra_j2000"], dec_epoch - tgt["dec_j2000"]) * 3600:.1f}")'
+        )
 
         # Query all images at this position
         all_imgs = find_images(ra_epoch, dec_epoch, collection=collection, search_radius_deg=0.08)
@@ -129,10 +135,10 @@ def survey_all_targets(collection: str = "spherex_qr2", epoch_year: float = 2025
 
     # Build Markdown table
     md_lines = [
-        f"# BẢNG THỐNG KÊ SỐ KHUNG HÌNH SPHEREx (5 MỤC TIÊU × 6 DETECTOR)",
+        "# BẢNG THỐNG KÊ SỐ KHUNG HÌNH SPHEREx (5 MỤC TIÊU × 6 DETECTOR)",
         f"- **Collection:** `{collection}`",
         f"- **Kỷ nguyên khảo sát:** `J{epoch_year:.1f}`",
-        f"- **Tác giả:** Khôi (`members/khoi/survey_targets.py`)",
+        "- **Tác giả:** Khôi (`members/khoi/survey_targets.py`)",
         "",
         "| Mục tiêu (Target) | RA (J2025.5) | Dec (J2025.5) | D1 | D2 | D3 | D4 | D5 | D6 | Tổng khung |",
         "| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |",
@@ -152,7 +158,9 @@ def survey_all_targets(collection: str = "spherex_qr2", epoch_year: float = 2025
     # Save to members/khoi/targets_summary.md and json
     out_dir = Path(__file__).resolve().parent
     (out_dir / "targets_summary.md").write_text(md_content, encoding="utf-8")
-    (out_dir / "targets_summary.json").write_text(json.dumps(summary_results, indent=2), encoding="utf-8")
+    (out_dir / "targets_summary.json").write_text(
+        json.dumps(summary_results, indent=2), encoding="utf-8"
+    )
     print(f"-> Đã lưu bảng thống kê vào: {out_dir / 'targets_summary.md'}")
 
     return {"collection": collection, "targets": summary_results}
