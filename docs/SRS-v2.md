@@ -95,13 +95,13 @@ The eyes là bầu trời 360° chiếm gần hết màn hình: thanh điều h�
 | EY-03 | **Lưới RA/Dec:** nút bật/tắt lưới toạ độ trên bản đồ; trạng thái nằm trong URL | Must | Thạch |
 | EY-04 | **Trình phát:** chọn một vùng (bấm mục tiêu hoặc nhập toạ độ) thì tải `/api/frames` và phát các khung chồng lên đúng vị trí, đúng kích thước trên bản đồ (theo `grid.center_ra`, `center_dec`, `pixscale_arcsec`) | Must | Duy Hoàng |
 | EY-05 | Trình phát có play/pause, phát lại, tốc độ, và **nhảy tới một thời điểm**: thanh thời gian ghi ngày thật của từng khung, bấm một ngày thì dừng ở khung đó. Chuyển ảnh gốc/ảnh hiệu như hiện nay | Must | Duy Hoàng |
-| EY-06 | **Popup thông tin:** bấm một mục tiêu hoặc một sao Gaia thì hiện tên, loại, RA/Dec, độ sáng (nếu có) và nguồn. Nếu thanh trái đang mở thì đóng lại rồi mở popup | Must | Thạch |
+| EY-06 | **Popup thông tin:** bấm vào bất kỳ thiên thể nào trên bản đồ. Thiên thể đã biết (khớp 5 mục tiêu, Gaia DR3 hoặc SIMBAD trong bán kính đề xuất 10″) thì hiện tên, loại, RA/Dec, độ sáng và nguồn. Không khớp catalog nào thì hiện “Unknown object” kèm RA/Dec của điểm bấm và câu “Not found in Gaia DR3 or SIMBAD”. Nếu thanh trái đang mở thì đóng lại rồi mở popup | Must | Thạch |
 | EY-07 | **Chế độ Testing:** làm nổi 5 mục tiêu trên bản đồ (vòng sáng nhấp nháy), bấm thì bay tới, phát khung và mở bảng chi tiết: mô tả, biểu đồ photometry, chuyển động riêng, thẻ “About this target” kèm câu ghi chú nguồn | Must | Thạch, Nguyên |
 | EY-08 | **Ô nhập toạ độ:** nhận tên hoặc hai dạng toạ độ như hiện nay; có một dòng giải thích mục đích: “Go to any position and play the SPHEREx pictures taken there”, kèm giới hạn của chế độ đang chạy (mục 7) | Must | Duy Hoàng |
 | EY-09 | URL giữ vị trí, FOV, detector, lưới và mục tiêu đang mở, để tải lại hoặc chia sẻ mở đúng cảnh | Must | Duy Hoàng |
 | EY-10 | Trên màn hình hẹp (390px): thanh trái thành ngăn kéo, thanh công cụ thu gọn thành một hàng biểu tượng có nhãn | Should | Thạch |
 
-Popup và Testing chỉ hiển thị thiên thể có trong dữ liệu (5 mục tiêu và sao Gaia). Hành tinh trong hệ Mặt Trời không có trong dữ liệu hiện tại (câu hỏi mở ở mục 12).
+“Planet” trong user flow nghĩa là mọi thiên thể trên bản đồ (đã chốt ngày 14/11). “Unknown” chỉ có nghĩa là không có trong các catalog đã tra, không phải phát hiện mới. Tra Gaia và SIMBAD cần mạng tới CDS; khi không tới được, popup nói rõ là chưa tra được thay vì báo Unknown.
 
 ## 7. Dữ liệu và giới hạn
 
@@ -180,7 +180,7 @@ v2 đạt khi mọi dòng Must dưới đây đạt trên một máy không ph�
 - [ ] Bật lưới RA/Dec thì thấy lưới toạ độ; tải lại trang vẫn giữ trạng thái.
 - [ ] Bấm từng mục tiêu trong 5 mục tiêu: bản đồ bay tới, khung SPHEREx phát chồng đúng vị trí, bảng chi tiết mở ra.
 - [ ] Trình phát: play, pause, phát lại, đổi tốc độ, bấm một ngày trên thanh thời gian thì dừng ở đúng khung của ngày đó.
-- [ ] Popup: bấm một mục tiêu khi thanh trái đang mở thì thanh trái đóng và popup hiện đủ tên, loại, RA/Dec.
+- [ ] Popup: bấm một mục tiêu khi thanh trái đang mở thì thanh trái đóng và popup hiện đủ tên, loại, RA/Dec; bấm một điểm không khớp catalog nào thì popup ghi “Unknown object” kèm RA/Dec.
 - [ ] Nhập `133.7951 -7.2451` và `08h55m10.831s -07d14m42.53s` cho cùng một vị trí; ô nhập có dòng giải thích mục đích.
 - [ ] Dữ liệu tổng hợp, mô phỏng và ứng viên đều có nhãn trên màn hình.
 - [ ] Không cuộn ngang ở 390px, Tab tới được mọi nút, nút cao tối thiểu 44px, trên cả 4 trang.
@@ -209,7 +209,7 @@ Khi SRS này được chốt, các dòng trên được chép sang `docs/QA-matr
 
 1. Mức ưu tiên ở mục 1 và phân công ở mục 10 có đồng ý không?
 2. Hạn chót cho từng bước Must, Should, Could là ngày nào?
-3. “Popup thông tin hành tinh” trong user flow: ý là hành tinh trong hệ Mặt Trời (chưa có trong dữ liệu, phải thêm nguồn) hay mọi thiên thể trên bản đồ (5 mục tiêu và sao Gaia)?
+3. Bán kính khớp catalog cho popup (đề xuất 10″, khoảng 1,5 pixel SPHEREx) có hợp lý không? (Nghĩa của “popup thông tin hành tinh” đã chốt ngày 14/11, xem EY-06.)
 4. Bản demo dùng chế độ live hay fixture? Live cần mạng tới IRSA tại nơi thi.
 5. Có làm mục Could “ứng viên chuyển động” không? Nếu có, ai kiểm chứng ứng viên trước khi đưa lên màn hình?
 6. Nhánh `khoi/celestial-sphere-3d-demo` có dùng cho Where are you? không, hay làm mới 2D theo user flow?
