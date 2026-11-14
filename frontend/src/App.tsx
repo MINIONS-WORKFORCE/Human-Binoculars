@@ -4,6 +4,7 @@
 import {
   lazy,
   Suspense,
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -11,13 +12,14 @@ import {
 } from "react";
 import { api, describeError, type ErrorInfo, type Frames } from "./api";
 import { apiBase, useMock } from "./config";
-import { BlinkViewer } from "./blink/BlinkViewer";
+import { BlinkViewer, type FovRequest } from "./blink/BlinkViewer";
 import { CoordinatePreview, type Lookup } from "./coords/CoordinatePreview";
 import { formatDec, formatRa } from "./coords/format";
 import { locate, previewInput, type Location } from "./coords/locate";
 import { CoordError } from "./coords/parse";
 import { DETECTORS, TARGET_PRESETS, findPresetForTarget } from "./targets";
 import { describeWarning } from "./warnings";
+import { Intro } from "./Intro";
 import {
   FOV_OPTIONS,
   buildSearch,
@@ -40,8 +42,6 @@ interface Request {
   /** Only known targets have one; without it the API sends no predicted_px. */
   targetKey?: string;
   detector: number;
-  /** Cutout width in arcminutes; null means the API's default size. */
-  fov: Fov | null;
   /** The text typed in the target field, kept in the URL. */
   q: string;
 }
@@ -58,6 +58,24 @@ const SkyPanel = lazy(() =>
 
 const FIRST = TARGET_PRESETS[0];
 
+/**
+ * The API is asked once per target and detector, always for the widest field of
+ * view. Choosing a smaller field only zooms the viewer in the browser, so it is
+ * instant and never waits for the server to render the frames again.
+ */
+const FETCH_FOV: Fov = 10;
+const FETCH_SIZE = fovToSize(FETCH_FOV);
+
+/** The Field of view menu entry for what the viewer shows now. */
+function fovChoice(shown: { arcmin: number | undefined; fitted: boolean }) {
+  if (shown.fitted) return String(FETCH_FOV);
+  const match = FOV_OPTIONS.find(
+    (option) =>
+      shown.arcmin !== undefined && Math.abs(shown.arcmin - option) < 0.35,
+  );
+  return match === undefined ? "custom" : String(match);
+}
+
 /** Map width in degrees: twice the frames' footprint for context, never under 6'. */
 const MIN_MAP_FOV_DEG = 0.1;
 function mapFov(
@@ -68,14 +86,8 @@ function mapFov(
   return Math.max(MIN_MAP_FOV_DEG, 2 * footprintDeg);
 }
 
-function requestFor(
-  location: Location,
-  detector: number,
-  fov: Fov | null,
-  q: string,
-): Request {
+function requestFor(location: Location, detector: number, q: string): Request {
   return {
-    fov,
     q,
     ra: location.raDeg,
     dec: location.decDeg,
@@ -87,8 +99,10 @@ function requestFor(
 
 async function fetchFrames(request: Request): Promise<State> {
   try {
-    const size = request.fov === null ? undefined : fovToSize(request.fov);
-    return { status: "ready", data: await api.frames({ ...request, size }) };
+    return {
+      status: "ready",
+      data: await api.frames({ ...request, size: FETCH_SIZE }),
+    };
   } catch (error) {
     return { status: "error", error: describeError(error) };
   }
@@ -99,7 +113,16 @@ export default function App() {
   const [fromUrl] = useState(() => parseUrlState(window.location.search));
   const [text, setText] = useState(fromUrl.q ?? FIRST.name);
   const [detector, setDetector] = useState(fromUrl.detector ?? 6);
+  // The field of view picked last (kept in the URL), the request the viewer zooms
+  // to, and what it shows now (after + / −, wheel or pinch it may differ).
   const [fov, setFov] = useState<Fov | null>(fromUrl.fov);
+  const [fovRequest, setFovRequest] = useState<FovRequest>({
+    arcmin: fromUrl.fov,
+  });
+  const [shownFov, setShownFov] = useState<{
+    arcmin: number | undefined;
+    fitted: boolean;
+  }>({ arcmin: undefined, fitted: fromUrl.fov === null });
   // A name lookup belongs to the text it was made for; typing again hides it.
   const [lookup, setLookup] = useState<{ input: string; result: Lookup }>({
     input: "",
@@ -114,7 +137,6 @@ export default function App() {
           dec: FIRST.dec,
           targetKey: FIRST.key,
           detector: fromUrl.detector ?? 6,
-          fov: fromUrl.fov,
           q: FIRST.name,
         },
   );
@@ -141,7 +163,7 @@ export default function App() {
     if (!request) return;
     const search = buildSearch({
       q: request.q,
-      fov: request.fov,
+      fov,
       detector: request.detector,
     });
     if (search !== window.location.search) {
@@ -151,7 +173,7 @@ export default function App() {
         `${window.location.pathname}${search}`,
       );
     }
-  }, [request]);
+  }, [request, fov]);
 
   const load = (next: Request) => {
     setState({ status: "loading" });
@@ -171,7 +193,7 @@ export default function App() {
       (location) => {
         if (!current) return;
         setLookup({ input, result: { status: "found", location } });
-        load(requestFor(location, detector, fov, input));
+        load(requestFor(location, detector, input));
       },
       (error: unknown) => {
         if (!current) return;
@@ -183,7 +205,6 @@ export default function App() {
           dec: FIRST.dec,
           targetKey: FIRST.key,
           detector,
-          fov,
           q: FIRST.name,
         });
       },
@@ -203,7 +224,7 @@ export default function App() {
     try {
       const location = await locate(input, api.resolve);
       setLookup({ input, result: { status: "found", location } });
-      load(requestFor(location, detector, fov, input));
+      load(requestFor(location, detector, input));
     } catch (error) {
       if (!(error instanceof CoordError)) throw error;
       setLookup({ input, result: { status: "error", error } });
@@ -212,6 +233,12 @@ export default function App() {
 
   const invalid =
     preview.status === "invalid" || currentLookup.status === "error";
+
+  const onViewChange = useCallback(
+    (arcmin: number | undefined, fitted: boolean) =>
+      setShownFov({ arcmin, fitted }),
+    [],
+  );
 
   return (
     <main className="page">
@@ -223,6 +250,8 @@ export default function App() {
             : `API · ${apiBase || "same origin"}`}
         </span>
       </header>
+
+      <Intro />
 
       <form className="controls" onSubmit={onSubmit}>
         <div className="target-field">
@@ -264,21 +293,22 @@ export default function App() {
         <label>
           Field of view
           <select
-            value={fov ?? ""}
+            value={fovChoice(shownFov)}
             onChange={(e) => {
-              const next = e.target.value
-                ? (Number(e.target.value) as Fov)
-                : null;
-              setFov(next);
-              if (request) load({ ...request, fov: next });
+              // Zooms the frames already loaded: no new request.
+              const next = Number(e.target.value) as Fov;
+              setFov(next === FETCH_FOV ? null : next);
+              setFovRequest({ arcmin: next === FETCH_FOV ? null : next });
             }}
           >
-            <option value="">Default (6′)</option>
-            {FOV_OPTIONS.map((option) => (
+            {[...FOV_OPTIONS].reverse().map((option) => (
               <option key={option} value={option}>
-                {option}′
+                {option === FETCH_FOV ? "Whole image" : `${option}′`}
               </option>
             ))}
+            <option value="custom" disabled hidden>
+              Custom zoom
+            </option>
           </select>
         </label>
         <button type="submit" disabled={currentLookup.status === "looking"}>
@@ -300,7 +330,6 @@ export default function App() {
                   dec: t.dec,
                   targetKey: t.key,
                   detector,
-                  fov,
                   q: t.name,
                 });
               }}
@@ -318,7 +347,12 @@ export default function App() {
             <FramesError error={state.error} onRetry={reload} />
           )}
           {state.status === "ready" && (
-            <FrameSummary data={state.data} onReload={reload} />
+            <FrameSummary
+              data={state.data}
+              onReload={reload}
+              fov={fovRequest}
+              onViewChange={onViewChange}
+            />
           )}
         </section>
         {request && (
@@ -399,9 +433,13 @@ function FramesError({
 function FrameSummary({
   data,
   onReload,
+  fov,
+  onViewChange,
 }: {
   data: Frames;
   onReload: () => void;
+  fov: FovRequest;
+  onViewChange: (arcmin: number | undefined, fitted: boolean) => void;
 }) {
   const { grid, target } = data;
   const preset = findPresetForTarget(target);
@@ -409,8 +447,10 @@ function FrameSummary({
   return (
     <>
       <p className="summary" data-testid="frame-summary">
-        <strong>{data.frames.length} frames</strong> ·{" "}
-        {target.name ?? "custom position"} · RA {formatRa(target.ra)} Dec{" "}
+        <strong>
+          {data.frames.length} {data.frames.length === 1 ? "frame" : "frames"}
+        </strong>{" "}
+        · {target.name ?? "custom position"} · RA {formatRa(target.ra)} Dec{" "}
         {formatDec(target.dec)} · detector D{data.detector} · grid {grid.width}×
         {grid.height} at {grid.pixscale_arcsec}″/px
       </p>
@@ -435,6 +475,8 @@ function FrameSummary({
           grid={grid}
           detector={data.detector}
           imageUrl={api.imageUrl}
+          fov={fov}
+          onViewChange={onViewChange}
           onReload={onReload}
         />
       )}
@@ -442,18 +484,19 @@ function FrameSummary({
         <section
           className="target-conclusion-card"
           data-testid="target-conclusion"
-          aria-label="Scientific Conclusion"
+          aria-label="About this target"
         >
           <header className="target-conclusion-header">
-            <span className="badge badge-conclusion">
-              Scientific Conclusion
-            </span>
+            <span className="badge badge-conclusion">About this target</span>
             <strong className="target-conclusion-name">{preset.name}</strong>
             <span className="target-conclusion-type">
               ({preset.objectType})
             </span>
           </header>
-          <p>Background information; the displayed frames have not independently confirmed these claims.</p>
+          <p className="target-conclusion-note">
+            What astronomers already know, and what to look for. It comes from
+            published studies, not from the frames above.
+          </p>
           <p className="target-conclusion-text">{preset.conclusion}</p>
         </section>
       )}

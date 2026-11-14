@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import requests
-from app.api_models import ErrorResponse, Frames
+from app.api_models import ErrorResponse, Frames, FramesQuery
 from app.main import app
 from app.services import observed_frames
 from app.services.fixtures import image_lock, images
@@ -160,6 +160,46 @@ def test_changed_fixture_cannot_reuse_cached_frames(client, manifest):
     assert ErrorResponse.model_validate(response.json()).error.code == "INTERNAL"
 
 
+def test_live_reload_reuses_cached_frames_and_pngs(client, manifest, monkeypatch):
+    from app.services import fixtures
+
+    cutouts = observed_frames.matching_cutouts(FramesQuery(**QUERY))
+    monkeypatch.setenv("DATA_MODE", "live")
+    calls = []
+
+    def download(query, directory):
+        calls.append(query)
+        return cutouts
+
+    monkeypatch.setattr(fixtures, "load_cutouts", download)
+    first = client.get("/api/frames", params=QUERY)
+    assert first.status_code == 200, first.text
+    assert first.headers["X-Cache"] == "MISS"
+    png = first.json()["frames"][0]["png"]
+    expected = client.get(png).content
+    with image_lock:
+        images.clear()
+
+    second = client.get("/api/frames", params=QUERY)
+    assert second.headers["X-Cache"] == "HIT"
+    assert second.json() == first.json()
+    assert client.get(png).content == expected
+    assert len(calls) == 1
+    assert client.get("/api/frames", params={**QUERY, "size": 0.06}).headers["X-Cache"] == "MISS"
+
+
+def test_frames_accept_dr1_alongside_quick_release(client, manifest):
+    index = json.loads(manifest.read_text(encoding="utf-8"))
+    entry = index["entries"][-1]
+    entry["obs_publisher_did"] = entry["obs_publisher_did"].replace("spherex_qr2", "spherex_dr1")
+    manifest.write_text(json.dumps(index), encoding="utf-8")
+
+    response = client.get("/api/frames", params=QUERY)
+    assert response.status_code == 200, response.text
+    result = Frames.model_validate(response.json())
+    assert [frame.release for frame in result.frames] == ["qr2", "dr1"]
+
+
 def test_partial_visit_missing_target_is_omitted(client, manifest):
     index = json.loads(manifest.read_text(encoding="utf-8"))
     for entry in index["entries"][:2]:
@@ -212,3 +252,16 @@ def test_observed_barnard_fixture_pack(client, monkeypatch):
         assert np.ptp(png) > 0
         assert frame.predicted_px is not None
     assert (read_png(client, result.frames[0].diff_png) == 128).all()
+
+
+def test_live_preserves_individual_observation_times(client, manifest, monkeypatch):
+    from app.services import fixtures
+    cutouts = observed_frames.matching_cutouts(FramesQuery(**QUERY))
+    monkeypatch.setenv("DATA_MODE", "live")
+    monkeypatch.setattr(fixtures, "load_cutouts", lambda *args: cutouts)
+    response = client.get("/api/frames", params=QUERY)
+    assert response.status_code == 200, response.text
+    frames = response.json()["frames"]
+    expected = sorted(c.mjd for c in cutouts if c.detector == QUERY["detector"])
+    assert [frame["mjd"] for frame in frames] == expected
+    assert len({frame["id"] for frame in frames}) == len(frames)

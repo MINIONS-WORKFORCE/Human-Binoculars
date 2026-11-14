@@ -19,19 +19,36 @@ export function crosshairPosition(
   return { cx: (x + 0.5) * pixelSize, cy: (y + 0.5) * pixelSize };
 }
 
-/** Image scaled to fill the canvas with nearest-neighbour sampling: square pixels. */
+/** The part of the image to show: a square of `span` pixels from (x0, y0). */
+export interface SourceWindow {
+  x0: number;
+  y0: number;
+  span: number;
+}
+
+/**
+ * Image (or the `source` window of it) scaled to fill the canvas with
+ * nearest-neighbour sampling: square pixels. A window reaching past the image
+ * edge is clipped by the browser and leaves black, as for a non-square image.
+ */
 export function drawImage(
   ctx: CanvasRenderingContext2D,
   image: CanvasImageSource | undefined,
   width: number,
   height: number,
+  source?: SourceWindow,
 ) {
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, width, height);
   if (!image) return;
   // Smoothing would invent detail SPHEREx never measured.
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(image, 0, 0, width, height);
+  if (source) {
+    const { x0, y0, span } = source;
+    ctx.drawImage(image, x0, y0, span, span, 0, 0, width, height);
+  } else {
+    ctx.drawImage(image, 0, 0, width, height);
+  }
 }
 
 /**

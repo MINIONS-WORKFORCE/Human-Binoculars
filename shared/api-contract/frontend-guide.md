@@ -59,11 +59,11 @@ UNKNOWN_TARGET and FRAME_NOT_FOUND use HTTP 404. error_no_frames.json
 illustrates NO_FRAMES; an empty filtered list should instead use FEW_FRAMES.
 Unexpected failures use HTTP 500 INTERNAL with safe public messages.
 
-Resolver fixtures currently support Barnard's Star, Barnard and Barnards Star.
-Other names return UNKNOWN_TARGET until the authoritative resolver is integrated.
-Photometry and astrometry provide synthetic schema examples. Live adapters for
-the new API are pending; DATA_MODE=live currently returns an INTERNAL error
-explaining this limitation. The previous live exercise uses app.legacy_main.
+The resolver uses the bundled five-target catalog. Other names return
+UNKNOWN_TARGET. With DATA_MODE=live, frames, photometry and astrometry use
+SPHEREx cutouts fetched from IRSA. Empty discovery yields NO_FRAMES for E3
+and empty measurements for E6/E7. Upstream failures return 502 UPSTREAM_ERROR
+or 504 UPSTREAM_TIMEOUT.
 
 ## Samples and handoff
 

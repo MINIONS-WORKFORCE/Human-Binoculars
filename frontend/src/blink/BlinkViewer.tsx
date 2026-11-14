@@ -3,13 +3,14 @@
 // frames from /api/frames and it preloads, draws and controls everything.
 import {
   useEffect,
+  useMemo,
   useReducer,
   useRef,
   type Dispatch,
   type RefObject,
 } from "react";
 import type { Frame, Frames } from "../api/client";
-import { crosshairPosition, drawCrosshair, drawImage } from "./canvas";
+import { drawCrosshair, drawImage } from "./canvas";
 import {
   FPS_MAX,
   FPS_MIN,
@@ -19,16 +20,36 @@ import {
   type PlayerAction,
 } from "./player";
 import { usePreloadedFrames } from "./usePreloadedFrames";
+import { useZoom, type FovRequest } from "./useZoom";
+import {
+  MIN_SPAN,
+  pixelGeometry,
+  predictedCentre,
+  toCanvas,
+  type GridSize,
+  type View,
+} from "./view";
 import "./blink.css";
+
+export type { FovRequest } from "./useZoom";
 
 export interface BlinkViewerProps {
   frames: readonly Frame[];
-  grid: Pick<Frames["grid"], "width" | "height">;
+  /** pixscale_arcsec lets the viewer show and accept a field of view in arcminutes. */
+  grid: Pick<Frames["grid"], "width" | "height"> &
+    Partial<Pick<Frames["grid"], "pixscale_arcsec">>;
   detector?: number;
   /** Turns a frame's png / diff_png path into a loadable URL. Keep it stable. */
   imageUrl?: (path: string) => string;
-  /** Screen pixels per SPHEREx pixel (before devicePixelRatio). */
-  zoom?: number;
+  /** Width the canvas fills, in CSS pixels (it shrinks on narrow screens). */
+  displaySize?: number;
+  /**
+   * Field of view to show, centred on the predicted position. Zooming happens in
+   * the browser on the frames already loaded. A new object re-applies it.
+   */
+  fov?: FovRequest;
+  /** Reports the field of view on screen (arcminutes) and whether it is the whole image. */
+  onViewChange?: (fovArcmin: number | undefined, fitted: boolean) => void;
   /**
    * Asks /api/frames again. Offered when an image fails, usually FRAME_NOT_FOUND
    * after the backend restarted or evicted it (an <img> cannot read the error code).
@@ -78,55 +99,37 @@ function usePlaybackLoop(
   }, [playing, fps, dispatch]);
 }
 
+/** Draws the `view` window of the image, then the crosshair if it is inside it. */
 function useCanvasDrawing(
   canvasRef: RefObject<HTMLCanvasElement | null>,
   image: HTMLImageElement | undefined,
   predictedPx: Frame["predicted_px"] | undefined,
   showCrosshair: boolean,
-  grid: BlinkViewerProps["grid"],
+  view: View,
   pixelSize: number,
 ) {
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
-    const width = grid.width * pixelSize;
-    const height = grid.height * pixelSize;
-    if (canvas.width !== width) canvas.width = width;
-    if (canvas.height !== height) canvas.height = height;
+    const size = view.span * pixelSize;
+    if (canvas.width !== size) canvas.width = size;
+    if (canvas.height !== size) canvas.height = size;
 
-    drawImage(ctx, image, width, height);
-    if (image && showCrosshair && predictedPx) {
+    drawImage(ctx, image, size, size, view);
+    const at = predictedPx ? toCanvas(predictedPx, view, pixelSize) : null;
+    if (image && showCrosshair && at) {
       const color =
         getComputedStyle(canvas).getPropertyValue("--color-marker").trim() ||
         "#ffc46b";
-      drawCrosshair(
-        ctx,
-        crosshairPosition(predictedPx, pixelSize),
-        pixelSize,
-        color,
-      );
+      drawCrosshair(ctx, at, pixelSize, color);
     }
-  }, [
-    canvasRef,
-    image,
-    predictedPx,
-    showCrosshair,
-    grid.width,
-    grid.height,
-    pixelSize,
-  ]);
+  }, [canvasRef, image, predictedPx, showCrosshair, view, pixelSize]);
 }
 
-/**
- * Whole device pixels per SPHEREx pixel, and the CSS width that shows the canvas at
- * exactly that size. Rounding here (not in CSS) keeps every pixel the same square
- * on screens with a fractional devicePixelRatio such as 1.25 or 1.5.
- */
-function pixelGeometry(zoom: number, gridWidth: number) {
-  const dpr = window.devicePixelRatio || 1;
-  const pixelSize = Math.max(1, Math.round(zoom * dpr));
-  return { pixelSize, cssWidth: (gridWidth * pixelSize) / dpr };
+/** "5.0′" or, under a minute, "40″". */
+function formatFov(arcmin: number): string {
+  return arcmin >= 1 ? `${arcmin.toFixed(1)}′` : `${Math.round(arcmin * 60)}″`;
 }
 
 function formatUtc(iso: string): string {
@@ -140,7 +143,9 @@ export function BlinkViewer({
   grid,
   detector,
   imageUrl = identity,
-  zoom = 10,
+  displaySize = 520,
+  fov,
+  onViewChange,
   onReload,
 }: BlinkViewerProps) {
   const preload = usePreloadedFrames(frames, imageUrl);
@@ -159,15 +164,37 @@ export function BlinkViewer({
 
   const frame = frames[index];
   const images = ready ? preload[mode] : [];
-  const { pixelSize, cssWidth } = pixelGeometry(zoom, grid.width);
+  // A stable object, so the zoom listeners are not re-attached on every frame tick.
+  const gridSize = useMemo<GridSize>(
+    () => ({ width: grid.width, height: grid.height }),
+    [grid.width, grid.height],
+  );
+  const zoom = useZoom({
+    canvasRef,
+    grid: gridSize,
+    pixscaleArcsec: grid.pixscale_arcsec,
+    centre: predictedCentre(frames.map((f) => f.predicted_px)),
+    fov,
+    framesKey: frames,
+  });
+  const { view } = zoom;
+  const { pixelSize, cssWidth } = pixelGeometry(
+    view.span,
+    displaySize,
+    window.devicePixelRatio || 1,
+  );
   useCanvasDrawing(
     canvasRef,
     images[index],
     frame?.predicted_px,
     showCrosshair,
-    grid,
+    view,
     pixelSize,
   );
+
+  useEffect(() => {
+    onViewChange?.(zoom.fovArcmin, zoom.fitted);
+  }, [onViewChange, zoom.fovArcmin, zoom.fitted]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -196,14 +223,16 @@ export function BlinkViewer({
       <div className="blink-stage" style={{ maxWidth: cssWidth }}>
         <canvas
           ref={canvasRef}
-          className="blink-canvas"
+          className={zoom.fitted ? "blink-canvas" : "blink-canvas is-zoomed"}
           role="img"
           aria-label={
             frame && ready
               ? `${mode === "diff" ? "Difference image" : "Image"}, frame ${index + 1} of ${count}, ${formatUtc(frame.iso)}`
               : "Frames are loading"
           }
-          style={{ aspectRatio: `${grid.width} / ${grid.height}` }}
+          data-testid="blink-canvas"
+          data-view={`${view.x0},${view.y0},${view.span}`}
+          {...zoom.pointerHandlers}
         />
         {preload.status === "loading" && (
           <div className="blink-overlay" role="status">
@@ -238,6 +267,55 @@ export function BlinkViewer({
             {detector !== undefined && <span>Detector D{detector}</span>}
           </>
         )}
+      </div>
+      {count === 1 && (
+        <p className="blink-single" role="note" data-testid="single-frame">
+          Only one visit of this spot is available, so there is nothing to blink
+          yet. Try another detector, or check back when SPHEREx has looked
+          again.
+        </p>
+      )}
+
+      <div className="blink-zoom" role="group" aria-label="Zoom">
+        <button
+          type="button"
+          className="secondary"
+          onClick={zoom.zoomOut}
+          disabled={zoom.fitted}
+          aria-label="Zoom out"
+          title="Zoom out (−)"
+        >
+          −
+        </button>
+        <button
+          type="button"
+          className="secondary"
+          onClick={zoom.zoomIn}
+          disabled={view.span <= MIN_SPAN}
+          aria-label="Zoom in"
+          title="Zoom in (+)"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          className="secondary"
+          onClick={zoom.fit}
+          disabled={zoom.fitted}
+          title="Show the whole image (0)"
+        >
+          Fit
+        </button>
+        <span className="blink-zoom-readout" data-testid="zoom-readout">
+          {zoom.fovArcmin !== undefined && (
+            <>View {formatFov(zoom.fovArcmin)}</>
+          )}
+          {zoom.fitted ? (
+            " · whole image"
+          ) : (
+            <> · ×{zoom.magnification.toFixed(1)} · drag to move</>
+          )}
+        </span>
       </div>
 
       <div className="blink-controls">
@@ -324,7 +402,8 @@ export function BlinkViewer({
       </div>
 
       <p className="blink-keys">
-        Keys: Space play/pause · ← → previous/next frame
+        Keys: Space play/pause · ← → previous/next frame · + − zoom · 0 whole
+        image · Mouse wheel zooms, drag moves
         {!hasPrediction &&
           " · No crosshair: pick a named target to get a predicted position"}
       </p>

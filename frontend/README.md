@@ -51,6 +51,39 @@ codes included; skipped when `LIVE_API_URL` is unset):
 LIVE_API_URL=http://127.0.0.1:8000 npx vitest run src/api/parity.test.ts
 ```
 
+## Deploy (Vercel)
+
+Production: https://human-binoculars.vercel.app, calling the API at
+https://human-binoculars.onrender.com.
+
+`vercel.json` and `.vercelignore` at the repo root build `frontend/` from the
+repo root, because the app also imports `shared/` and `api_samples/`; only those
+three folders are uploaded. The project's `VITE_API_BASE_URL` environment
+variable (set in Vercel for production, preview and development) is the API
+origin baked into the build. To deploy by hand from the repo root:
+
+```bash
+npx vercel@latest deploy --prod
+```
+
+The API's `CORS_ALLOW_ORIGINS` (on Render) must allow the Vercel domain; it is
+`*` today. A sleeping free Render instance takes about a minute to answer the
+first request, which the page shows as a seconds counter.
+
+## Before a demo: smoke test
+
+From the repo root, checks `/api/health`, then `/api/resolve`, `/api/frames` and the
+first PNG and difference PNG for all five targets in `shared/targets.json`:
+
+```bash
+npm run smoke -- https://human-binoculars.onrender.com --origin https://<frontend-domain>
+```
+
+`--origin` also checks that the API's CORS lets that frontend read the answers.
+Without a URL it tests `http://127.0.0.1:8000`. CI runs it against the fixture
+backend after pytest. A sleeping Render instance takes about a minute to answer
+the first request; the script waits up to 2 minutes.
+
 ## Loading and error states
 
 The page reads only `error.code`, never the server's `message`
